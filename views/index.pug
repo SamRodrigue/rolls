@@ -1,5 +1,52 @@
 extends layout
 
+block scripts
+  script(src='/javascripts/index.js')
+
 block content
-  h1= title
-  p Welcome to #{title}
+  .top.text-center
+    h1= title
+    p Welcome to #{title}
+  
+  .container
+    .content
+      table#room-list.table.table-striped.table-responsive.table-hover.table-bordered.table-condensed
+        thead
+          tr
+            th.col-10 Room
+            th.col-1.text-center Users
+            th.d-none
+            th.col-1.text-center Open
+        tbody
+          tr
+            td.room-name Room Name
+            td.text-center.room-users 0
+            td.d-none.room-locked 0
+            td.text-center
+              span.oi(data-glyph='lock-locked')
+          tr
+            td.room-name Room Name2
+            td.text-center.room-users 0
+            td.d-none.room-locked 0
+            td.text-center
+              span.oi.text-muted(data-glyph='lock-unlocked')
+  
+  .footer
+
+  #connect.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h3#form-title Enter Password
+          button.close(data-dismiss='modal') &times;
+
+        .modal-body
+          form
+            .form-group
+              label(for='password') Password
+              input#room-password.form-control(type='password')
+        .modal-footer
+          button.btn.btn-primary(type='submit')
+            span Enter
+          button.btn.btn-default(data-dismiss='modal')
+            span Close

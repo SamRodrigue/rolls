@@ -2,6 +2,11 @@ doctype html
 html
   head
     title= title
+    link(rel='stylesheet', href='/modules/bootstrap/css/bootstrap.css')
+    link(rel='stylesheet', href='/modules/open-iconic/font/css/open-iconic.css')
     link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src='/modules/jquery/js/jquery.js')
+    script(src='/modules/bootstrap/js/bootstrap.js')
+    block scripts
   body
     block content
