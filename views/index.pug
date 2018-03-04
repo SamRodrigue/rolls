@@ -7,33 +7,24 @@ block content
   .top.text-center
     h1= title
     p Welcome to #{title}
+    button.btn.btn-primary
+      span Create Room
   
-  .container
+  .container.mt-3
     .content
       table#room-list.table.table-striped.table-responsive.table-hover.table-bordered.table-condensed
         thead
           tr
+            th.d-none
             th.col-10 Room
             th.col-1.text-center Users
             th.d-none
             th.col-1.text-center Open
         tbody
-          tr
-            td.room-name Room Name
-            td.text-center.room-users 0
-            td.d-none.room-locked 0
-            td.text-center
-              span.oi(data-glyph='lock-locked')
-          tr
-            td.room-name Room Name2
-            td.text-center.room-users 0
-            td.d-none.room-locked 0
-            td.text-center
-              span.oi.text-muted(data-glyph='lock-unlocked')
   
   .footer
 
-  #connect.modal.fade
+  #connect-modal.modal.fade
     .modal-dialog
       .modal-content
         .modal-header
@@ -41,12 +32,17 @@ block content
           button.close(data-dismiss='modal') &times;
 
         .modal-body
-          form
+          form#connect-form
             .form-group
-              label(for='password') Password
-              input#room-password.form-control(type='password')
+              input#room-id.d-none(type='text')
+              label(for='username') User Name
+              input#username.form-control(type='text')
+              label.mt-2(for='password') Password
+              input#password.form-control(type='password')
+              input#connect-submit.d-none(type='submit')
         .modal-footer
-          button.btn.btn-primary(type='submit')
+          label(for='connect-submit').btn.btn-primary
             span Enter
-          button.btn.btn-default(data-dismiss='modal')
-            span Close
+          label
+            button.btn.btn-default(data-dismiss='modal')
+              span Close

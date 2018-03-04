@@ -1,5 +1,6 @@
 var express = require('express');
 var path = require('path');
+var socket = require('socket.io');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
@@ -10,6 +11,7 @@ var users = require('./routes/users');
 var room  = require('./routes/room.js');
 
 var app = express();
+app.socket = socket();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -43,6 +45,51 @@ app.use(function(err, req, res, next) {
   // render the error page
   res.status(err.status || 500);
   res.render('error');
+});
+
+// Rooms
+var rooms = new Map();
+
+// Temp fill romms
+rooms.set('AA11', 
+{
+  name: 'ROOM NAME1',
+  users: 0,
+  locked: true
+});
+rooms.set('BB22',
+{
+  name: 'ROOM NAME2',
+  users: 1,
+  locked: false
+});
+
+var rooms_meta = [
+
+]
+
+// Sockets
+// User connects
+app.socket.on('connection', function(socket) {
+  console.log('a user connected');
+
+  // Send room list
+  socket.emit('room-list', Array.from(rooms));
+
+  // Added room
+  socket.on('new', function(room) {
+    console.log('new room')
+  });
+
+  // Join request
+  socket.on('join', function(join_req) {
+    console.log('a user requested to join room ' + join_req.room_id);
+  });
+
+  // User disconnects
+  socket.on('disconnect', function() {
+    console.log('a user disconnected');
+  });
 });
 
 module.exports = app;
