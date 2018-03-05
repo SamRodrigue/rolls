@@ -28,7 +28,7 @@ router.get('/', function(req, res, next) {
 
       // Chech user name
       if (!create_req.username || !create_req.username.trim()) {
-        socket.emit('alert', 'Error: Ivalide user name');
+        socket.emit('alert', 'Error: Invalid user name');
         return;
       }
 
@@ -74,8 +74,6 @@ router.get('/', function(req, res, next) {
         users: [user]
       };
 
-      console.log('new room ' + JSON.stringify(room_meta.users[0].name));
-
       rooms.set(id, room);
       rooms_meta.set(id, room_meta);
 
@@ -94,7 +92,7 @@ router.get('/', function(req, res, next) {
       console.log('a user requested to join room ' + join_req.room_id);
       // Chech user name
       if (!join_req.username || !join_req.username.trim()) {
-        socket.emit('alert', 'Error: Ivalide user name');
+        socket.emit('alert', 'Error: Invalid user name');
         return;
       }
 
@@ -151,17 +149,23 @@ router.get('/', function(req, res, next) {
     // User disconnects
     socket.on('disconnect', function() {
       console.log('a user disconnected');
-      socket.leave('index');
 
       // Remove user from any connected room
       for (var [id, room_meta] in rooms_meta) {
-        for (var i = 0; i < room_meta.length; i++) {
-          if (socket == user.socket) {
+        room_meta.users.forEach(function(a_user, i) {
+          if (socket.id == a_user.socket.id) {
+            console.log("HEREHERE" + a_user.name);
             room_meta.users.pop(i);
             rooms.get(id).users = room_meta.users.length;
           }
-        }
+        });
       }
+
+      // Update all other index clients
+      socket.broadcast.to('index').emit('rooms', Array.from(rooms));
+
+      // Remove from index
+      socket.leave('index');
     });
   });
 

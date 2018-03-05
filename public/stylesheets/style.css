@@ -6,3 +6,8 @@ body {
 a {
   color: #00B7FF;
 }
+
+.user-area {
+  border-style: solid;
+  height: 10em;
+}

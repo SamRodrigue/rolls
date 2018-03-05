@@ -17,6 +17,21 @@ app.socket = socket();
 app.rooms = new Map();
 app.rooms_meta = new Map();
 
+// Temp room
+app.rooms.set('A1', {
+  name: 'TEST ROOM',
+  users: 0,
+  locked: false
+});
+
+app.rooms_meta.set('A1', {
+  password: {
+    admin: 'a',
+    user: ''
+  },
+  users: []
+});
+
 // Set globals
 app.set('socket', app.socket);
 app.set('rooms', app.rooms);
