@@ -7,7 +7,7 @@ block content
   .top.text-center
     h1= title
     p Welcome to #{title}
-    button.btn.btn-primary
+    button#create-button.btn.btn-primary
       span Create Room
   
   .container.mt-3
@@ -24,11 +24,39 @@ block content
   
   .footer
 
+  #create-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h2#form-title Create Room 
+          button.close(data-dismiss='modal') &times;
+
+        .modal-body
+          form#create-form
+            .form-group
+              input#room-id.d-none(type='text')
+              label.mt-2(for='username') User Name
+              input#username.form-control(type='text')
+              label.mt-2(for='room-name') Room Name
+              input#room-name.form-control(type='text')
+              label.mt-2(for='admin-password') Admin Password
+              input#admin-password.form-control(type='password')
+              label.mt-2(for='user-password') User Password
+              input#user-password.form-control(type='password')
+              input#create-submit.d-none(type='submit')
+        .modal-footer
+          label(for='create-submit').btn.btn-primary
+            span Enter
+          label
+            button.btn.btn-default(data-dismiss='modal')
+              span Close
+
   #connect-modal.modal.fade
     .modal-dialog
       .modal-content
         .modal-header
-          h3#form-title Enter Password
+          h2 Join Room 
+          h3#form-title
           button.close(data-dismiss='modal') &times;
 
         .modal-body
@@ -37,9 +65,11 @@ block content
               input#room-id.d-none(type='text')
               label(for='username') User Name
               input#username.form-control(type='text')
-              label.mt-2(for='password') Password
+              label.mt-2#password-label(for='password') Password
               input#password.form-control(type='password')
               input#connect-submit.d-none(type='submit')
+          button.btn.btn-default.btn-sm#password-login
+            span Admin Login
         .modal-footer
           label(for='connect-submit').btn.btn-primary
             span Enter

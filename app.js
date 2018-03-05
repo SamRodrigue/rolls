@@ -13,6 +13,21 @@ var room  = require('./routes/room.js');
 var app = express();
 app.socket = socket();
 
+// Rooms
+app.rooms = new Map();
+app.rooms_meta = new Map();
+
+// Set globals
+app.set('socket', app.socket);
+app.set('rooms', app.rooms);
+app.set('rooms_meta', app.rooms_meta);
+
+// Socket.io fix for windows
+if (/^win/.test(process.platform)) {
+  console.warn('Starting uws bug-hack interval under Windows');
+  setInterval(() => {}, 50);
+}
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
@@ -45,51 +60,6 @@ app.use(function(err, req, res, next) {
   // render the error page
   res.status(err.status || 500);
   res.render('error');
-});
-
-// Rooms
-var rooms = new Map();
-
-// Temp fill romms
-rooms.set('AA11', 
-{
-  name: 'ROOM NAME1',
-  users: 0,
-  locked: true
-});
-rooms.set('BB22',
-{
-  name: 'ROOM NAME2',
-  users: 1,
-  locked: false
-});
-
-var rooms_meta = [
-
-]
-
-// Sockets
-// User connects
-app.socket.on('connection', function(socket) {
-  console.log('a user connected');
-
-  // Send room list
-  socket.emit('room-list', Array.from(rooms));
-
-  // Added room
-  socket.on('new', function(room) {
-    console.log('new room')
-  });
-
-  // Join request
-  socket.on('join', function(join_req) {
-    console.log('a user requested to join room ' + join_req.room_id);
-  });
-
-  // User disconnects
-  socket.on('disconnect', function() {
-    console.log('a user disconnected');
-  });
 });
 
 module.exports = app;
