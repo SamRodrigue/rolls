@@ -1,6 +1,7 @@
 var express = require('express');
+var http = require('http');
 var path = require('path');
-var socket = require('socket.io');
+var socketio = require('socket.io');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
@@ -11,20 +12,22 @@ var users = require('./routes/users');
 var room  = require('./routes/room.js');
 
 var app = express();
-app.socket = socket();
+app.server = http.createServer(app);
+app.io = socketio();
+app.io.attach(app.server);
 
 // Rooms
-app.rooms = new Map();
-app.rooms_meta = new Map();
+rooms = new Map();
+rooms_meta = new Map();
 
 // Temp room
-app.rooms.set('A1', {
+rooms.set('A1', {
   name: 'TEST ROOM',
   users: 0,
   locked: false
 });
 
-app.rooms_meta.set('A1', {
+rooms_meta.set('A1', {
   password: {
     admin: 'a',
     user: ''
@@ -32,16 +35,9 @@ app.rooms_meta.set('A1', {
   users: []
 });
 
-// Set globals
-app.set('socket', app.socket);
-app.set('rooms', app.rooms);
-app.set('rooms_meta', app.rooms_meta);
-
-// Socket.io fix for windows
-if (/^win/.test(process.platform)) {
-  console.warn('Starting uws bug-hack interval under Windows');
-  setInterval(() => {}, 50);
-}
+// set globals
+app.set('rooms', rooms);
+app.set('rooms_meta', rooms_meta);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

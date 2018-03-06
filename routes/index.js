@@ -5,21 +5,34 @@ var router = express.Router();
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Rolls' });
 
-  io = req.app.get('socket');
   rooms = req.app.get('rooms');
   rooms_meta = req.app.get('rooms_meta');
 
-  // Sockets
+  // Websockets
   // User connects
-  io.on('connection', function(socket) {
+  req.app.io.on('connection', (socket) => {
     console.log('a user connected');
-    socket.join('index');
+    // Check if user is already connected to index
+
+    // Emit socket room redirect
+    //socket.emit('join-io', 'index');
+
+
 
     // Send rooms list
-    socket.emit('rooms', Array.from(rooms));
+    socket.emit('update-rooms', Array.from(rooms));
+  });
 
-    // Added room
-    socket.on('create', function(create_req) {
+    /*
+    // User joined index
+    socket.on('join-io', function(join_req) {
+      if (join.req.room == 'index') {
+        console.log('a user connected');
+      }
+    });
+
+    // Added rolls room
+    socket.on('create-room', function(create_req) {
       // Check room name
       if (!create_req.room_name || !create_req.room_name.trim()) {
         socket.emit('alert', 'Error: New room requires a name');
@@ -83,12 +96,11 @@ router.get('/', function(req, res, next) {
       socket.broadcast.to('index').emit('rooms', Array.from(rooms));
 
       // Move to new room
-      socket.emit('join', id);
-      socket.leave('index');
+      socket.emit('join-room', id);
     });
 
     // Join request
-    socket.on('join', function(join_req) {
+    socket.on('join-room', function(join_req) {
       console.log('a user requested to join room ' + join_req.room_id);
       // Chech user name
       if (!join_req.username || !join_req.username.trim()) {
@@ -142,8 +154,7 @@ router.get('/', function(req, res, next) {
       room.users = room_meta.users.length;
 
       // Move to room
-      socket.emit('join', id);
-      socket.leave('index');
+      socket.emit('join-room', id);
     });
 
     // User disconnects
@@ -153,8 +164,8 @@ router.get('/', function(req, res, next) {
       // Remove user from any connected room
       for (var [id, room_meta] in rooms_meta) {
         room_meta.users.forEach(function(a_user, i) {
+          console.log("HEREHERE" + a_user.name);
           if (socket.id == a_user.socket.id) {
-            console.log("HEREHERE" + a_user.name);
             room_meta.users.pop(i);
             rooms.get(id).users = room_meta.users.length;
           }
@@ -168,6 +179,7 @@ router.get('/', function(req, res, next) {
       socket.leave('index');
     });
   });
+  */
 
   // Helper functions
   function create_id() {

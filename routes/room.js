@@ -4,7 +4,6 @@ var router = express.Router();
 /* GET home page. */
 router.get('/:id', function(req, res, next) {
   var id = req.params.id;
-  io = req.app.get('socket');
   rooms = req.app.get('rooms');
   rooms_meta = req.app.get('rooms_meta');
 
@@ -21,19 +20,19 @@ router.get('/:id', function(req, res, next) {
 
   res.render('room', { room: room, room_meta: room_meta });
 
-  // Sockets
+  // Web sockets
   // User connects
-  io.on('connection', function(socket) {
+  req.app.wss.on('connection', (ws) => {
     // Check user
     room_meta.users.forEach(function(a_user) {
 
     });
 
     console.log('a user connected to room: ' + id);
-    socket.join(id);
+    //socket.join(id);
 
     // User disconnects
-    socket.on('disconnect', function() {
+    /*socket.on('disconnect', function() {
       console.log('a user disconnected');
       socket.leave(id);
 
@@ -44,7 +43,7 @@ router.get('/:id', function(req, res, next) {
           rooms.get(id).users = room_meta.users.length;
         }
       }
-    });
+    });*/
   });
 });
 

@@ -1,12 +1,17 @@
-$(document).ready(function() {
-  // Load Socket
+$(document).ready(() => {
+  // Load web socket
   var socket = io();
 
-  socket.on('alert', function(text) {
-    alert(text);
+  socket.on('connect', () => {
+    let rms = Object.keys(socket);
+    console.log(rms); // [ <socket.id>, 'room 237' ]
   });
-  
-  socket.on('rooms', function(rooms) {
+  socket.on('alert', (text) => { alert(text) });
+  socket.on('rooms', (rooms) => { update_rooms(rooms) });
+  socket.on('join-room', (id) => { join_room(id) });
+  socket.on('disconnect', () => {});
+
+  function update_rooms(rooms) {
     var room_table = '';
     for (var [id, room] of rooms) {
       room_table += '<tr>';
@@ -19,31 +24,33 @@ $(document).ready(function() {
     }
 
     $('#room-list tbody').html(room_table);
-  });
+  }
 
-  socket.on('join', function(id) {
+  function join_room(id) {
     alert('Joining');
     window.location.href = '/room/' + id;
-  });
+  }
 
-  $('#create-button').on('click', function(event) {
+  // Form: Create Room
+  $('#create-button').on('click', (event) => {
     $('#create-modal').modal();
   });
 
-  $('form#create-form').submit(function() {
-    var create_req = {
+  $('form#create-form').submit(() => {
+    var data = {
       username: $(this).find('input#username').val(),
       room_name: $(this).find('input#room-name').val(),
       admin_password: $(this).find('input#admin-password').val(),
       user_password: $(this).find('input#user-password').val()
     };
+    socket.emit('create-room', data);
 
-    socket.emit('create', create_req);
-    console.log('Creating');
+    console.log('Creating Room'); // DEBUG
     return false;
   });
 
-  $('#room-list').on('click', 'tbody tr', function(event) {
+  // Table: Room-List
+  $('#room-list').on('click', 'tbody tr', (event) => {
     var room_name = $(this).find('td.room-name').html();
     var room_id = $(this).find('td.room-id').html();
     var room_locked = ($(this).find('td.room-locked').html() == 1);
@@ -66,21 +73,22 @@ $(document).ready(function() {
     $('#connect-modal').modal();
   });
 
-  $('#connect-modal button#password-login').on('click', function(event) {
+  // Form: Join Room
+  $('#connect-modal button#password-login').on('click', (event) => {
     var connect = $('#connect-modal');
     connect.find('label#password-label').removeClass('d-none');
     connect.find('input#password').removeClass('d-none');
     connect.find('button#password-login').addClass('d-none');
   });
 
-  $('form#connect-form').submit(function() {
+  $('form#connect-form').submit(() => {
     var join_req = {
       room_id: $(this).find('input#room-id').val(),
       username: $(this).find('input#username').val(),
       password: $(this).find('input#password').val()
     };
 
-    socket.emit('join', join_req);
+    socket.emit('join-room', join_req);
     console.log('Connecting');
     return false;
   });
