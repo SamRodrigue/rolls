@@ -4,56 +4,47 @@ var router = express.Router();
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Rolls' });
+});
 
-  rooms = req.app.get('rooms');
-  rooms_meta = req.app.get('rooms_meta');
-
+router.sockets = (io, rooms, rooms_meta) => {
   // Websockets
   // User connects
-  req.app.io.on('connection', (socket) => {
-    console.log('a user connected');
-    // Check if user is already connected to index
-
-    // Emit socket room redirect
-    //socket.emit('join-io', 'index');
-
-
-
-    // Send rooms list
-    socket.emit('update-rooms', Array.from(rooms));
-  });
-
-    /*
-    // User joined index
-    socket.on('join-io', function(join_req) {
-      if (join.req.room == 'index') {
-        console.log('a user connected');
+  io.on('connect', (socket) => {
+    socket.on('join-io', (room) => {
+      // Confirm room
+      if (room == 'index') {
+        console.log('a user joined index');
+        socket.join('index');
+      } else {
+        console.log('a user tried to join ' + room);
+        return;
       }
     });
 
     // Added rolls room
-    socket.on('create-room', function(create_req) {
+    socket.on('create-room', function(data) {
+      console.log(JSON.stringify(data));
       // Check room name
-      if (!create_req.room_name || !create_req.room_name.trim()) {
+      if (!data.room_name || !data.room_name.trim()) {
         socket.emit('alert', 'Error: New room requires a name');
         return;
       }
 
       // Chech user name
-      if (!create_req.username || !create_req.username.trim()) {
+      if (!data.user_name || !data.user_name.trim()) {
         socket.emit('alert', 'Error: Invalid user name');
         return;
       }
 
       // Check admin password
-      if (!create_req.admin_password) {
+      if (!data.admin_password) {
         socket.emit('alert', 'Error: An admin password is required');
         return;
       }
 
       // Check if room exists
       for (var [id, room] in rooms) {
-        if (room.name == create_req.room_name) {
+        if (room.name == data.room_name) {
           socket.emit('alert', 'Error: A room with the same name already exists');
           return;
         }
@@ -69,20 +60,20 @@ router.get('/', function(req, res, next) {
       // Create user
       var user = {
         socket: socket,
-        name: create_req.username,
+        name: data.user_name,
         role: 'admin'
       };
       
       var room = {
-        name: create_req.room_name,
+        name: data.room_name,
         users: 1,
-        locked: (create_req.user_password ? true : false)
+        locked: (data.user_password ? true : false)
       };
 
       var room_meta = {
         password: {
-          admin: create_req.admin_password,
-          user: create_req.user_password
+          admin: data.admin_password,
+          user: data.user_password
         },
         users: [user]
       };
@@ -100,16 +91,16 @@ router.get('/', function(req, res, next) {
     });
 
     // Join request
-    socket.on('join-room', function(join_req) {
-      console.log('a user requested to join room ' + join_req.room_id);
+    socket.on('join-room', function(data) {
+      console.log('a user requested to join room ' + data.room_id);
       // Chech user name
-      if (!join_req.username || !join_req.username.trim()) {
+      if (!data.user_name || !data.user_name.trim()) {
         socket.emit('alert', 'Error: Invalid user name');
         return;
       }
 
       // Find requested room
-      if (!rooms.has(join_req.room_id) || !rooms_meta.has(join_req.room_id)) {
+      if (!rooms.has(data.room_id) || !rooms_meta.has(data.room_id)) {
         console.log('ERROR: a user requested an unregistered room');
         
         // Send response to user
@@ -118,22 +109,22 @@ router.get('/', function(req, res, next) {
       }
 
       // Get room
-      var id = join_req.room_id;
+      var id = data.room_id;
       var room = rooms.get(id);
       var room_meta = rooms_meta.get(id);
 
       // Create user
       var user = {
         socket: socket,
-        name: join_req.username,
+        name: data.user_name,
         role: ''
       };
 
       // Check password
-      if (join_req.password == room_meta.password.admin) {
+      if (data.password == room_meta.password.admin) {
         user.role = 'admin';
         socket.emit('alert', 'DEBUG: ADMIN');
-      } else if (join_req.password == room_meta.password.user) {
+      } else if (data.password == room_meta.password.user) {
         user.role = 'user';
         socket.emit('alert', 'DEBUG: USER');
       } else {
@@ -178,13 +169,21 @@ router.get('/', function(req, res, next) {
       // Remove from index
       socket.leave('index');
     });
+
+    // Main
+    console.log('a user connected');
+
+    // Emit socket room redirect
+    socket.emit('join-io', 'index');
+
+    // Send rooms list
+    socket.emit('update-rooms', Array.from(rooms));    
   });
-  */
 
   // Helper functions
   function create_id() {
     return Math.random().toString(36).substr(2, 9);
   }
-});
+}
 
 module.exports = router;

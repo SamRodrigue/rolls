@@ -20,6 +20,9 @@ app.io.attach(app.server);
 rooms = new Map();
 rooms_meta = new Map();
 
+// Register route sockets
+index.sockets(app.io, rooms, rooms_meta);
+
 // Temp room
 rooms.set('A1', {
   name: 'TEST ROOM',
@@ -36,8 +39,8 @@ rooms_meta.set('A1', {
 });
 
 // set globals
-app.set('rooms', rooms);
-app.set('rooms_meta', rooms_meta);
+//app.set('rooms', rooms);
+//app.set('rooms_meta', rooms_meta);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

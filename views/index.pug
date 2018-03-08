@@ -12,7 +12,7 @@ block content
   
   .content.mt-3
     .container
-      table#room-list.table.table-striped.table-responsive.table-hover.table-bordered.table-condensed
+      table#rooms.table.table-striped.table-responsive.table-hover.table-bordered.table-condensed
         thead
           tr
             th.d-none
@@ -20,7 +20,7 @@ block content
             th.col-1.text-center Users
             th.d-none
             th.col-1.text-center Open
-        tbody
+        tbody#rooms-body
   
   .footer
 
@@ -28,21 +28,20 @@ block content
     .modal-dialog
       .modal-content
         .modal-header
-          h2#form-title Create Room 
+          h2 Create Room 
           button.close(data-dismiss='modal') &times;
 
         .modal-body
-          form#create-form
+          form#create
             .form-group
-              input#room-id.d-none(type='text')
-              label.mt-2(for='username') User Name
-              input#username.form-control(type='text')
-              label.mt-2(for='room-name') Room Name
-              input#room-name.form-control(type='text')
-              label.mt-2(for='admin-password') Admin Password
-              input#admin-password.form-control(type='password')
-              label.mt-2(for='user-password') User Password
-              input#user-password.form-control(type='password')
+              label(for='create-user-name') User Name
+              input#create-user-name.form-control(type='text', name='user-name')
+              label.mt-2(for='create-room-name') Room Name
+              input#create-room-name.form-control(type='text', name='room-name')
+              label.mt-2(for='create-admin-password') Admin Password
+              input#create-admin-password.form-control(type='password', name='admin-password')
+              label.mt-2(for='create-user-password') User Password
+              input#create-user-password.form-control(type='password', name='user-password')
               input#create-submit.d-none(type='submit')
         .modal-footer
           label(for='create-submit').btn.btn-primary
@@ -51,27 +50,27 @@ block content
             button.btn.btn-default(data-dismiss='modal')
               span Close
 
-  #connect-modal.modal.fade
+  #join-modal.modal.fade
     .modal-dialog
       .modal-content
         .modal-header
           h2 Join Room 
-          h3#form-title
+          h3#join-title
           button.close(data-dismiss='modal') &times;
 
         .modal-body
-          form#connect-form
+          form#join
             .form-group
-              input#room-id.d-none(type='text')
-              label(for='username') User Name
-              input#username.form-control(type='text')
-              label.mt-2#password-label(for='password') Password
-              input#password.form-control(type='password')
-              input#connect-submit.d-none(type='submit')
-          button.btn.btn-default.btn-sm#password-login
+              input#join-room-id.d-none(type='text', name='room-id')
+              label(for='join-user-name') User Name
+              input#join-user-name.form-control(type='text', name='user-name')
+              label.mt-2#join-label-password(for='join-password') Password
+              input#join-password.form-control(type='password' name='password')
+              input#join-submit.d-none(type='submit')
+          button.btn.btn-default.btn-sm#join-button-password
             span Admin Login
         .modal-footer
-          label(for='connect-submit').btn.btn-primary
+          label(for='join-submit').btn.btn-primary
             span Enter
           label
             button.btn.btn-default(data-dismiss='modal')
