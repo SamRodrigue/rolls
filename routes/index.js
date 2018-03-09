@@ -10,19 +10,21 @@ router.sockets = (io, rooms, rooms_meta) => {
   // Websockets
   // User connects
   io.on('connect', (socket) => {
-    socket.on('join-io', (room) => {
+    socket.on('join-io', (data) => {
       // Confirm room
-      if (room == 'index') {
+      if (data == 'index') {
         console.log('a user joined index');
         socket.join('index');
+        // Send rooms list
+        socket.emit('update-rooms', Array.from(rooms));  
       } else {
-        console.log('a user tried to join ' + room);
+        console.log('a user tried to join ' + data);
         return;
       }
     });
 
     // Added rolls room
-    socket.on('create-room', function(data) {
+    socket.on('create-room', (data) => {
       console.log(JSON.stringify(data));
       // Check room name
       if (!data.room_name || !data.room_name.trim()) {
@@ -30,7 +32,7 @@ router.sockets = (io, rooms, rooms_meta) => {
         return;
       }
 
-      // Chech user name
+      // Check user name
       if (!data.user_name || !data.user_name.trim()) {
         socket.emit('alert', 'Error: Invalid user name');
         return;
@@ -174,10 +176,7 @@ router.sockets = (io, rooms, rooms_meta) => {
     console.log('a user connected');
 
     // Emit socket room redirect
-    socket.emit('join-io', 'index');
-
-    // Send rooms list
-    socket.emit('update-rooms', Array.from(rooms));    
+    socket.emit('join-io', 'index');  
   });
 
   // Helper functions

@@ -47,12 +47,13 @@ $(document).ready(() => {
     console.log('disconnected');
   });
 
-  function join_io(room) {
-    console.log('Joining ' + room);
-    socket.emit('join-io', room);
+  function join_io(data) {
+    console.log('joining ' + data);
+    socket.emit('join-io', data);
   }
 
   function update_rooms(data) {
+    console.log('updating rooms');
     var room_table = '';
     for (var [id, room] of data) {
       room_table += '<tr>';
@@ -88,7 +89,8 @@ $(document).ready(() => {
   });
 
   // Table: Room-List
-  $(rooms.table).on('click', 'tbody tr', (event) => {
+  $(rooms.body).on('click', 'tr', () => {
+    console.log($('td.room-name', this).hide());
     var room_name = $(this).find('td.room-name').html();
     var room_id = $(this).find('td.room-id').html();
     var room_locked = ($(this).find('td.room-locked').html() == 1);
@@ -106,7 +108,7 @@ $(document).ready(() => {
       $(join.inputs.password).addClass('d-none');
       $(join.buttons.password).removeClass('d-none');
     }
-    alert(join.modal);
+    alert(join.modal + ' ' + room_id);
     $(join.modal).modal();
   });
 
