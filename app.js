@@ -2,6 +2,12 @@ var express = require('express');
 var http = require('http');
 var path = require('path');
 var socketio = require('socket.io');
+var session = require('express-session')({
+  secret: 'letsroll',
+  resave: true,
+  saveUninitialized: true
+});
+var sharedsession = require('express-socket.io-session');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
@@ -15,6 +21,8 @@ var app = express();
 app.server = http.createServer(app);
 app.io = socketio();
 app.io.attach(app.server);
+app.use(session);
+app.io.use(sharedsession(session, { autoSave: true }));
 
 // Rooms
 app.rooms = new Map();
@@ -40,11 +48,12 @@ app.set('view engine', 'pug');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
+//app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(logger('dev')); //!!!
 
 app.use('/', index);
 app.use('/users', users);
@@ -73,13 +82,26 @@ app.func = {};
 
 app.func.rooms_array = (rooms) => {
   var data = [];
-  rooms.forEach(room => {
-    data.push([ room.id, 
+  rooms.forEach((room, id) => {
+    data.push([ id, 
     {
       name: room.name,
       users: room.users.length,
       locked: room.locked
     }]);
+  });
+  return data;
+}
+
+app.func.room_array = (room) => {
+  var data = {
+    name: room.name,
+    users: []
+  };
+  room.users.forEach((user) => {
+    data.users.push({
+      name: user.name
+    });
   });
   return data;
 }
@@ -90,6 +112,10 @@ app.func.create_id = () => {
 
 // sockets
 app.io.on('connect', (socket) => {
+  // Register route sockets
+  index.sockets(socket, app.rooms, app.func);
+  room.sockets(socket, app.rooms, app.func);
+
   socket.on('join', (data) => {
     // Confirm room
     if (data == 'index') { // anyone can join index
@@ -114,9 +140,6 @@ app.io.on('connect', (socket) => {
       return;
     }
   });
-  // Register route sockets
-  index.sockets(socket, app.rooms, app.func);
-  room.sockets(socket, app.rooms, app.func);
 
   socket.on('disconnect', () => {
     // Remove user from room

@@ -39,10 +39,10 @@ $(document).ready(function() {
   socket.on('connect', function() {
     console.log('connected');
   });
-  socket.on('alert', (text) => { alert(text) });
-  socket.on('join-io', (data) => { join_io(data) });
-  socket.on('update-rooms', (data) => { update_rooms(data) });
-  socket.on('join-room', (data) => { join_room(data) });
+  socket.on('alert', function(text) { alert(text) });
+  socket.on('join-io', function(data) { join_io(data) });
+  socket.on('update-rooms', function(data) { update_rooms(data) });
+  socket.on('join-room', function(data) { join_room(data) });
   socket.on('disconnect', function() { 
     console.log('disconnected');
   });

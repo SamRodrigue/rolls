@@ -1,5 +1,8 @@
 extends layout
 
+block scripts
+  script(src='/javascripts/room.js')
+
 block content
   .top.text-center
     h1 Rolls
@@ -9,7 +12,7 @@ block content
     .container-fluid.mt-3
       .row
         #dice.col-12.col-sm-6.col-md-7.col-lg-8.border.border-primary
-          .user-area.col-12.m-1.border.border-dark.rounded
+          //.user-area.col-12.m-1.border.border-dark.rounded
             .row.user-status-bar
               .user-name.col-sm-12.col-md-4.border.border-success
                 span Name
@@ -40,12 +43,6 @@ block content
             .row.user-roll
               button.btn.btn-primary.col-12
                 span Roll
-          .user-dice.col-12.m-1.border.border-dark.rounded
-            .row.user-status-bar
-              .user-name.col-sm-12.col-md-4.border.border-success
-                span Name
-              .user-dice-status.col-sm-12.col-md-8.border.border-success
-                span 3d6:12|2d12:18|30
         #log.col-12.col-sm-6.col-md-5.col-lg-4.border.border-secondary
           span Log
 

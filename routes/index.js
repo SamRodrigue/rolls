@@ -87,8 +87,7 @@ router.sockets = (socket, rooms, func) => {
     }
 
     // Get room
-    var id = data.room_id;
-    var room = rooms.get(id);
+    var room = rooms.get(data.room_id);
 
     // Create user
     var user = {
@@ -98,10 +97,10 @@ router.sockets = (socket, rooms, func) => {
     };
 
     // Check password
-    if (data.password == room.password.admin) {
+    if (data.password === room.password.admin) {
       user.role = 'admin';
       socket.emit('alert', 'DEBUG: ADMIN');
-    } else if (data.password == room.password.user) {
+    } else if (data.password === room.password.user) {
       user.role = 'user';
       socket.emit('alert', 'DEBUG: USER');
     } else {
@@ -109,19 +108,49 @@ router.sockets = (socket, rooms, func) => {
       return;
     }
 
-    // Check if user name is unique in room
-    for (var i = 0; i < room.users.length; i++) {
-      if (user.name == room.users[i].name) {
-        socket.emit('alert', 'Error: A user with that name is already in the room');
-        return;
+    // Check if user is already in room
+    var user_error = false;
+    var new_user = true;
+    room.users.some((a_user, index) => {
+      if (user.socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+        console.log('a user rejoined room ' + room.name);
+        // Check if user name is unique in room
+        room.users.some((another_user) => {
+          if (user.name === another_user.name && 
+              user.socket.handshake.sessionID !== another_user.socket.handshake.sessionID) {
+            socket.emit('alert', 'Error: A user with that name is already in the room');
+            user_error = true;
+            return true;
+          }
+        });
+        if (user_error) return true;
+
+        new_user = false;
+        room.users[index] = user;
+        return true;
       }
+    });
+
+    if (!user_error) {
+      // New user
+      if (new_user) {
+        // Check if user name is unique in room
+        room.users.some((a_user) => {
+          if (user.name === a_user.name) {
+            socket.emit('alert', 'Error: A user with that name is already in the room');
+            user_error = true;
+            return true;
+          }
+        });
+
+        if (!user_error) {
+          // Add user to room
+          room.users.push(user);
+        }
+      } 
+      // Move to room
+      socket.emit('join-room', data.room_id);
     }
-
-    // Add user to room_meta and recalculate number of users
-    room.users.push(user);
-
-    // Move to room
-    socket.emit('join-room', id);
   });
 
   // Main
