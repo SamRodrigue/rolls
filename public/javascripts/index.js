@@ -32,24 +32,24 @@ var rooms = {
   body: '#rooms-body'
 };
 
-$(document).ready(() => {
+$(document).ready(function() {
   // Load web socket
   var socket = io();
   
-  socket.on('connect', () => {
+  socket.on('connect', function() {
     console.log('connected');
   });
   socket.on('alert', (text) => { alert(text) });
   socket.on('join-io', (data) => { join_io(data) });
   socket.on('update-rooms', (data) => { update_rooms(data) });
   socket.on('join-room', (data) => { join_room(data) });
-  socket.on('disconnect', () => { 
+  socket.on('disconnect', function() { 
     console.log('disconnected');
   });
 
   function join_io(data) {
     console.log('joining ' + data);
-    socket.emit('join-io', data);
+    socket.emit('join', data);
   }
 
   function update_rooms(data) {
@@ -77,7 +77,7 @@ $(document).ready(() => {
     $(create.modal).modal();
   });
 
-  $(create.form).submit(() => {
+  $(create.form).submit(function() {
     var data = {
       user_name: $(create.inputs.user_name).val(),
       room_name: $(create.inputs.room_name).val(),
@@ -89,13 +89,12 @@ $(document).ready(() => {
   });
 
   // Table: Room-List
-  $(rooms.body).on('click', 'tr', () => {
-    console.log($('td.room-name', this).hide());
+  $(rooms.body).on('click', 'tr', function() {
     var room_name = $(this).find('td.room-name').html();
     var room_id = $(this).find('td.room-id').html();
     var room_locked = ($(this).find('td.room-locked').html() == 1);
     
-    $(join.title).html(room_name);
+    $(join.title).html('Join: ' + room_name);
     $(join.inputs.room_id).val(room_id);
 
     if (room_locked) {
@@ -108,18 +107,17 @@ $(document).ready(() => {
       $(join.inputs.password).addClass('d-none');
       $(join.buttons.password).removeClass('d-none');
     }
-    alert(join.modal + ' ' + room_id);
     $(join.modal).modal();
   });
 
   // Form: Join Room
-  $(join.buttons.password).on('click', (event) => {
+  $(join.buttons.password).on('click', function(event) {
     $(join.buttons.password).addClass('d-none');
     $(join.labels.password).removeClass('d-none');
     $(join.inputs.password).removeClass('d-none');
   });
 
-  $(join.form).submit(() => {
+  $(join.form).submit(function() {
     var data = {
       room_id: $(join.inputs.room_id).val(),
       user_name: $(join.inputs.user_name).val(),

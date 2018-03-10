@@ -17,20 +17,12 @@ app.io = socketio();
 app.io.attach(app.server);
 
 // Rooms
-rooms = new Map();
-rooms_meta = new Map();
-
-// Register route sockets
-index.sockets(app.io, rooms, rooms_meta);
+app.rooms = new Map();
 
 // Temp room
-rooms.set('A1', {
+app.rooms.set('A1', {
   name: 'TEST ROOM',
-  users: 0,
-  locked: false
-});
-
-rooms_meta.set('A1', {
+  locked: false,
   password: {
     admin: 'a',
     user: ''
@@ -76,4 +68,58 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
+// helper functions
+app.func = {};
+
+app.func.rooms_array = (rooms) => {
+  var data = [];
+  rooms.forEach(room => {
+    data.push([ room.id, 
+    {
+      name: room.name,
+      users: room.users.length,
+      locked: room.locked
+    }]);
+  });
+  return data;
+}
+
+app.func.create_id = () => {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+// sockets
+app.io.on('connect', (socket) => {
+  socket.on('join', (data) => {
+    // Confirm room
+    if (data == 'index') { // anyone can join index
+      console.log('a user joined index');
+      socket.join('index');
+      // Send rooms list
+      socket.emit('update-rooms', app.func.rooms_array(app.rooms));  
+    } else {
+      // Check if user has access to room
+      if (!app.rooms.has(data)) {
+        console.log('A user tried to access an unavailable room: ' + data);
+        return;
+      }
+      var room = app.rooms.get(data);
+      for (var user in room.users) {
+        if (user.socket.id == socket.id) {
+          console.log('a user joined ' + data);
+          socket.join(data);
+        }
+      }
+      console.log('a user tried to join ' + data);
+      return;
+    }
+  });
+  // Register route sockets
+  index.sockets(socket, app.rooms, app.func);
+  room.sockets(socket, app.rooms, app.func);
+
+  socket.on('disconnect', () => {
+    // Remove user from room
+  });
+});
 module.exports = app;
