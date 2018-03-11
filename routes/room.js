@@ -87,6 +87,26 @@ router.sockets = (io, socket, rooms, func) => {
 
   socket.on('remove-dice', (data) => {
     console.log('a user removed a ' + data.type);
+    var room = rooms.get(data.room_id);
+    var user;
+    room.users.some((a_user) => {
+      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+        user = a_user;
+        return true;
+      }
+    });
+    if (user) { 
+      // Remove dice
+      var changed = false;
+      user.dice.some((die, index) => {
+        if (die.type === data.type) {
+          user.dice.pop(index);
+          changed = true;
+        }
+      });
+
+      if (changed) io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+    }
   });
 
   socket.on('roll-dice', (data) => {
@@ -104,6 +124,24 @@ router.sockets = (io, socket, rooms, func) => {
       user.dice.forEach((die) => {
         func.roll(die);
       });
+
+      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+    }
+  });
+
+  socket.on('clear-dice', (data) => {
+    console.log('a user is clearing dice');
+    var room = rooms.get(data.room_id);
+    var user;
+    room.users.some((a_user) => {
+      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+        user = a_user;
+        return true;
+      }
+    });
+    if (user) { 
+      // Clear dice
+      user.dice = [];
 
       io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
     }

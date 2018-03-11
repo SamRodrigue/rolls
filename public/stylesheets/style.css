@@ -27,3 +27,58 @@ a {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.d4, .d6, .d8, .d10, .d12, .d20 {
+  width: 64px;
+  height: 64px;
+  background-size: contain;
+  background-position: center; 
+  background-repeat: no-repeat;
+}
+.d4 {
+  background-image: url('/images/d4.png');
+}
+.d6 {
+  background-image: url('/images/d6.png');
+}
+.d8 {
+  background-image: url('/images/d8.png');
+}
+.d10 {
+  background-image: url('/images/d10.png');
+}
+.d12 {
+  background-image: url('/images/d12.png');
+}
+.d20 {
+  background-image: url('/images/d20.png');
+}
+
+.die-number {
+  font-size: 2em;
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0 #000,
+  -1px 1px 0 #000,
+  1px -1px 0 #000,
+  -1px -1px 0 #000,
+  0px 1px 0 #000,
+  0px -1px 0 #000,
+  -1px 0px 0 #000,
+  1px 0px 0 #000,
+  2px 2px 0 #000,
+  -2px 2px 0 #000,
+  2px -2px 0 #000,
+  -2px -2px 0 #000,
+  0px 2px 0 #000,
+  0px -2px 0 #000,
+  -2px 0px 0 #000,
+  2px 0px 0 #000,
+  1px 2px 0 #000,
+  -1px 2px 0 #000,
+  1px -2px 0 #000,
+  -1px -2px 0 #000,
+  2px 1px 0 #000,
+  -2px 1px 0 #000,
+  2px -1px 0 #000,
+  -2px -1px 0 #000;
+}

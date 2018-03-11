@@ -26,6 +26,12 @@ function add_dice() {
 
 function remove_dice() {
   console.log('removing ' + dice_type);
+  socket.emit('remove-dice', { room_id: room_id, type: dice_type }); socket.send('');
+}
+
+function clear_dice() {
+  console.log('clearing');
+  socket.emit('clear-dice', { room_id: room_id }); socket.send('');
 }
 
 function roll_dice() {
@@ -78,8 +84,9 @@ $(document).ready(function() {
     // Add users
     console.log('updating room');
     var dice = '';
+    var user_dice = '';
     for (var a_user of data.users) {
-      dice += `
+      a_dice = `
 <div class="user-area col-12 m-1 border border-dark rounded">
   <div class="row user-status-bar">
     <div class="user-name col-12 border border-success text-center">
@@ -100,7 +107,7 @@ $(document).ready(function() {
           <span>` + status_dice(a_user.dice, 'd10') + `</span>
         </div>
         <div class="user-dice-status-12 col-6 col-md-4 col-lg-3 col-xl-2">
-          <span>` + status_dice(a_user.dice, 'd412') + `</span>
+          <span>` + status_dice(a_user.dice, 'd12') + `</span>
         </div>
         <div class="user-dice-status-20 col-6 col-md-4 col-lg-3 col-xl-2">
           <span>` + status_dice(a_user.dice, 'd20') + `</span>
@@ -113,18 +120,21 @@ $(document).ready(function() {
   </div>
   <div class="row user-dice">`;
       for (var die of a_user.dice) {
-        dice += `
-    <div class="` + die.type + ` bg-` + colors[die.type] + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 border border-warning mx-auto" style="height: 64px;">
-      <span class="bg-light border border-warning center" style="font-size: 2em;">` + ((die.value > -1) ? die.value : '?') + `</span>
+        a_dice += `
+    <div class="` + die.type + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;">
+      <span class="center die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
     </div>`;
       }
-      dice += `
+      a_dice += `
   </div>`;
       if (user.name === a_user.name) {
-        dice += `
+        a_dice += `
   <div class="row user-roll">
-    <button id="roll" class="btn btn-primary col-7" onClick="roll_dice()">
+    <button id="roll" class="btn btn-primary col-4" onClick="roll_dice()">
       <span>Roll</span>
+    </button>
+    <button id="clear-roll" class="btn btn-warning col-3" onClick="clear_dice()">
+      <span>Clear</span>
     </button>
     <div class="dropdown col-3 m-0 p-0">
       <button class="btn btn-default dropdown-toggle col-12" type="button" data-toggle="dropdown">
@@ -145,12 +155,17 @@ $(document).ready(function() {
     <button id="remove-dice" class="btn btn-danger col-1 p-0 m-0" onClick="remove_dice()">
       <span>-</span>
     </button>
-  </div>`;
-      
-      }
-      dice += `
+  </div>
 </div>`;
+      user_dice = a_dice;  
+      } else {
+        a_dice += `
+</div>`;
+        dice += a_dice;
+      }
     }
+    // Add user to top of list
+    dice = user_dice + dice;
     $('#dice').html(dice);
   }
 });
