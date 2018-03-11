@@ -32,6 +32,11 @@ a {
   overflow-y: scroll;
 }
 
+.user-name {
+  color: #FFFFFF;
+  background-color: #000000;
+}
+
 .d4, .d6, .d8, .d10, .d12, .d20 {
   width: 64px;
   height: 64px;
@@ -39,23 +44,36 @@ a {
   background-position: center; 
   background-repeat: no-repeat;
 }
-.d4 {
-  background-image: url('/images/d4.png');
+.d4 {  background-image: url('/images/d4.png'); }
+.d6 {  background-image: url('/images/d6.png'); }
+.d8 {  background-image: url('/images/d8.png'); }
+.d10 { background-image: url('/images/d10.png'); }
+.d12 { background-image: url('/images/d12.png'); }
+.d20 { background-image: url('/images/d20.png'); }
+
+.d4-label {
+  color: #FFFFFF;
+  background-color: #3366FF;
 }
-.d6 {
-  background-image: url('/images/d6.png');
+.d6-label {
+  color: #000000;
+  background-color: #FFFF00;
 }
-.d8 {
-  background-image: url('/images/d8.png');
+.d8-label {
+  color: #FFFFFF;
+  background-color: #008000;
 }
-.d10 {
-  background-image: url('/images/d10.png');
+.d10-label {
+  color: #000000;
+  background-color: #FF0000;
 }
-.d12 {
-  background-image: url('/images/d12.png');
+.d12-label {
+  color: #000000;
+  background-color: #FF9900;
 }
-.d20 {
-  background-image: url('/images/d20.png');
+.d20-label {
+  color: #FFFFFF;
+  background-color: #993366;
 }
 
 .die-number {

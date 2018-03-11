@@ -9,7 +9,7 @@ router.get('/', function(req, res, next) {
 router.sockets = (io, socket, rooms, func) => {
   // Added rolls room
   socket.on('create-room', (data) => {
-    console.log(JSON.stringify(data));
+    console.log('creating new room ' + data.room_name);
     // Check room name
     if (!data.room_name || !data.room_name.trim()) {
       socket.emit('alert', 'Error: New room requires a name');

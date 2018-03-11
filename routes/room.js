@@ -14,7 +14,7 @@ router.get('/:id', function(req, res, next) {
     return;
   }
 
-  res.render('room', { room: rooms.get(id) });
+  res.render('room', { title: 'Room: ' + rooms.get(id).name, room: rooms.get(id) });
 });
 
 router.sockets = (io, socket, rooms, func) => {
@@ -36,7 +36,6 @@ router.sockets = (io, socket, rooms, func) => {
       if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
         user = a_user;
         // Update socket if session id matches
-        console.log('user is authorized');
         user.socket = socket;
         authorized = true;
         return true;
@@ -131,7 +130,6 @@ router.sockets = (io, socket, rooms, func) => {
       if (changed) {
         io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
         var date = new Date();
-        console.log(date.getTime());
         io.sockets.in(data.room_id).emit('room-log', 
         { 
           user: user.name,

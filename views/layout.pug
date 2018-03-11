@@ -1,6 +1,7 @@
 doctype html
 html
   head
+    meta(name="viewport" content="width=device-width, initial-scale=1")
     title= title
     link(rel='stylesheet', href='/modules/bootstrap/css/bootstrap.css')
     link(rel='stylesheet', href='/modules/open-iconic/font/css/open-iconic.css')
@@ -10,5 +11,5 @@ html
     script(src='/modules/popper/js/popper.js')
     script(src='/modules/bootstrap/js/bootstrap.js')
     block scripts
-  body
+  body.pl-1.pr-1.pl-sm-3.pr-sm-3
     block content

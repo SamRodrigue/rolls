@@ -14,12 +14,12 @@ block content
     .container
       table#rooms.table.table-striped.table-responsive.table-hover.table-bordered.table-condensed
         thead
-          tr
-            th.d-none
-            th.col-10 Room
-            th.col-1.text-center Users
-            th.d-none
-            th.col-1.text-center Open
+          tr(scope="row")
+            th(scope="col").d-none
+            th(scope="col").col-10 Room
+            th(scope="col").col-1.text-center Users
+            th(scope="col").d-none
+            th(scope="col").col-1.text-center Open
         tbody#rooms-body
   
   .footer

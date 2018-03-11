@@ -51,11 +51,11 @@ $(document).ready(function() {
     console.log('updating rooms');
     var room_table = '';
     for (var [id, room] of data) {
-      room_table += '<tr>';
-      room_table += '<td class="room-id d-none">' + id + '</td>';
-      room_table += '<td class="room-name">' + room.name + '</td>';
-      room_table += '<td class="room-users text-center">' + room.users.toString() + '</td>';
-      room_table += '<td class="room-locked d-none">' + (room.locked ? "1" : "0") + '</td>';
+      room_table += '<tr scope="row">';
+      room_table += '<td class="room-id d-none" scope="col">' + id + '</td>';
+      room_table += '<td class="room-name" scope="col">' + room.name + '</td>';
+      room_table += '<td class="room-users text-center" scope="col">' + room.users.toString() + '</td>';
+      room_table += '<td class="room-locked d-none" scope="col">' + (room.locked ? "1" : "0") + '</td>';
       room_table += '<td class="text-center"><span class="oi" data-glyph="' + (room.locked ? "lock-locked" : "lock-unlocked") + '"></span></td>';
       room_table += '</tr>';
     }

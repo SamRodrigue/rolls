@@ -154,6 +154,31 @@ app.func.dice_status = (dice) => {
   return out;
 }
 
+// heartbeat
+heartbeat = setInterval(() => {
+  for (var [id, room] of app.rooms) {
+    room.users.some((user, index) => {
+      //Check empty socket
+      var empty_socket = true;
+      Object.keys(app.io.sockets.sockets).some((socket_id) => {
+        var socket = app.io.sockets.sockets[socket_id];
+        if (socket.handshake.sessionID === user.socket.handshake.sessionID) {
+          empty_socket = false;
+          return true;
+        }
+      })
+      if (empty_socket) { // May need to as alive attribute to skip one check
+        console.log('removing user from ' + id);
+        room.users.pop(index);
+        if (room.users.length === 0) {
+          console.log('closing room ' + id);
+          app.rooms.delete(id);
+        }
+      }
+    });
+  }
+}, 5 * 60 * 1000);
+
 // sockets
 app.io.on('connect', (socket) => {
   // Register route sockets
@@ -163,11 +188,9 @@ app.io.on('connect', (socket) => {
   // Main
   console.log('a user connected');
 
-  // Emit socket room redirect
-  //socket.emit('join-io', 'index');
-
   // Join io rooms
   socket.on('join', (data) => {
+    socket.is_alive = true;
     // Confirm room
     if (data == 'index') { // anyone can join index
       socket.leaveAll();
@@ -199,15 +222,6 @@ app.io.on('connect', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('a user disconnected');
-    // Remove user from room
-    for (var [id, room] of app.rooms) {
-      room.users.some((user, index) => {
-        if (socket.handshake.sessionID === user.socket.handshake.sessionID) {
-          //room.users.pop(index); // Is removing user when transitioning from index to room
-          return true;
-        }
-      });
-    }
   });
 });
 

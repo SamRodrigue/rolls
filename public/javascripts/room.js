@@ -93,22 +93,22 @@ $(document).ready(function() {
     </div>
     <div class="user-dice-status col-12 border border-success">
       <div class="row">
-        <div class="user-dice-status-4 col-6 col-md-4 col-lg-3 col-xl-2">
+        <div class="d4-label col-6 col-md-4 col-lg-3 col-xl-2 text-center">
           <span>` + status_dice(a_user.dice, 'd4') + `</span>
         </div>
-        <div class="user-dice-status-6 col-6 col-md-4 col-lg-3 col-xl-2">
+        <div class="d6-label col-6 col-md-4 col-lg-3 col-xl-2 text-center">
           <span>` + status_dice(a_user.dice, 'd6') + `</span>
         </div>
-        <div class="user-dice-status-8 col-6 col-md-4 col-lg-3 col-xl-2">
+        <div class="d8-label col-6 col-md-4 col-lg-3 col-xl-2 text-center">
           <span>` + status_dice(a_user.dice, 'd8') + `</span>
         </div>
-        <div class="user-dice-status-10 col-6 col-md-4 col-lg-3 col-xl-2">
+        <div class="d10-label col-6 col-md-4 col-lg-3 col-xl-2 text-center">
           <span>` + status_dice(a_user.dice, 'd10') + `</span>
         </div>
-        <div class="user-dice-status-12 col-6 col-md-4 col-lg-3 col-xl-2">
+        <div class="d12-label col-6 col-md-4 col-lg-3 col-xl-2 text-center">
           <span>` + status_dice(a_user.dice, 'd12') + `</span>
         </div>
-        <div class="user-dice-status-20 col-6 col-md-4 col-lg-3 col-xl-2">
+        <div class="d20-label col-6 col-md-4 col-lg-3 col-xl-2 text-center">
           <span>` + status_dice(a_user.dice, 'd20') + `</span>
         </div>
         <div class="user-dice-status-total col-12 col-lg-6 col-xl-12 text-center">
@@ -116,15 +116,6 @@ $(document).ready(function() {
         </div>
       </div>
     </div>
-  </div>
-  <div class="row user-dice">`;
-      for (var die of a_user.dice) {
-        a_dice += `
-    <div class="` + die.type + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;">
-      <span class="center die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
-    </div>`;
-      }
-      a_dice += `
   </div>`;
       if (user.name === a_user.name) {
         a_dice += `
@@ -140,12 +131,12 @@ $(document).ready(function() {
         <span id="dice-type" value="` + dice_type + `">` + dice_type + `<span>
       </button>
       <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-        <button class="dice-type-select dropdown-item col-12" type="button" onClick="set_dice_type('d4')">d4</button>
-        <button class="dice-type-select dropdown-item" type="button" onClick="set_dice_type('d6')">d6</button>
-        <button class="dice-type-select dropdown-item" type="button" onClick="set_dice_type('d8')">d8</button>
-        <button class="dice-type-select dropdown-item" type="button" onClick="set_dice_type('d10')">d10</button>
-        <button class="dice-type-select dropdown-item" type="button" onClick="set_dice_type('d12')">d12</button>
-        <button class="dice-type-select dropdown-item" type="button" onClick="set_dice_type('d20')">d20</button>
+        <button class="dice-type-select dropdown-item d4-label text-center" type="button" onClick="set_dice_type('d4')">d4</button>
+        <button class="dice-type-select dropdown-item d6-label text-center" type="button" onClick="set_dice_type('d6')">d6</button>
+        <button class="dice-type-select dropdown-item d8-label text-center" type="button" onClick="set_dice_type('d8')">d8</button>
+        <button class="dice-type-select dropdown-item d10-label text-center" type="button" onClick="set_dice_type('d10')">d10</button>
+        <button class="dice-type-select dropdown-item d12-label text-center" type="button" onClick="set_dice_type('d12')">d12</button>
+        <button class="dice-type-select dropdown-item d20-label text-center" type="button" onClick="set_dice_type('d20')">d20</button>
       </div>
     </div> 
     <button id="add-dice" class="btn btn-success col-1 p-0 m-0" onClick="add_dice()">
@@ -154,19 +145,28 @@ $(document).ready(function() {
     <button id="remove-dice" class="btn btn-danger col-1 p-0 m-0" onClick="remove_dice()">
       <span>-</span>
     </button>
+  </div>`;
+      }
+      a_dice += `
+  <div class="row user-dice">`;
+      for (var die of a_user.dice) {
+        a_dice += `
+    <div class="` + die.type + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;">
+      <span class="center die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
+    </div>`;
+      }
+      a_dice += `
   </div>
 </div>`;
-      user_dice = a_dice;  
-      } else {
-        a_dice += `
-</div>`;
-        dice += a_dice;
-      }
+      if (user.name === a_user.name) user_dice = a_dice;
+      else dice += a_dice;
     }
     // Add user to top of list
     dice = user_dice + dice;
     $('#dice').html(dice);
+    $('#log').css('height', 0);
     $('#log').css('height', $('#dice').outerHeight());
+    $('#log').scrollTop($('#log')[0].scrollHeight - $('#log').height());
   }
 
   function room_log(data) {
