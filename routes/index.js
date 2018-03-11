@@ -6,7 +6,7 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'Rolls' });
 });
 
-router.sockets = (socket, rooms, func) => {
+router.sockets = (io, socket, rooms, func) => {
   // Added rolls room
   socket.on('create-room', (data) => {
     console.log(JSON.stringify(data));
@@ -47,7 +47,8 @@ router.sockets = (socket, rooms, func) => {
     var user = {
       socket: socket,
       name: data.user_name,
-      role: 'admin'
+      role: 'admin',
+      dice: []
     };
     
     var room = {
@@ -57,8 +58,9 @@ router.sockets = (socket, rooms, func) => {
         admin: data.admin_password,
         user: data.user_password
       },
-      users: [user]
+      users: []
     };
+    room.users.push(user);
     rooms.set(id, room);
 
     // Update all other index clients
@@ -93,16 +95,17 @@ router.sockets = (socket, rooms, func) => {
     var user = {
       socket: socket,
       name: data.user_name,
-      role: ''
+      role: '',
+      dice: []
     };
 
     // Check password
     if (data.password === room.password.admin) {
       user.role = 'admin';
-      socket.emit('alert', 'DEBUG: ADMIN');
+      //socket.emit('alert', 'DEBUG: ADMIN');
     } else if (data.password === room.password.user) {
       user.role = 'user';
-      socket.emit('alert', 'DEBUG: USER');
+      //socket.emit('alert', 'DEBUG: USER');
     } else {
       socket.emit('alert', 'Error: Incorrect password');
       return;
@@ -145,19 +148,15 @@ router.sockets = (socket, rooms, func) => {
 
         if (!user_error) {
           // Add user to room
+          console.log('adding user to ' + room.name);
           room.users.push(user);
+          console.log('Room Size ' + rooms.get(data.room_id).users.length);
         }
       } 
       // Move to room
       socket.emit('join-room', data.room_id);
     }
   });
-
-  // Main
-  console.log('a user connected');
-
-  // Emit socket room redirect
-  socket.emit('join-io', 'index');
 }
 
 module.exports = router;

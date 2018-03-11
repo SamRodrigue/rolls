@@ -7,7 +7,7 @@ router.get('/:id', function(req, res, next) {
   var rooms = req.app.rooms;
 
   if (!rooms.has(id)) {
-    console.log('A user tried to access an unavailable room: ' + id);
+    console.log('ERROR: a user tried to access an unavailable room: ' + id);
 
     // Reroute to error
     res.render('error', { error: { status: 'This room does not exist'}});
@@ -17,7 +17,7 @@ router.get('/:id', function(req, res, next) {
   res.render('room', { room: rooms.get(id) });
 });
 
-router.sockets = (socket, rooms, func) => {
+router.sockets = (io, socket, rooms, func) => {
   socket.on('enter-room', (data) => {
     // Check if room exists
     if (!rooms.has(data)) {
@@ -32,14 +32,14 @@ router.sockets = (socket, rooms, func) => {
 
     // Check if user is authorized to enter room
     var authorized = false;
-    room.users.forEach((a_user) => {
-      console.log('compare ' + socket.handshake.sessionID + ' ' + a_user.socket.handshake.sessionID);
+    room.users.some((a_user) => {
       if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
         user = a_user;
         // Update socket if session id matches
         console.log('user is authorized');
         user.socket = socket;
         authorized = true;
+        return true;
       }
     });
 
@@ -49,18 +49,64 @@ router.sockets = (socket, rooms, func) => {
     }
 
     // Send room data
-    var room_data = func.room_array(room);
-    room_data.user = { name: user.name };
-
-    socket.emit('room-data', room_data);
+    socket.emit('user-data', { name: user.name });
+    io.sockets.in(data).emit('room-data', func.room_array(room));
   });
 
-  socket.on('dice', (data) => {
+  socket.on('add-dice', (data) => {
+    console.log('a user added a ' + data.type);
+    var dice = { type: '', value: -1 };
+    if (['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].includes(data.type)) {
+      dice.type = data.type;
+    } else {
+      console.log('ERROR: a user tried to add an unknown die ' + data.type);
+      return;
+    }
+    // Check if room exists
+    if (!rooms.has(data.room_id)) {
+      console.log('ERROR: a user requested an unregistered room');
+      
+      // Send response to user
+      socket.emit('alert', 'Error: Unknow room');
+      return;
+    }
+    var room = rooms.get(data.room_id);
+    var user;
+    room.users.some((a_user) => {
+      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+        user = a_user;
+        return true;
+      }
+    });
+    if (user) { 
+      user.dice.push(dice);
+      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+    }
 
   });
 
-  socket.on('roll', (data) => {
+  socket.on('remove-dice', (data) => {
+    console.log('a user removed a ' + data.type);
+  });
 
+  socket.on('roll-dice', (data) => {
+    console.log('a user is rolling');
+    var room = rooms.get(data.room_id);
+    var user;
+    room.users.some((a_user) => {
+      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+        user = a_user;
+        return true;
+      }
+    });
+    if (user) { 
+      // Roll dice
+      user.dice.forEach((die) => {
+        func.roll(die);
+      });
+
+      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+    }
   });
 };
 

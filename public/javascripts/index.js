@@ -38,19 +38,14 @@ $(document).ready(function() {
   
   socket.on('connect', function() {
     console.log('connected');
+    socket.emit('join', 'index'); socket.send('');
   });
   socket.on('alert', function(text) { alert(text) });
-  socket.on('join-io', function(data) { join_io(data) });
   socket.on('update-rooms', function(data) { update_rooms(data) });
   socket.on('join-room', function(data) { join_room(data) });
   socket.on('disconnect', function() { 
     console.log('disconnected');
   });
-
-  function join_io(data) {
-    console.log('joining ' + data);
-    socket.emit('join', data);
-  }
 
   function update_rooms(data) {
     console.log('updating rooms');
@@ -67,9 +62,9 @@ $(document).ready(function() {
     $(rooms.body).html(room_table);
   }
 
-  function join_room(id) {
-    alert('Joining');
-    window.location.href = '/room/' + id;
+  function join_room(data) {
+    console.log('joining ' + data);
+    window.location.href = '/room/' + data;
   }
 
   // Form: Create Room
@@ -84,7 +79,7 @@ $(document).ready(function() {
       admin_password: $(create.inputs.admin_password).val(),
       user_password: $(create.inputs.user_password).val()
     };
-    socket.emit('create-room', data);
+    socket.emit('create-room', data); socket.send('');
     return false;
   });
 
@@ -123,7 +118,7 @@ $(document).ready(function() {
       user_name: $(join.inputs.user_name).val(),
       password: $(join.inputs.password).val()
     };
-    socket.emit('join-room', data);
+    socket.emit('join-room', data); socket.send('');
     console.log('Connecting ' + JSON.stringify(data));
     return false;
   });
