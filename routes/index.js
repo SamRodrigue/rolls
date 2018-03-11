@@ -17,7 +17,7 @@ router.sockets = (io, socket, rooms, func) => {
     }
 
     // Check user name
-    if (!data.user_name || !data.user_name.trim()) {
+    if (!data.user_name || !data.user_name.trim() || data.user_name.length > 32) {
       socket.emit('alert', 'Error: Invalid user name');
       return;
     }
@@ -74,7 +74,7 @@ router.sockets = (io, socket, rooms, func) => {
   socket.on('join-room', function(data) {
     console.log('a user requested to join room ' + data.room_id);
     // Chech user name
-    if (!data.user_name || !data.user_name.trim()) {
+    if (!data.user_name || !data.user_name.trim() || data.user_name.length > 32) {
       socket.emit('alert', 'Error: Invalid user name');
       return;
     }

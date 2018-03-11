@@ -75,13 +75,12 @@ $(document).ready(function() {
   socket.on('alert',      function(text) { alert(text) });
   socket.on('user-data',  function(data) { user = data; });
   socket.on('room-data',  function(data) { room_data(data); });
+  socket.on('room-log',   function(data) { room_log(data); });
   socket.on('disconnect', function(data) {
       console.log('disconnected');
   });
 
   function room_data(data) {
-    //alert(JSON.stringify(data));
-    // Add users
     console.log('updating room');
     var dice = '';
     var user_dice = '';
@@ -167,5 +166,18 @@ $(document).ready(function() {
     // Add user to top of list
     dice = user_dice + dice;
     $('#dice').html(dice);
+    $('#log').css('height', $('#dice').outerHeight());
+  }
+
+  function room_log(data) {
+    console.log('adding log');
+    var log = $('#log').html();
+    var time = new Date(data.time);
+    console.log(data.time);
+    var time_stamp = '[' + time.getHours() + ':' + time.getMinutes() + ']';
+    log += '<span class="row">' + time_stamp + ' ' + data.user + ' ' + data.log + '</span>';
+    $('#log').html(log);
+    // Scroll to bottom of log
+    $('#log').scrollTop($('#log')[0].scrollHeight - $('#log').height());
   }
 });

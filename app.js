@@ -124,6 +124,36 @@ app.func.roll= (die) => {
   die.value = Math.floor(Math.random() * floor) + 1;
 }
 
+app.func.dice_status = (dice) => {
+  var out = '';
+  var total = new Map();
+  total.set('total', 0);
+  dice.forEach((die) => {
+    if (die.value > -1) {
+      var old_value = 0;
+      var old_count = 0;
+      if (total.has(die.type)) {
+        var old_value = total.get(die.type).value;
+        var old_count = total.get(die.type).count;
+      }
+      var new_total = {
+        value: old_value + die.value,
+        count: old_count + 1
+      };
+      total.set(die.type, new_total);
+      total.set('total', total.get('total') + die.value);
+    }
+  });
+  ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].forEach((die_type) => {
+    if (total.has(die_type)) {
+      var curr = total.get(die_type);
+      out += curr.count + die_type + ':' + curr.value + ' ';
+    }
+  });
+  out += 'Total: ' + total.get('total');
+  return out;
+}
+
 // sockets
 app.io.on('connect', (socket) => {
   // Register route sockets

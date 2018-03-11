@@ -28,6 +28,10 @@ a {
   100% { transform: rotate(360deg); }
 }
 
+#log {
+  overflow-y: scroll;
+}
+
 .d4, .d6, .d8, .d10, .d12, .d20 {
   width: 64px;
   height: 64px;

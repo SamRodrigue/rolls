@@ -102,6 +102,7 @@ router.sockets = (io, socket, rooms, func) => {
         if (die.type === data.type) {
           user.dice.pop(index);
           changed = true;
+          return true;
         }
       });
 
@@ -121,11 +122,23 @@ router.sockets = (io, socket, rooms, func) => {
     });
     if (user) { 
       // Roll dice
+      var changed = false;
       user.dice.forEach((die) => {
+        changed = true;
         func.roll(die);
       });
 
-      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+      if (changed) {
+        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+        var date = new Date();
+        console.log(date.getTime());
+        io.sockets.in(data.room_id).emit('room-log', 
+        { 
+          user: user.name,
+          time: date.getTime(),
+          log: func.dice_status(user.dice)
+        });
+      }
     }
   });
 
