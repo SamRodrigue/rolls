@@ -101,10 +101,11 @@ router.sockets = (io, socket, rooms, func) => {
     });
     if (user && found_user && 
         (user.role === 'admin' || user.name === data.name)) {
-          console.log('removing user ' + room.users[target_user].name + ' from ' + data.room_id);
+      console.log('removing user ' + room.users[target_user].name + ' from ' + data.room_id);
       room.users[target_user].socket.leave(data.room_id); 
-      room.users.slice(target_user, 1);
+      room.users.splice(target_user, 1);
       io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+      console.log('users remaining ' + room.users.length);
       if (room.users.length === 0) {
         console.log('removing room ' + data.room_id);
         rooms.delete(data.room_id);

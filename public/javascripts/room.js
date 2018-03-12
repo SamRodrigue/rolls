@@ -8,6 +8,7 @@ function remove_user(data) {
   if (user.role === 'admin' || user.name === data) {
     console.log('removing user ' + data);
     socket.emit('remove_user', { room_id: room_id, name: data }); socket.send('');
+    window.location.href = '/';
   }
 }
 
@@ -70,13 +71,20 @@ $(document).ready(function() {
     socket.emit('join', room_id); socket.send('');
     socket.emit('enter-room', room_id); socket.send('');
   });
-  socket.on('alert',      function(text) { alert(text) });
+  socket.on('alert',      function(text) { show_alert(text) });
   socket.on('user-data',  function(data) { user_data(data); });
   socket.on('room-data',  function(data) { room_data(data); });
   socket.on('room-log',   function(data) { room_log(data); });
   socket.on('disconnect', function(data) {
       console.log('disconnected');
   });
+
+  function show_alert(data) {
+    alert(data + ' returning to index');
+    setTimeout(function() {
+      window.location.href = '/';
+    }, 2500);
+  }
 
   function user_data(data) {
     user = data;

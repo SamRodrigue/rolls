@@ -40,24 +40,37 @@ $(document).ready(function() {
     console.log('connected');
     socket.emit('join', 'index'); socket.send('');
   });
-  socket.on('alert', function(text) { alert(text) });
+  socket.on('alert', function(data) { show_alert(data) });
   socket.on('update-rooms', function(data) { update_rooms(data) });
   socket.on('join-room', function(data) { join_room(data) });
   socket.on('disconnect', function() { 
     console.log('disconnected');
   });
 
+  function show_alert(data) {
+    $('#alert-message').html('<span>' + data + '</span>');
+    $('#alert').modal();
+  }
+
   function update_rooms(data) {
     console.log('updating rooms');
     var room_table = '';
-    for (var [id, room] of data) {
-      room_table += '<tr scope="row">';
-      room_table += '<td class="room-id d-none" scope="col">' + id + '</td>';
-      room_table += '<td class="room-name" scope="col">' + room.name + '</td>';
-      room_table += '<td class="room-users text-center" scope="col">' + room.users.toString() + '</td>';
-      room_table += '<td class="room-locked d-none" scope="col">' + (room.locked ? "1" : "0") + '</td>';
-      room_table += '<td class="text-center"><span class="oi" data-glyph="' + (room.locked ? "lock-locked" : "lock-unlocked") + '"></span></td>';
-      room_table += '</tr>';
+    if (data.length == 0) {
+      room_table = `
+<tr scope="row" id="no-rooms">
+  <td colspan="5" class="text-center"><div><span>No rooms, create a new one!</span></div></td>
+</tr>`;
+    } else {
+      for (var [id, room] of data) {
+        room_table += `
+  <tr scope="row">
+    <td class="room-id d-none" scope="col">` + id + `</td>
+    <td class="room-name" scope="col">` + room.name + `</td>
+    <td class="room-users text-center" scope="col">` + room.users.toString() + `</td>
+    <td class="room-locked d-none" scope="col">` + (room.locked ? "1" : "0") + `</td>
+    <td class="text-center"><span class="oi" data-glyph="` + (room.locked ? "lock-locked" : "lock-unlocked") + `"></span></td>
+  </tr>`;
+      }
     }
     $(rooms.body).html(room_table);
   }
@@ -85,6 +98,10 @@ $(document).ready(function() {
 
   // Table: Room-List
   $(rooms.body).on('click', 'tr', function() {
+    if ($(this).is('#no-rooms')) {
+      $(create.modal).modal();
+      return;
+    }
     var room_name = $(this).find('td.room-name').html();
     var room_id = $(this).find('td.room-id').html();
     var room_locked = ($(this).find('td.room-locked').html() == 1);

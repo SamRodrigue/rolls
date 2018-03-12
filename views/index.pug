@@ -21,6 +21,9 @@ block content
             th(scope="col").d-none
             th(scope="col").col-1.text-center Open
         tbody#rooms-body
+          tr
+            td.text-center(colspan='5')
+              .loader
   
   .footer
 
@@ -30,7 +33,6 @@ block content
         .modal-header
           h2 Create Room 
           button.close(data-dismiss='modal') &times;
-
         .modal-body
           form#create
             .form-group
@@ -56,7 +58,6 @@ block content
         .modal-header
           h2#join-title
           button.close(data-dismiss='modal') &times;
-
         .modal-body
           form#join
             .form-group
@@ -74,3 +75,13 @@ block content
           label
             button.btn.btn-default(data-dismiss='modal')
               span Close
+
+  #alert.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header.bg-warning.text-white
+          h2 Alert
+          button.close(data-dismiss='modal') &times;
+        .modal-body
+          #alert-message
+        .modal-footer.bg-warning.text-white
