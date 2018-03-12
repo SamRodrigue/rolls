@@ -1,22 +1,20 @@
 // Elements
 var socket;
 var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') + 1);
-var user = { name: '' };
+var user = { name: '', role: 'user'};
 var dice_type = 'd4';
-var colors = {
-  d4: 'primary',
-  d6: 'secondary',
-  d8: 'success',
-  d10: 'danger',
-  d12: 'warning',
-  d20: 'info'
+
+function remove_user(data) {
+  if (user.role === 'admin' || user.name === data) {
+    console.log('removing user ' + data);
+    socket.emit('remove_user', { room_id: room_id, name: data }); socket.send('');
+  }
 }
 
 // Dice
 function set_dice_type(type) {
   dice_type = type;
   $('#dice-type').text(type);
-  $('#dice-type').val(type);
 }
 
 function add_dice() {
@@ -73,12 +71,17 @@ $(document).ready(function() {
     socket.emit('enter-room', room_id); socket.send('');
   });
   socket.on('alert',      function(text) { alert(text) });
-  socket.on('user-data',  function(data) { user = data; });
+  socket.on('user-data',  function(data) { user_data(data); });
   socket.on('room-data',  function(data) { room_data(data); });
   socket.on('room-log',   function(data) { room_log(data); });
   socket.on('disconnect', function(data) {
       console.log('disconnected');
   });
+
+  function user_data(data) {
+    user = data;
+    socket.emit('get-room', { room_id: room_id }); socket.send('');
+  }
 
   function room_data(data) {
     console.log('updating room');
@@ -88,8 +91,17 @@ $(document).ready(function() {
       a_dice = `
 <div class="user-area col-12 m-1 border border-dark rounded">
   <div class="row user-status-bar">
-    <div class="user-name col-12 border border-success text-center">
-      <span>` + a_user.name + `</span>
+    <div class="row user-name col-12 p-0 m-0 border border-success text-center">
+      <div class="col-11">
+        <span>` + a_user.name + `</span>
+      </div>`;
+      if (user.role === 'admin' || user.name === a_user.name) {
+        a_dice += `
+      <button class="btn btn-default col-1 p-0 m-0" onClick="remove_user('` + a_user.name + `')">
+        <span>&times</span>
+      </button>`;
+      }
+      a_dice += `
     </div>
     <div class="user-dice-status col-12 border border-success">
       <div class="row">
@@ -128,7 +140,7 @@ $(document).ready(function() {
     </button>
     <div class="dropdown col-3 m-0 p-0">
       <button class="btn btn-default dropdown-toggle col-12" type="button" data-toggle="dropdown">
-        <span id="dice-type" value="` + dice_type + `">` + dice_type + `<span>
+        <span id="dice-type">` + dice_type + `<span>
       </button>
       <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
         <button class="dice-type-select dropdown-item d4-label text-center" type="button" onClick="set_dice_type('d4')">d4</button>

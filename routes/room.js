@@ -48,8 +48,69 @@ router.sockets = (io, socket, rooms, func) => {
     }
 
     // Send room data
-    socket.emit('user-data', { name: user.name });
-    io.sockets.in(data).emit('room-data', func.room_array(room));
+    socket.emit('user-data', { name: user.name, role: user.role });
+    socket.broadcast.to(data).emit('room-data', func.room_array(room));
+  });
+
+  socket.on('get-room', (data) => {
+    // Check if room exists
+    if (!rooms.has(data.room_id)) {
+      console.log('ERROR: a user requested an unregistered room');
+      
+      // Send response to user
+      socket.emit('alert', 'Error: Unknow room');
+      return;
+    }
+    var room = rooms.get(data.room_id);
+    var user;
+    room.users.some((a_user) => {
+      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+        user = a_user;
+        return true;
+      }
+    });
+    if (user) { 
+      socket.emit('room-data', func.room_array(room));
+    }
+  });
+
+  socket.on('remove_user', (data) => {
+    // Check if room exists
+    if (!rooms.has(data.room_id)) {
+      console.log('ERROR: a user requested an unregistered room');
+      
+      // Send response to user
+      socket.emit('alert', 'Error: Unknow room');
+      return;
+    }
+    var room = rooms.get(data.room_id);
+    var user;
+    var in_room = false;
+    var found_user = false;
+    var target_user;
+    room.users.some((a_user, index) => {
+      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+        user = a_user;
+        in_room = true;
+      }
+      if (a_user.name === data.name) {
+        target_user = index;
+        found_user = true;
+      }
+      if (in_room && found_user) return true;
+    });
+    if (user && found_user && 
+        (user.role === 'admin' || user.name === data.name)) {
+          console.log('removing user ' + room.users[target_user].name + ' from ' + data.room_id);
+      room.users[target_user].socket.leave(data.room_id); 
+      room.users.slice(target_user, 1);
+      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+      if (room.users.length === 0) {
+        console.log('removing room ' + data.room_id);
+        rooms.delete(data.room_id);
+        io.sockets.in('index').emit('update-rooms', func.rooms_array(rooms));
+      }
+    }
   });
 
   socket.on('add-dice', (data) => {
@@ -81,11 +142,17 @@ router.sockets = (io, socket, rooms, func) => {
       user.dice.push(dice);
       io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
     }
-
   });
 
   socket.on('remove-dice', (data) => {
-    console.log('a user removed a ' + data.type);
+    // Check if room exists
+    if (!rooms.has(data.room_id)) {
+      console.log('ERROR: a user requested an unregistered room');
+      
+      // Send response to user
+      socket.emit('alert', 'Error: Unknow room');
+      return;
+    }
     var room = rooms.get(data.room_id);
     var user;
     room.users.some((a_user) => {
@@ -99,7 +166,8 @@ router.sockets = (io, socket, rooms, func) => {
       var changed = false;
       user.dice.some((die, index) => {
         if (die.type === data.type) {
-          user.dice.pop(index);
+          console.log('a user removed a ' + data.type + die.type);
+          user.dice.splice(index, 1);
           changed = true;
           return true;
         }

@@ -113,15 +113,16 @@ app.func.create_id = () => {
 
 app.func.roll= (die) => {
   var floor = 0;
+  var offset = 0;
   switch (die.type) {
-    case 'd4':  floor = 4;  break; 
-    case 'd6':  floor = 6;  break; 
-    case 'd8':  floor = 8;  break; 
-    case 'd10': floor = 10; break; 
-    case 'd12': floor = 12; break; 
-    case 'd20': floor = 20; break; 
+    case 'd4':  floor = 4;  offset = 1; break; 
+    case 'd6':  floor = 6;  offset = 1; break; 
+    case 'd8':  floor = 8;  offset = 1; break; 
+    case 'd10': floor = 10; offset = 0; break; 
+    case 'd12': floor = 12; offset = 1; break; 
+    case 'd20': floor = 20; offset = 1; break; 
   }
-  die.value = Math.floor(Math.random() * floor) + 1;
+  die.value = Math.floor(Math.random() * floor) + offset;
 }
 
 app.func.dice_status = (dice) => {
@@ -155,6 +156,7 @@ app.func.dice_status = (dice) => {
 }
 
 // heartbeat
+/*
 heartbeat = setInterval(() => {
   for (var [id, room] of app.rooms) {
     room.users.some((user, index) => {
@@ -178,6 +180,7 @@ heartbeat = setInterval(() => {
     });
   }
 }, 5 * 60 * 1000);
+*/ // Reomve for now
 
 // sockets
 app.io.on('connect', (socket) => {
