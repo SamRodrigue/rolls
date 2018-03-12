@@ -8,7 +8,7 @@ function remove_user(data) {
   if (user.role === 'admin' || user.name === data) {
     console.log('removing user ' + data);
     socket.emit('remove_user', { room_id: room_id, name: data }); socket.send('');
-    window.location.href = '/';
+    if (user.name === data) window.location.href = '/';
   }
 }
 
