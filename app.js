@@ -27,27 +27,12 @@ app.io.use(sharedsession(session, { autoSave: true }));
 // Rooms
 app.rooms = new Map();
 
-// Temp room
-/*app.rooms.set('A1', {
-  name: 'TEST ROOM',
-  locked: false,
-  password: {
-    admin: 'a',
-    user: ''
-  },
-  users: []
-});*/
-
-// set globals
-//app.set('rooms', rooms);
-//app.set('rooms_meta', rooms_meta);
-
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
 // uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(favicon(path.join(__dirname, 'public', 'images/favicon.ico')));
 //app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
