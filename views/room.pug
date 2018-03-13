@@ -9,12 +9,12 @@ block content
   
   .content
     .container-fluid.mt-3
-      .row.user-roll
-        button#roll.btn.btn-primary.col-4(onClick="roll_dice()")
+      .row.user-roll.col-6.mx-auto
+        button#roll.btn.btn-primary.col-5(onClick="roll_dice()")
           span Roll
         button#clear-roll.btn.btn-warning.col-3(onClick="clear_dice()")
           span Clear
-        .dropdown.col-3.m-0.p-0
+        //.dropdown.col-3.m-0.p-0
           button.btn.btn-default.dropdown-toggle.col-12(type="button" data-toggle="dropdown")
             span#dice-type d4
           .dropdown-menu(aria-labelledby="dropdownMenuButton")
@@ -24,13 +24,61 @@ block content
             button.dice-type-select.dropdown-item.d10-label.text-center(type="button" onClick="set_dice_type('d10')") d10
             button.dice-type-select.dropdown-item.d12-label.text-center(type="button" onClick="set_dice_type('d12')") d12
             button.dice-type-select.dropdown-item.d20-label.text-center(type="button" onClick="set_dice_type('d20')") d20
-        button#add-dice.btn.btn-success.col-1.p-0.m-0(onClick="add_dice()")
+        button#add-dice.btn.btn-success.col-2.p-0.m-0(data-toggle="modal" data-target="#add-modal")
           span +
-        button#remove-dice.btn.btn-danger.col-1.p-0.m-0(onClick="remove_dice()")
+        button#remove-dice.btn.btn-danger.col-2.p-0.m-0(data-toggle="modal" data-target="#remove-modal")
           span -
       .row
-        #dice.col-12.col-sm-6.col-md-7.col-lg-8.border.border-primary
+        #dice.col-12.col-sm-6.col-md-7.col-lg-8.border.border-primary.content
           .loader
-        #log.col-12.col-sm-6.col-md-5.col-lg-4.border.border-secondary
+        #log.col-12.col-sm-6.col-md-5.col-lg-4.border.border-secondary.content
 
-      
+  .footer
+
+  #add-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header.bg-success
+          h2 Add Dice
+          button.close(data-dismiss='modal') &times;
+        .modal-body.row
+          button.dice-type-select.dropdown-item.d4.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="add_dice('d4')")
+            span.center.die-number d4
+          button.dice-type-select.dropdown-item.d6.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="add_dice('d6')")
+            span.center.die-number d6
+          button.dice-type-select.dropdown-item.d8.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="add_dice('d8')")
+            span.center.die-number d8
+          button.dice-type-select.dropdown-item.d10.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="add_dice('d10')")
+            span.center.die-number d10
+          button.dice-type-select.dropdown-item.d12.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="add_dice('d12')")
+            span.center.die-number d12
+          button.dice-type-select.dropdown-item.d20.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="add_dice('d20')")
+            span.center.die-number d20
+        .modal-footer
+          label
+            button.btn.btn-default(data-dismiss='modal')
+              span Close
+
+  #remove-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header.bg-danger
+          h2 Remove Dice
+          button.close(data-dismiss='modal') &times;
+        .modal-body.row
+          button.dice-type-select.dropdown-item.d4.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="remove_dice('d4')")
+            span.center.die-number d4
+          button.dice-type-select.dropdown-item.d6.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="remove_dice('d6')")
+            span.center.die-number d6
+          button.dice-type-select.dropdown-item.d8.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="remove_dice('d8')")
+            span.center.die-number d8
+          button.dice-type-select.dropdown-item.d10.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="remove_dice('d10')")
+            span.center.die-number d10
+          button.dice-type-select.dropdown-item.d12.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="remove_dice('d12')")
+            span.center.die-number d12
+          button.dice-type-select.dropdown-item.d20.text-center.col-6.col-md-4.col-lg-3.col-xl-2.mx-auto(type="button" onClick="remove_dice('d20')")
+            span.center.die-number d20
+        .modal-footer
+          label
+            button.btn.btn-default(data-dismiss='modal')
+              span Close

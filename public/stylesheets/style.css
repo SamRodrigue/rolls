@@ -18,11 +18,6 @@ a {
   overflow-y: scroll;
 }
 
-.user-name {
-  color: #FFFFFF;
-  background-color: #000000;
-}
-
 .d4, .d6, .d8, .d10, .d12, .d20 {
   width: 64px;
   height: 64px;

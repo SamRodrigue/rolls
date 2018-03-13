@@ -17,14 +17,14 @@ function set_dice_type(type) {
   $('#dice-type').text(type);
 }
 
-function add_dice() {
-  console.log('adding ' + dice_type);
-  socket.emit('add-dice', { room_id: room_id, type: dice_type }); socket.send('');
+function add_dice(data) {
+  console.log('adding ' + data);
+  socket.emit('add-dice', { room_id: room_id, type: data }); socket.send('');
 }
 
-function remove_dice() {
-  console.log('removing ' + dice_type);
-  socket.emit('remove-dice', { room_id: room_id, type: dice_type }); socket.send('');
+function remove_dice(data) {
+  console.log('removing ' + data);
+  socket.emit('remove-dice', { room_id: room_id, type: data }); socket.send('');
 }
 
 function clear_dice() {
@@ -108,7 +108,7 @@ $(document).ready(function() {
   <div class="row user-status-bar">
     <div class="row user-name col-12 p-0 m-0 border border-success text-center">
       <div class="col-11">
-        <span>` + a_user.name + `</span>
+        <h5>` + a_user.name + `</h5>
       </div>`;
       if (user.role === 'admin' || user.name === a_user.name) {
         a_dice += `
@@ -128,16 +128,20 @@ $(document).ready(function() {
       a_dice += status_dice(a_user.dice, 'd20');
       a_dice += status_dice(a_user.dice, 'total');
       a_dice += `
-        </div>
       </div>
     </div>
   </div>
   <div class="row user-dice">`;
-      for (var die of a_user.dice) {
+      if (a_user.dice.length > 0) {
+        for (var die of a_user.dice) {
+          a_dice += `
+      <div class="` + die.type + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;">
+        <span class="center die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
+      </div>`;
+        }
+      } else {
         a_dice += `
-    <div class="` + die.type + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;">
-      <span class="center die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
-    </div>`;
+      <span>No Dice</span>`;
       }
       a_dice += `
   </div>
@@ -159,9 +163,9 @@ $(document).ready(function() {
     var time = new Date(data.time);
     console.log(data.time);
     var time_stamp = '[' + time.getHours() + ':' + time.getMinutes() + ']';
-    log += '<span class="row">' + time_stamp + ' ' + data.user + ' ' + data.log + '</span>';
+    log = '<span class="row">' + time_stamp + ' ' + data.user + ' ' + data.log + '</span>' + log;
     $('#log').html(log);
     // Scroll to bottom of log
-    $('#log').scrollTop($('#log')[0].scrollHeight - $('#log').height());
+    $('#log').scrollTop(0); //$('#log')[0].scrollHeight - $('#log').height());
   }
 });
