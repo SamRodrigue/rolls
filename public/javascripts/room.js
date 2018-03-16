@@ -41,7 +41,7 @@ function status_dice(dice, type) {
   var changed = false;
   if (type === 'total') {
     var total = 0;
-    for (var die of dice) {
+    for (var die in dice) {
       changed = true;
       if (die.value > -1) {
         total += die.value;
@@ -53,7 +53,7 @@ function status_dice(dice, type) {
   } else {
     var num = 0;
     var total = 0;
-    for (var die of dice) {
+    for (var die in dice) {
       if (die.type === type) {
         changed = true;
         num++;
@@ -78,7 +78,7 @@ $(document).ready(function() {
     socket.emit('join', room_id); socket.send('');
     socket.emit('enter-room', room_id); socket.send('');
   });
-  socket.on('alert',      function(text) { show_alert(text) });
+  socket.on('alert',      function(text) { show_alert(text); });
   socket.on('user-data',  function(data) { user_data(data); });
   socket.on('room-data',  function(data) { room_data(data); });
   socket.on('room-log',   function(data) { room_log(data); });
@@ -102,8 +102,10 @@ $(document).ready(function() {
     console.log('updating room');
     var dice = '';
     var user_dice = '';
-    for (var a_user of data.users) {
-      a_dice = `
+    var dice_count = { d4: 0, d6: 0, d8: 0, d10: 0, d12:0, d20:0 };
+    for (var i = 0, len = data.users.length; i < len; i++) {
+      var a_user = data.users[i];
+      var a_dice = `
 <div class="user-area col-12 m-1 border border-dark rounded">
   <div class="row user-status-bar">
     <div class="row user-name col-12 p-0 m-0 border border-success text-center">
@@ -133,9 +135,10 @@ $(document).ready(function() {
   </div>
   <div class="row user-dice">`;
       if (a_user.dice.length > 0) {
-        for (var die of a_user.dice) {
+        for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
+          var die = a_user.dice[j];
           a_dice += `
-      <div class="` + die.type + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;">
+      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;">
         <span class="center die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
       </div>`;
         }
@@ -146,7 +149,14 @@ $(document).ready(function() {
       a_dice += `
   </div>
 </div>`;
-      if (user.name === a_user.name) user_dice = a_dice;
+      if (user.name === a_user.name) {
+        user_dice = a_dice;
+        // Update die count
+        for (var k = 0, len_k = a_user.dice.length; k < len_k; k++) {
+          var die = a_user.dice[k];
+          dice_count[die.type]++;
+        }
+      }
       else dice += a_dice;
     }
     // Add user to top of list
@@ -155,6 +165,10 @@ $(document).ready(function() {
     $('#log').css('height', 0);
     $('#log').css('height', $('#dice').outerHeight());
     $('#log').scrollTop($('#log')[0].scrollHeight - $('#log').height());
+
+    Object.keys(dice_count).forEach(function(dice_type) {
+      $('#' + dice_type + '-count').html(dice_count[dice_type]);
+    });
   }
 
   function room_log(data) {
@@ -168,4 +182,8 @@ $(document).ready(function() {
     // Scroll to bottom of log
     $('#log').scrollTop(0); //$('#log')[0].scrollHeight - $('#log').height());
   }
+
+  $(document).on('click', '.dice-click', function() {
+    //alert('here');
+  });
 });

@@ -14,16 +14,21 @@ a {
   transform: translateX(-50%) translateY(-50%);
 }
 
+#rooms {
+  max-width: 792px;
+}
+
 #log {
   overflow-y: scroll;
 }
 
 .d4, .d6, .d8, .d10, .d12, .d20 {
-  width: 64px;
   height: 64px;
   background-size: contain;
   background-position: center; 
   background-repeat: no-repeat;
+  background-color: transparent;
+  border: 0;
 }
 .d4 {  background-image: url('/images/d4.png'); }
 .d6 {  background-image: url('/images/d6.png'); }
@@ -31,6 +36,40 @@ a {
 .d10 { background-image: url('/images/d10.png'); }
 .d12 { background-image: url('/images/d12.png'); }
 .d20 { background-image: url('/images/d20.png'); }
+
+.dice-roll {
+  -webkit-animation-name: rotate;
+  -moz-animation-name: rotate;
+  animation-name: rotate;
+  -webkit-animation-duration:0.5s;
+  -moz-animation-duration:0.5s;
+  animation-duration:0.5s;
+  -webkit-animation-iteration-count:infinite;
+  -moz-animation-iteration-count:infinite;
+  animation-iteration-count:infinite;
+  -webkit-animation-timing-function:linear;
+  -moz-animation-timing-function:linear;
+  animation-timing-function:linear;
+}
+
+.dice-container {
+  width: 132px;
+}
+
+@-webkit-keyframes rotate {
+  from {-webkit-transform:rotate(0deg);}
+  to {  -webkit-transform:rotate(360deg);}
+}
+
+@-moz-keyframes rotate {
+  from {-moz-transform:rotate(0deg);}
+  to {  -moz-transform:rotate(360deg);}
+}
+
+@keyframes rotate {
+  from {-webkit-transform:rotate(0deg);}
+  to {  -webkit-transform:rotate(360deg);}
+}
 
 .d4-label {
   color: #FFFFFF;
@@ -58,6 +97,40 @@ a {
 }
 
 .die-number {
+  line-height: 64px;
+  vertical-align: middle;
+  font-size: 2em;
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0 #000,
+  -1px 1px 0 #000,
+  1px -1px 0 #000,
+  -1px -1px 0 #000,
+  0px 1px 0 #000,
+  0px -1px 0 #000,
+  -1px 0px 0 #000,
+  1px 0px 0 #000,
+  2px 2px 0 #000,
+  -2px 2px 0 #000,
+  2px -2px 0 #000,
+  -2px -2px 0 #000,
+  0px 2px 0 #000,
+  0px -2px 0 #000,
+  -2px 0px 0 #000,
+  2px 0px 0 #000,
+  1px 2px 0 #000,
+  -1px 2px 0 #000,
+  1px -2px 0 #000,
+  -1px -2px 0 #000,
+  2px 1px 0 #000,
+  -2px 1px 0 #000,
+  2px -1px 0 #000,
+  -2px -1px 0 #000;
+}
+
+.die-count {
+  vertical-align: middle;
+  width: 52px;
+  height: 38px;
   font-size: 2em;
   color: #FFFFFF;
   text-shadow: 1px 1px 0 #000,
