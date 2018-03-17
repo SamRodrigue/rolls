@@ -4,6 +4,16 @@ var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') 
 var user = { name: '', role: 'user'};
 var dice_type = 'd4';
 var selected_dice = null;
+var dice_overlay = `
+<div class="row" id="dice-overlay">
+<button class="btn btn-danger" id="dice-overlay-remove" type="button" onclick="remove_dice()">
+  <span class="oi" data-glyph="x"></span>
+</button>
+<div id="dice-overlay-glow"></div>
+<button class="btn btn-warning" id="dice-overlay-roll" type="button" onclick="roll_dice(true)">
+  <span class="oi" data-glyph="random"></span>
+</button>
+</div>`;
 
 function remove_user(data) {
   if (user.role === 'admin' || user.name === data) {
@@ -25,10 +35,10 @@ function add_dice(data) {
 
 function remove_dice(data) {
   var out;
-  if (typeof data == 'undefined') {
+  if (typeof data == 'undefined' && selected_dice !== null) {
     out = {
       room_id: room_id,
-      index: selected_dice
+      index: selected_dice.index
     }
   } else {
     out = {
@@ -51,10 +61,10 @@ function roll_dice(data) {
     out = {
       room_id: room_id
     }
-  } else {
+  } else if (selected_dice !== null) {
     out = {
       room_id: room_id,
-      index: selected_dice
+      index: selected_dice.index
     }
   }
   console.log('rolling');
@@ -132,7 +142,7 @@ $(document).ready(function() {
     for (var i = 0, len = data.users.length; i < len; i++) {
       var a_user = data.users[i];
       var a_dice = `
-<div class="user-area col-12 m-1 border border-dark rounded">
+<div class="user-area col-12 m-1 border border-dark rounded mx-auto">
   <div class="row user-status-bar">
     <div class="row user-name col-12 p-0 m-0 border border-success text-center">
       <div class="col-11">
@@ -164,8 +174,8 @@ $(document).ready(function() {
         for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
           var die = a_user.dice[j];
           a_dice += `
-      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `>
-        <span class="center die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
+      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center mx-auto" style="height: 64px;" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `>
+        <span class="die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
       </div>`;
         }
       } else {
@@ -190,7 +200,7 @@ $(document).ready(function() {
     $('#dice').html(dice);
     $('#log').css('height', 0);
     $('#log').css('height', $('#dice').outerHeight());
-    $('#log').scrollTop($('#log')[0].scrollHeight - $('#log').height());
+    $('#log').scrollTop(0);
 
     Object.keys(dice_count).forEach(function(dice_type) {
       $('#' + dice_type + '-count').html(dice_count[dice_type]);
@@ -202,25 +212,38 @@ $(document).ready(function() {
     var log = $('#log').html();
     var time = new Date(data.time);
     console.log(data.time);
-    var time_stamp = '[' + time.getHours() + ':' + time.getMinutes() + ']';
-    log = '<span class="row">' + time_stamp + ' ' + data.user + ' ' + data.log + '</span>' + log;
+    var time_stamp = '[' + time.getHours() + ':' + ((time.getMinutes() < 10) ? '0' : '') + time.getMinutes() + ']';
+    log = '<span class="row">' + time_stamp + '&nbsp;<b>' + data.user + '</b>&nbsp;' + data.log + '</span>' + log;
     $('#log').html(log);
     // Scroll to bottom of log
-    $('#log').scrollTop(0); //$('#log')[0].scrollHeight - $('#log').height());
+    $('#log').scrollTop(0);
   }
+
+  $(window).on('resize', function() {
+    if (selected_dice !== null) {
+      var o_pos = $('#dice-overlay').position();
+      var pos = $(selected_dice.anchor).position();
+      console.log('x: ' + (o_pos.left - pos.left) + ' y: ' + (o_pos.top - pos.top));
+      console.log('x: ' + (o_pos.left) + ' y: ' + (o_pos.top));
+      console.log('x: ' + (pos.left) + ' y: ' + (pos.top));
+    }
+  });
 
   // Reset selected dice
   $(document).on('click', function() {
     selected_dice = null;
-    $('#dice-overlay').css('top', '-100px');
+    $('#dice-overlay').remove();
   });
 
   // Display dice specific options when own dice is clicked
   $(document).on('click', '.dice-click', function(event) {
-    selected_dice = $(this).attr('index');
-    var pos = $(this).offset();
-    $('#dice-overlay').css('left', (pos.left - 18) + 'px');
-    $('#dice-overlay').css('top', pos.top + 'px');
+    selected_dice = { anchor: this, index: $(this).attr('index')};
+
+    var pos = $(this).position();
+    $('#dice-overlay').remove();
+    $(this).append(dice_overlay);
+    //$('#dice-overlay').css('top', pos.top + 'px');
+    //$('#dice-overlay').css('left', pos.left + 'px');
     event.stopPropagation();
   });
 });

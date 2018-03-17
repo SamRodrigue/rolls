@@ -22,8 +22,18 @@ a {
   overflow-y: scroll;
 }
 
+#log span p {
+  margin-bottom: 0;
+}
+
+#log span {
+  margin-bottom: 0.1em;
+}
+
 .d4, .d6, .d8, .d10, .d12, .d20 {
   height: 64px;
+  width: 64px;
+  margin: auto;
   background-size: contain;
   background-position: center; 
   background-repeat: no-repeat;
@@ -159,20 +169,38 @@ a {
   -2px -1px 0 #000;
 }
 
+.dice-click:hover {
+  cursor: pointer;
+}
+
 #dice-overlay {
-  position: absolute;
-  top: -100px;
-  left: 0px;
+  position: relative;
+  top: -64px;
+  left: -17px;
+  width: 128px;
 }
 
 #dice-overlay-glow {
-  width: 65px;
-  height: 63px;
+  width: 64px;
+  height: 64px;
   border-color: #00FF00;
   -webkit-box-shadow: 0px 0px 25px 0px #00FF00;
   -moz-box-shadow: 0px 0px 25px 0px #00FF00;
   box-shadow: 0px 0px 25px 0px #00FF00;
   z-index: 20;
+}
+
+.d4 #dice-overlay-glow {
+  border-top-left-radius: 50%;
+  border-top-right-radius: 50%;
+}
+
+.d6 #dice-overlay-glow {
+  border-radius: 10%;
+}
+
+.d8 #dice-overlay-glow, .d10 #dice-overlay-glow, .d12 #dice-overlay-glow, .d20 #dice-overlay-glow {
+  border-radius: 50%;
 }
 
 #dice-overlay-remove {

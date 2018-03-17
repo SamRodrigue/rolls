@@ -133,7 +133,7 @@ app.func.dice_status = (dice) => {
   ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].forEach((die_type) => {
     if (total.has(die_type)) {
       var curr = total.get(die_type);
-      out += curr.count + die_type + ':' + curr.value + ' ';
+      out += '<p class="' + die_type + '-label">' + curr.count + die_type + ':' + curr.value + '</p>&nbsp;';
     }
   });
   out += 'Total: ' + total.get('total');
