@@ -1,6 +1,31 @@
 body {
   padding: 50px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  background-color: rgb(32, 32, 32);
+  background-image: url('/images/table.png');
+  background-size: contain;
+  background-position: top;
+  background-repeat: repeat-y;
+}
+
+@media (min-width: 576px) { 
+  body {
+    background-size: 100% auto;
+  }
+}
+
+@media (min-width: 768px) {
+
+}
+
+@media (min-width: 992px) {
+  body {
+    background-size: 75% auto;
+  }
+}
+
+@media (min-width: 1200px) {
+
 }
 
 a {
@@ -16,6 +41,20 @@ a {
 
 #rooms {
   max-width: 792px;
+}
+
+#rooms td:hover {
+  cursor: pointer;  
+}
+
+#dice {
+  background-color: transparent;
+  border: double 5px grey;
+}
+
+#log-container {
+  background-color: transparent;
+  border: double 5px grey;
 }
 
 #log {
@@ -47,6 +86,14 @@ a {
 .d12 { background-image: url('/images/d12.png'); }
 .d20 { background-image: url('/images/d20.png'); }
 
+.dice-container {
+  width: 132px;
+}
+
+.user-dice {
+  background: rgba(248, 249, 250, 0.5);
+}
+
 .dice-roll {
   -webkit-animation-name: rotate;
   -moz-animation-name: rotate;
@@ -60,10 +107,6 @@ a {
   -webkit-animation-timing-function:linear;
   -moz-animation-timing-function:linear;
   animation-timing-function:linear;
-}
-
-.dice-container {
-  width: 132px;
 }
 
 @-webkit-keyframes rotate {
@@ -109,6 +152,12 @@ a {
 .die-number {
   line-height: 64px;
   vertical-align: middle;
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none;
   font-size: 2em;
   color: #FFFFFF;
   text-shadow: 1px 1px 0 #000,

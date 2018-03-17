@@ -5,19 +5,20 @@ block scripts
 
 block content
   .top.text-center
-    h3 Room: #{room.name}
+    h3.text-light Room: #{room.name}
   
   .content
-    .container-fluid.mt-2
+    .container-fluid.mt-2.col-12.col-lg-10.col-xl-8
       .row.user-roll.col-12.col-md-8.col-lg-6.mx-auto.input-group
         button#roll.btn.btn-primary.col-8(onClick="roll_dice()")
           span Roll
-        button#add-dice.btn.btn-success.col-4(data-toggle="modal" data-target="#dice-modal")
+        button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#dice-modal")
           span Dice
       .row.mt-2
-        #dice.col-12.col-sm-6.col-md-7.col-lg-8.border.border-primary.content
+        #dice.col-12.col-sm-6.col-md-7.col-lg-8.content
           .loader
-        #log.col-12.col-sm-6.col-md-5.col-lg-4.border.border-secondary.content
+        #log-container.col-12.col-sm-6.col-md-5.col-lg-4.pt-1.pb-1
+          #log.col-12.border.border-secondary.bg-light.content
 
   .footer
 

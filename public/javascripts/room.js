@@ -143,16 +143,21 @@ $(document).ready(function() {
       var a_user = data.users[i];
       var a_dice = `
 <div class="user-area col-12 m-1 border border-dark rounded mx-auto">
-  <div class="row user-status-bar">
+  <div class="row user-status-bar bg-light">
     <div class="row user-name col-12 p-0 m-0 border border-success text-center">
-      <div class="col-11">
+      <div class="col-9 col-md-10">
         <h5>` + a_user.name + `</h5>
       </div>`;
-      if (user.role === 'admin' || user.name === a_user.name) {
+      if (user.name === a_user.name) {
         a_dice += `
-      <button class="btn btn-default col-1 p-0 m-0" onClick="remove_user('` + a_user.name + `')">
-        <span>&times</span>
+      <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')">
+        <span>Leave</span>
       </button>`;
+      } else if (user.role === 'admin') {
+        a_dice += `
+        <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')">
+          <span>Kick</span>
+        </button>`;
       }
       a_dice += `
     </div>
@@ -180,7 +185,7 @@ $(document).ready(function() {
         }
       } else {
         a_dice += `
-      <span>No Dice</span>`;
+      <div class="col-12 text-center">No Dice</div>`;
       }
       a_dice += `
   </div>
@@ -199,7 +204,7 @@ $(document).ready(function() {
     dice = user_dice + dice;
     $('#dice').html(dice);
     $('#log').css('height', 0);
-    $('#log').css('height', $('#dice').outerHeight());
+    $('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
     $('#log').scrollTop(0);
 
     Object.keys(dice_count).forEach(function(dice_type) {
@@ -220,13 +225,8 @@ $(document).ready(function() {
   }
 
   $(window).on('resize', function() {
-    if (selected_dice !== null) {
-      var o_pos = $('#dice-overlay').position();
-      var pos = $(selected_dice.anchor).position();
-      console.log('x: ' + (o_pos.left - pos.left) + ' y: ' + (o_pos.top - pos.top));
-      console.log('x: ' + (o_pos.left) + ' y: ' + (o_pos.top));
-      console.log('x: ' + (pos.left) + ' y: ' + (pos.top));
-    }
+    $('#log').css('height', 0);
+    $('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
   });
 
   // Reset selected dice
@@ -242,8 +242,10 @@ $(document).ready(function() {
     var pos = $(this).position();
     $('#dice-overlay').remove();
     $(this).append(dice_overlay);
-    //$('#dice-overlay').css('top', pos.top + 'px');
-    //$('#dice-overlay').css('left', pos.left + 'px');
     event.stopPropagation();
   });
+
+  function rem_px(rem) {
+    return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+  }
 });

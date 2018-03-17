@@ -5,14 +5,14 @@ block scripts
 
 block content
   .top.text-center
-    h1= title
-    p Welcome to #{title}
+    h1.text-light= title
+    p.text-light Welcome to #{title}
     button#create-button.btn.btn-primary
       span Create Room
   
   .content.mt-3
     .container
-      table#rooms.table.table-striped.table-responsive.table-hover.table-bordered.table-condensed.mx-auto
+      table#rooms.table.table-striped.table-responsive.table-hover.table-bordered.table-condensed.mx-auto.bg-light
         thead
           tr(scope="row")
             th(scope="col").d-none
