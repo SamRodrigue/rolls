@@ -3,6 +3,7 @@ var socket;
 var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') + 1);
 var user = { name: '', role: 'user'};
 var dice_type = 'd4';
+var selected_dice = null;
 
 function remove_user(data) {
   if (user.role === 'admin' || user.name === data) {
@@ -23,8 +24,20 @@ function add_dice(data) {
 }
 
 function remove_dice(data) {
+  var out;
+  if (typeof data == 'undefined') {
+    out = {
+      room_id: room_id,
+      index: selected_dice
+    }
+  } else {
+    out = {
+      room_id: room_id,
+      type: data
+    }
+  }
   console.log('removing ' + data);
-  socket.emit('remove-dice', { room_id: room_id, type: data }); socket.send('');
+  socket.emit('remove-dice', out); socket.send('');
 }
 
 function clear_dice() {
@@ -32,16 +45,28 @@ function clear_dice() {
   socket.emit('clear-dice', { room_id: room_id }); socket.send('');
 }
 
-function roll_dice() {
+function roll_dice(data) {
+  var out;
+  if (typeof data == 'undefined') {
+    out = {
+      room_id: room_id
+    }
+  } else {
+    out = {
+      room_id: room_id,
+      index: selected_dice
+    }
+  }
   console.log('rolling');
-  socket.emit('roll-dice', { room_id: room_id }); socket.send('');
+  socket.emit('roll-dice', out); socket.send('');
 }
 
 function status_dice(dice, type) {
   var changed = false;
   if (type === 'total') {
     var total = 0;
-    for (var die in dice) {
+    for (var i = 0, len = dice.length; i < len; i++) {
+      var die = dice[i];
       changed = true;
       if (die.value > -1) {
         total += die.value;
@@ -53,7 +78,8 @@ function status_dice(dice, type) {
   } else {
     var num = 0;
     var total = 0;
-    for (var die in dice) {
+    for (var i = 0, len = dice.length; i < len; i++) {
+      var die = dice[i];
       if (die.type === type) {
         changed = true;
         num++;
@@ -138,7 +164,7 @@ $(document).ready(function() {
         for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
           var die = a_user.dice[j];
           a_dice += `
-      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;">
+      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` p-2 col-4 col-sm-4 col-md-2 col-lg-1 mx-auto" style="height: 64px;" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `>
         <span class="center die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
       </div>`;
         }
@@ -183,7 +209,18 @@ $(document).ready(function() {
     $('#log').scrollTop(0); //$('#log')[0].scrollHeight - $('#log').height());
   }
 
-  $(document).on('click', '.dice-click', function() {
-    //alert('here');
+  // Reset selected dice
+  $(document).on('click', function() {
+    selected_dice = null;
+    $('#dice-overlay').css('top', '-100px');
+  });
+
+  // Display dice specific options when own dice is clicked
+  $(document).on('click', '.dice-click', function(event) {
+    selected_dice = $(this).attr('index');
+    var pos = $(this).offset();
+    $('#dice-overlay').css('left', (pos.left - 18) + 'px');
+    $('#dice-overlay').css('top', pos.top + 'px');
+    event.stopPropagation();
   });
 });

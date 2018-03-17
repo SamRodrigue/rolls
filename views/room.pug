@@ -87,3 +87,10 @@ block content
             span Clear
           button.btn.btn-default(data-dismiss='modal')
             span Close
+
+  #dice-overlay.row
+    button#dice-overlay-remove.btn.btn-danger(type="button" onClick="remove_dice()")
+      span.oi(data-glyph="x") 
+    #dice-overlay-glow
+    button#dice-overlay-roll.btn.btn-warning(type="button" onClick="roll_dice(true)")
+      span.oi(data-glyph="random")

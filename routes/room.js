@@ -166,14 +166,19 @@ router.sockets = (io, socket, rooms, func) => {
     if (user) { 
       // Remove dice
       var changed = false;
-      user.dice.some((die, index) => {
-        if (die.type === data.type) {
-          console.log('a user removed a ' + data.type + die.type);
-          user.dice.splice(index, 1);
-          changed = true;
-          return true;
-        }
-      });
+      if (data.hasOwnProperty('index')) {
+        user.dice.splice(data.index, 1);
+        changed = true;
+      } else if (data.hasOwnProperty('type')) {
+        user.dice.some((die, index) => {
+          if (die.type === data.type) {
+            console.log('a user removed a ' + data.type + die.type);
+            user.dice.splice(index, 1);
+            changed = true;
+            return true;
+          }
+        });
+      }
 
       if (changed) io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
     }
@@ -192,10 +197,15 @@ router.sockets = (io, socket, rooms, func) => {
     if (user) { 
       // Roll dice
       var changed = false;
-      user.dice.forEach((die) => {
+      if (data.hasOwnProperty('index')) {
         changed = true;
-        func.roll(die);
-      });
+        func.roll(user.dice[data.index]);
+      } else  {
+        user.dice.forEach((die) => {
+          changed = true;
+          func.roll(die);
+        });
+      }
 
       if (changed) {
         io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
