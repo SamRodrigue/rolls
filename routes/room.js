@@ -44,6 +44,8 @@ router.sockets = (io, socket, rooms, func) => {
 
     if (!authorized) {
       console.log('ERROR: an unauthorized user attempted to enter ' + room.name);
+      // Send response to user
+      socket.emit('alert', 'Error: You do not have permission to join this room');
       return;
     }
 
