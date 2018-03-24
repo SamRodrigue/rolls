@@ -168,9 +168,9 @@ $(document).ready(function() {
       } else if (user.role === 'admin') {
         a_dice += `
       <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
-        <button class="btn btn-success col-4 p-0" type="button" onclick="counter(1, ` + a_user.name + `)"><span>+</span></button>
+        <button class="btn btn-success col-4 p-0" type="button" onclick="counter(1, '` + a_user.name + `')"><span>+</span></button>
         <span class="col-4 p-0 text-center"><h5 class="m-0">` + a_user.counter + `</h5></span>
-        <button class="btn btn-danger col-4 p-0" type="button" onclick="counter(-1, ` + a_user.name + `)"><span>-</span></button>
+        <button class="btn btn-danger col-4 p-0" type="button" onclick="counter(-1, '` + a_user.name + `')"><span>-</span></button>
       </div>
       <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>
       <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')"><span>Kick</span></button>`;

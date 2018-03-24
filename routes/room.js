@@ -28,6 +28,8 @@ router.sockets = (io, socket, rooms, func) => {
       socket.emit('alert', 'Error: You do not have permission to join this room');
       return;
     }
+    // Update user socket
+    user.socket = socket;
 
     // Send room data
     socket.emit('user-data', { name: user.name, role: user.role });
