@@ -166,7 +166,8 @@ app.func.remove_user = (sid, func, rooms, room_id) => {
     }
   } else {
     if (!rooms.has(room_id)) {
-      console.log('ERROR: a user requested an unregistered room');
+      console.log('ERROR: a user requested an unregistered room ' + room_id);
+      return;
     }
     room = rooms.get(room_id);
     room.users.some((a_user, index) => {
@@ -255,7 +256,7 @@ app.io.on('connect', (socket) => {
 
   // Join io rooms
   socket.on('join', (data) => {
-    socket.last_room = data;
+    socket.current_room = data;
     // Confirm room
     if (data == 'index') { // anyone can join index
       socket.leaveAll();
@@ -288,15 +289,15 @@ app.io.on('connect', (socket) => {
   socket.on('disconnect', () => {
     console.log('a user disconnected');
     // Get user from session id
-    if (typeof socket.last_room != 'undefined') {
-      if (app.rooms.has(socket.last_room)) {
-        app.rooms.get(socket.last_room).users.forEach((a_user, index) => {
+    for (var [id, a_room] of app.rooms) {
+      //if (typeof socket.current_room == 'undefined' || socket.current_room != id) { // Users will be removed from all rooms they are in
+        a_room.users.forEach((a_user, index) => {
           if (a_user.socket.handshake.sessionID === socket.handshake.sessionID) {
-            a_user.timeout = setTimeout(() => {app.func.remove_user(socket.handshake.sessionID, app.func, app.rooms, socket.last_room)}, global.JOIN_TIMEOUT);
+            a_user.timeout = setTimeout(() => {app.func.remove_user(socket.handshake.sessionID, app.func, app.rooms, id)}, global.JOIN_TIMEOUT);
             return true;
           }
         });
-      }
+      //}
     }
   });
 });
