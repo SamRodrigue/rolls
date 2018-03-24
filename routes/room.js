@@ -25,9 +25,12 @@ router.sockets = (io, socket, rooms, func) => {
     if (!user) {
       console.log('ERROR: an unauthorized user attempted to enter ' + room.name);
       // Send response to user
-      socket.emit('alert', 'Error: You do not have permission to join this room');
+      socket.emit('alert', 'Error: You do not have permission to join this room or your session has expired. Please try again');
       return;
     }
+    // Stop user timeout
+    clearTimeout(user.timeout);
+
     // Update user socket
     user.socket = socket;
 
@@ -52,17 +55,7 @@ router.sockets = (io, socket, rooms, func) => {
     var [target_user, target_user_index] = find_user_name(room, data.name);
     if (user && target_user && 
         (user.role === 'admin' || user.name === data.name)) {
-      console.log('removing user ' + target_user.name + ' from ' + data.room_id);
-      target_user.socket.emit('alert', 'You have been removed from the room');
-      target_user.socket.leave(data.room_id);
-      room.users.splice(target_user_index, 1);
-      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
-      console.log('users remaining ' + room.users.length);
-      if (room.users.length === 0) {
-        console.log('removing room ' + data.room_id);
-        rooms.delete(data.room_id);
-        io.sockets.in('index').emit('update-rooms', func.rooms_array(rooms));
-      }
+      func.remove_user(target_user.socket.handshake.sessionID, func, rooms, data.room_id);
     }
   });
 

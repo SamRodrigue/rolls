@@ -47,6 +47,7 @@ router.sockets = (io, socket, rooms, func) => {
     // Create user
     var user = {
       socket: socket,
+      timeout: null,
       name: data.user_name,
       role: 'admin',
       dice: [],
@@ -96,6 +97,7 @@ router.sockets = (io, socket, rooms, func) => {
     // Create user
     var user = {
       socket: socket,
+      timeout: null,
       name: data.user_name,
       role: '',
       dice: [],
