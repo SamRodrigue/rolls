@@ -19,30 +19,10 @@ router.get('/:id', function(req, res, next) {
 
 router.sockets = (io, socket, rooms, func) => {
   socket.on('enter-room', (data) => {
-    // Check if room exists
-    if (!rooms.has(data)) {
-      console.log('ERROR: a user requested an unregistered room');
-      
-      // Send response to user
-      socket.emit('alert', 'Error: Unknow room');
-      return;
-    }
-    var room = rooms.get(data);
-    var user;
-
-    // Check if user is authorized to enter room
-    var authorized = false;
-    room.users.some((a_user) => {
-      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-        user = a_user;
-        // Update socket if session id matches
-        user.socket = socket;
-        authorized = true;
-        return true;
-      }
-    });
-
-    if (!authorized) {
+    var room = find_room(rooms, data, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
+    if (!user) {
       console.log('ERROR: an unauthorized user attempted to enter ' + room.name);
       // Send response to user
       socket.emit('alert', 'Error: You do not have permission to join this room');
@@ -55,58 +35,25 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('get-room', (data) => {
-    // Check if room exists
-    if (!rooms.has(data.room_id)) {
-      console.log('ERROR: a user requested an unregistered room');
-      
-      // Send response to user
-      socket.emit('alert', 'Error: Unknow room');
-      return;
-    }
-    var room = rooms.get(data.room_id);
-    var user;
-    room.users.some((a_user) => {
-      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-        user = a_user;
-        return true;
-      }
-    });
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
     if (user) { 
       socket.emit('room-data', func.room_array(room));
     }
   });
 
   socket.on('remove_user', (data) => {
-    // Check if room exists
-    if (!rooms.has(data.room_id)) {
-      console.log('ERROR: a user requested an unregistered room');
-      
-      // Send response to user
-      socket.emit('alert', 'Error: Unknow room');
-      return;
-    }
-    var room = rooms.get(data.room_id);
-    var user;
-    var in_room = false;
-    var found_user = false;
-    var target_user;
-    room.users.some((a_user, index) => {
-      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-        user = a_user;
-        in_room = true;
-      }
-      if (a_user.name === data.name) {
-        target_user = index;
-        found_user = true;
-      }
-      if (in_room && found_user) return true;
-    });
-    if (user && found_user && 
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
+    var [target_user, target_user_index] = find_user_name(room, data.name);
+    if (user && target_user && 
         (user.role === 'admin' || user.name === data.name)) {
-      console.log('removing user ' + room.users[target_user].name + ' from ' + data.room_id);
-      room.users[target_user].socket.emit('alert', 'You have been removed from the room');
-      room.users[target_user].socket.leave(data.room_id);
-      room.users.splice(target_user, 1);
+      console.log('removing user ' + target_user.name + ' from ' + data.room_id);
+      target_user.socket.emit('alert', 'You have been removed from the room');
+      target_user.socket.leave(data.room_id);
+      room.users.splice(target_user_index, 1);
       io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
       console.log('users remaining ' + room.users.length);
       if (room.users.length === 0) {
@@ -126,22 +73,9 @@ router.sockets = (io, socket, rooms, func) => {
       console.log('ERROR: a user tried to add an unknown die ' + data.type);
       return;
     }
-    // Check if room exists
-    if (!rooms.has(data.room_id)) {
-      console.log('ERROR: a user requested an unregistered room');
-      
-      // Send response to user
-      socket.emit('alert', 'Error: Unknow room');
-      return;
-    }
-    var room = rooms.get(data.room_id);
-    var user;
-    room.users.some((a_user) => {
-      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-        user = a_user;
-        return true;
-      }
-    });
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
     if (user) { 
       user.dice.push(dice);
       io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
@@ -149,22 +83,10 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('remove-dice', (data) => {
-    // Check if room exists
-    if (!rooms.has(data.room_id)) {
-      console.log('ERROR: a user requested an unregistered room');
-      
-      // Send response to user
-      socket.emit('alert', 'Error: Unknow room');
-      return;
-    }
-    var room = rooms.get(data.room_id);
-    var user;
-    room.users.some((a_user) => {
-      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-        user = a_user;
-        return true;
-      }
-    });
+    console.log('a user removed a ' + data.type);
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
     if (user) { 
       // Remove dice
       var changed = false;
@@ -188,14 +110,9 @@ router.sockets = (io, socket, rooms, func) => {
 
   socket.on('roll-dice', (data) => {
     console.log('a user is rolling');
-    var room = rooms.get(data.room_id);
-    var user;
-    room.users.some((a_user) => {
-      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-        user = a_user;
-        return true;
-      }
-    });
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
     if (user) { 
       // Roll dice
       var changed = false;
@@ -216,7 +133,7 @@ router.sockets = (io, socket, rooms, func) => {
         { 
           user: user.name,
           time: date.getTime(),
-          log: func.dice_status(user.dice)
+          log: func.dice_status(user.dice, user.counter)
         });
       }
     }
@@ -224,21 +141,66 @@ router.sockets = (io, socket, rooms, func) => {
 
   socket.on('clear-dice', (data) => {
     console.log('a user is clearing dice');
-    var room = rooms.get(data.room_id);
-    var user;
-    room.users.some((a_user) => {
-      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-        user = a_user;
-        return true;
-      }
-    });
-    if (user) { 
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
+    if (user) {
       // Clear dice
       user.dice = [];
 
       io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
     }
   });
+
+  socket.on('counter', (data) => {
+    console.log('a user is changing a counter');
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
+    var [target_user, target_user_index] = find_user_name(room, data.name);
+    if (user && target_user && 
+        (user.role === 'admin' || user.name === data.name)) {
+      // Change counter
+      target_user.counter += data.counter;
+
+      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+    }
+  });
 };
+
+function find_room(rooms, id, socket) {
+  if (!rooms.has(id)) {
+    console.log('ERROR: a user requested an unregistered room');
+    
+    // Send response to user
+    socket.emit('alert', 'Error: Unknow room');
+    return null;
+  }
+  return rooms.get(id);
+}
+
+function find_user_socket(room, socket) {
+  var user = null;
+  room.users.some((a_user) => {
+    if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+      user = a_user;
+      return true;
+    }
+  });
+  return user;
+}
+
+function find_user_name(room, name) {
+  var target_user = null;
+  var target_user_index = -1;
+  room.users.some((a_user, index) => {
+    if (a_user.name === name) {
+      target_user = a_user;
+      target_user_index = index;
+      return true;
+    }
+  });
+  return [target_user, target_user_index];
+}
 
 module.exports = router;

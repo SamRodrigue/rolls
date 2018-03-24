@@ -15,6 +15,18 @@ var dice_overlay = `
 </button>
 </div>`;
 
+function show_alert(data) {
+  alert(data + ', returning to index');
+  //setTimeout(function() { Will be needed when alert moved to modal
+    window.location.href = '/';
+  //}, 2500);
+}
+
+function user_data(data) {
+  user = data;
+  socket.emit('get-room', { room_id: room_id }); socket.send('');
+}
+
 function remove_user(data) {
   if (user.role === 'admin' || user.name === data) {
     console.log('removing user ' + data);
@@ -71,7 +83,7 @@ function roll_dice(data) {
   socket.emit('roll-dice', out); socket.send('');
 }
 
-function status_dice(dice, type) {
+function status_dice(dice, type, counter) {
   var changed = false;
   if (type === 'total') {
     var total = 0;
@@ -83,7 +95,11 @@ function status_dice(dice, type) {
       }
     }
     if (changed) {
-      return '<div class="' + type + '-label col-6 col-md-4 col-lg-3 col-xl-2 text-center mx-auto"><span>Total: ' + total + '</span></div>';
+      var out = '<div class="' + type + '-label col-6 col-md-4 col-lg-3 col-xl-2 text-center mx-auto"><span>Total: ' + total;
+      if (counter !== 0) {
+        out += ' (' + (total + counter) + ')';
+      }
+      return out + '</span></div>';
     }
   } else {
     var num = 0;
@@ -104,6 +120,13 @@ function status_dice(dice, type) {
   }
   return '';
 }
+
+function counter(counter, name) {
+  if (typeof name == 'undefined') {
+    name = user.name;
+  }
+  socket.emit('counter', { room_id: room_id, counter: counter, name: name }); socket.send('');
+}
   
 $(document).ready(function() {
   // Load web socket
@@ -122,18 +145,6 @@ $(document).ready(function() {
       console.log('disconnected');
   });
 
-  function show_alert(data) {
-    alert(data + ', returning to index');
-    //setTimeout(function() { Will be needed when alert moved to modal
-      window.location.href = '/';
-    //}, 2500);
-  }
-
-  function user_data(data) {
-    user = data;
-    socket.emit('get-room', { room_id: room_id }); socket.send('');
-  }
-
   function room_data(data) {
     console.log('updating room');
     var dice = '';
@@ -144,20 +155,31 @@ $(document).ready(function() {
       var a_dice = `
 <div class="user-area col-12 m-1 border border-dark rounded mx-auto">
   <div class="row user-status-bar bg-light">
-    <div class="row user-name col-12 p-0 m-0 border border-success text-center">
-      <div class="col-9 col-md-10">
-        <h5>` + a_user.name + `</h5>
-      </div>`;
+    <div class="row user-name col-12 p-0 m-0 border border-success text-center">`;
       if (user.name === a_user.name) {
         a_dice += `
-      <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')">
-        <span>Leave</span>
-      </button>`;
+      <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
+        <button class="btn btn-success col-4 p-0" type="button" onclick="counter(1)"><span>+</span></button>
+        <span class="col-4 p-0 text-center"><h5 class="m-0">` + a_user.counter + `</h5></span>
+        <button class="btn btn-danger col-4 p-0" type="button" onclick="counter(-1)"><span>-</span></button>
+      </div>
+      <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>
+      <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')"><span>Leave</span></button>`;
       } else if (user.role === 'admin') {
         a_dice += `
-        <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')">
-          <span>Kick</span>
-        </button>`;
+      <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
+        <button class="btn btn-success col-4 p-0" type="button" onclick="counter(1, ` + a_user.name + `)"><span>+</span></button>
+        <span class="col-4 p-0 text-center"><h5 class="m-0">` + a_user.counter + `</h5></span>
+        <button class="btn btn-danger col-4 p-0" type="button" onclick="counter(-1, ` + a_user.name + `)"><span>-</span></button>
+      </div>
+      <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>
+      <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')"><span>Kick</span></button>`;
+      } else {
+        a_dice += `
+      <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
+        <span class="col-12 p-0 text-center"><h5 class="m-0">` + a_user.counter + `</h5></span>
+      </div>
+      <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>`;
       }
       a_dice += `
     </div>
@@ -169,7 +191,7 @@ $(document).ready(function() {
       a_dice += status_dice(a_user.dice, 'd10');
       a_dice += status_dice(a_user.dice, 'd12');
       a_dice += status_dice(a_user.dice, 'd20');
-      a_dice += status_dice(a_user.dice, 'total');
+      a_dice += status_dice(a_user.dice, 'total', a_user.counter);
       a_dice += `
       </div>
     </div>

@@ -42,13 +42,15 @@ router.sockets = (io, socket, rooms, func) => {
       console.log('ABN: Room ID collision');
       id = func.create_id();
     }
+    console.log('created a new room ' + id);
 
     // Create user
     var user = {
       socket: socket,
       name: data.user_name,
       role: 'admin',
-      dice: []
+      dice: [],
+      counter: 0
     };
     
     var room = {
@@ -96,7 +98,8 @@ router.sockets = (io, socket, rooms, func) => {
       socket: socket,
       name: data.user_name,
       role: '',
-      dice: []
+      dice: [],
+      counter: 0
     };
 
     // Check password

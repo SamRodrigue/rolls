@@ -13,10 +13,12 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
+// Routes
 var index = require('./routes/index');
 var users = require('./routes/users');
 var room  = require('./routes/room.js');
 
+// Express
 var app = express();
 app.server = http.createServer(app);
 app.io = socketio();
@@ -62,6 +64,56 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
+// cli
+var stdin = process.stdin;
+var stdout = process.stdout;
+stdin.resume();
+stdin.setEncoding('utf8');
+ 
+stdin.on('data', function (cmd) {
+  // helper functions
+  function display_rooms() {
+    stdout.write('number of rooms: ' + app.rooms.size + '\n');
+    for (var [id, room] of app.rooms) {
+      stdout.write('Room: ' + room.name + ' (' + id + ')\n');
+      stdout.write('  Users: ' + room.users.length + '\n');
+      room.users.forEach((user) => {
+        stdout.write('    User: ' + user.name + '\n');
+      });
+    }
+  }
+
+  function close_room(args) {
+    if (args.length < 2) {
+      stdout.write('Provide a room id\n');
+      return;
+    }
+    var id = args[1];
+    if (!app.rooms.has(id)) {
+      console.log('ERROR: a user requested an unregistered room');
+      return;
+    }
+    app.rooms.delete(id);
+    app.io.sockets.in(id).emit('alert', 'This room has been closed');
+    app.io.sockets.in('index').emit('update-rooms', app.func.rooms_array(app.rooms));
+  }
+
+  // Split cmd
+  var cmd = cmd.trim();
+  var args = cmd.split(' ');
+  //stdout.write('Raw: ' + cmd + '\n');
+  //stdout.write('Number of args: ' + args.length + '\n');
+  if (args.length > 0) {
+    //stdout.write('Checking command: ' + args[0] + '\n');
+    switch (args[0]) {
+      case 'rooms': display_rooms(); break;
+      case 'close': close_room(args); break;
+      default:
+        stdout.write('Unknown command: ' + args[0] + '\n');
+    }
+  }
+});
+
 // helper functions
 app.func = {};
 
@@ -86,7 +138,8 @@ app.func.room_array = (room) => {
   room.users.forEach((user) => {
     data.users.push({
       name: user.name,
-      dice: user.dice
+      dice: user.dice,
+      counter: user.counter
     });
   });
   return data;
@@ -110,7 +163,7 @@ app.func.roll= (die) => {
   die.value = Math.floor(Math.random() * floor) + offset;
 }
 
-app.func.dice_status = (dice) => {
+app.func.dice_status = (dice, counter) => {
   var out = '';
   var total = new Map();
   total.set('total', 0);
@@ -137,6 +190,9 @@ app.func.dice_status = (dice) => {
     }
   });
   out += 'Total: ' + total.get('total');
+  if (counter !== 0) {
+    out += ' (' + (total.get('total') + counter) + ')';
+  }
   return out;
 }
 
