@@ -269,6 +269,10 @@ a {
   background-color: #993366;
 }
 
+#user-counter:hover {
+  cursor: pointer;
+}
+
 .die-number {
   line-height: 64px;
   vertical-align: middle;

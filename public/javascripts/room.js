@@ -103,7 +103,7 @@ function status_dice(dice, type, counter) {
       }
     }
     if (changed) {
-      var out = '<div class="' + type + '-label col-6 col-md-4 col-lg-3 col-xl-2 text-center mx-auto"><span>Total: ' + total;
+      var out = '<div class="total-label text-center mx-auto"><span class="mx-auto">Total: ' + total;
       if (counter !== 0) {
         out += ' (' + (total + counter) + ')';
       }
@@ -176,7 +176,7 @@ $(document).ready(function() {
         a_dice += `
       <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
         <button class="btn btn-success col-4 p-0" type="button" onclick="counter(1)"><span>+</span></button>
-        <span class="col-4 p-0 text-center"><h5 class="m-0">` + a_user.counter + `</h5></span>
+        <span id="user-counter" class="col-4 p-0 text-center"><h5 class="m-0" value="` + a_user.counter + `">` + a_user.counter + `</h5></span>
         <button class="btn btn-danger col-4 p-0" type="button" onclick="counter(-1)"><span>-</span></button>
       </div>
       <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>
@@ -281,6 +281,26 @@ $(document).ready(function() {
     $('#dice-overlay').remove();
     $(this).append(dice_overlay);
     event.stopPropagation();
+  });
+
+  $(document).on('mouseenter', '#user-counter', function() {
+    $(this).find('h5').html('0');
+    $(this).css('color', '#ffffff');
+    if ($(this).find('h5').attr('value') == '0') {
+      $(this).css('background-color', '#007bff');
+    } else {
+      $(this).css('background-color', '#dc3545');
+    }
+  });
+
+  $(document).on('mouseleave', '#user-counter', function() {
+    $(this).find('h5').html($(this).find('h5').attr('value'));
+    $(this).css('color', 'inherit');
+    $(this).css('background-color', 'inherit');
+  });
+
+  $(document).on('click', '#user-counter', function() {
+    counter(0, user.name); /* ToDo: Allow admin to reset other user's counter */
   });
 
   function rem_px(rem) {
