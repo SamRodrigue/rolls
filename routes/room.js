@@ -61,7 +61,7 @@ router.sockets = (io, socket, rooms, func) => {
 
   socket.on('add-dice', (data) => {
     console.log('a user added a ' + data.type);
-    var dice = { type: '', value: -1 };
+    var dice = { type: '', value: -1, time: Date.now() };
     if (['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].includes(data.type)) {
       dice.type = data.type;
     } else {

@@ -156,6 +156,8 @@ router.sockets = (io, socket, rooms, func) => {
           console.log('adding user to ' + room.name);
           room.users.push(user);
           console.log('Room Size ' + rooms.get(data.room_id).users.length);
+        } else {
+          return;
         }
       } 
       // Move to room

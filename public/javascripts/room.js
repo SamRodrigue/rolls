@@ -4,6 +4,7 @@ var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') 
 var user = { name: '', role: 'user'};
 var dice_type = 'd4';
 var selected_dice = null;
+var die_glow_time = 1000;
 var dice_overlay = `
 <div class="row" id="dice-overlay">
 <button class="btn btn-danger" id="dice-overlay-remove" type="button" onclick="remove_dice()">
@@ -14,6 +15,9 @@ var dice_overlay = `
   <span class="oi" data-glyph="random"></span>
 </button>
 </div>`;
+var dice_color = { 
+  d4: '#3366ff', d6: '#ffff00', d8: '#008000', 
+  d10: '#ff0000', d12: '#ff9900', d20: '#993366' };
 
 function show_alert(data) {
   alert(data + ', returning to index');
@@ -121,6 +125,14 @@ function status_dice(dice, type, counter) {
   return '';
 }
 
+function die_animation(type, delta, full) {
+  if (delta > full) {
+    return;
+  }
+  var out = 'animation-name: ' + type + '-glow; animation-timing-function: linear; animation-duration: ' + full/1000 + 's; animation-delay: -' + delta/1000 + 's;';
+  return out;
+}
+
 function counter(counter, name) {
   if (typeof name == 'undefined') {
     name = user.name;
@@ -201,7 +213,7 @@ $(document).ready(function() {
         for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
           var die = a_user.dice[j];
           a_dice += `
-      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center mx-auto" style="height: 64px;" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `>
+      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center mx-auto" style="height: 64px; ` + die_animation(die.type, (data.time - die.time), die_glow_time) + `" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `">
         <span class="die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
       </div>`;
         }
@@ -238,7 +250,7 @@ $(document).ready(function() {
     console.log('adding log');
     var log = $('#log').html();
     var time = new Date(data.time);
-    console.log(data.time);
+    //console.log(data.time);
     var time_stamp = '[' + time.getHours() + ':' + ((time.getMinutes() < 10) ? '0' : '') + time.getMinutes() + ']';
     log = '<span class="row">' + time_stamp + '&nbsp;<b>' + data.user + '</b>&nbsp;' + data.log + '</span>' + log;
     $('#log').html(log);

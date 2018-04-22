@@ -135,7 +135,8 @@ app.func.rooms_array = (rooms) => {
 app.func.room_array = (room) => {
   var data = {
     name: room.name,
-    users: []
+    users: [],
+    time: Date.now()
   };
   room.users.forEach((user) => {
     data.users.push({
@@ -210,6 +211,7 @@ app.func.roll = (die) => {
     case 'd20': floor = 20; offset = 1; break; 
   }
   die.value = Math.floor(Math.random() * floor) + offset;
+  die.time = Date.now();
 }
 
 app.func.dice_status = (dice, counter) => {
