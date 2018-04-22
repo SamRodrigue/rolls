@@ -285,11 +285,11 @@ $(document).ready(function() {
 
   $(document).on('mouseenter', '#user-counter', function() {
     $(this).find('h5').html('0');
-    $(this).css('color', '#ffffff');
     if ($(this).find('h5').attr('value') == '0') {
+      $(this).css('color', '#ffffff');
       $(this).css('background-color', '#007bff');
     } else {
-      $(this).css('background-color', '#dc3545');
+      $(this).css('background-color', '#ffc107');
     }
   });
 
