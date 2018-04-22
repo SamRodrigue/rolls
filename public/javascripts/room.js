@@ -20,13 +20,23 @@ var dice_color = {
   d10: '#ff0000', d12: '#ff9900', d20: '#993366' };
 
 function show_alert(data) {
-  if (data.kick) {
-    alert(data.alert + ', returning to index');
+  var out = { kick: true, alert: '' };
+  if (typeof data.kick != 'undefined') {
+    out.kick = data.kick;
+  }
+  if (typeof data.alert == 'undefined') {
+    out.alert = data;
+  } else {
+    out.alert = data.alert;
+  }
+
+  if (out.kick) {
+    alert(out.alert + ', returning to index');
     //setTimeout(function() { Will be needed when alert moved to modal
       window.location.href = '/';
     //}, 2500);
   } else {
-    alert(data.alert);
+    alert(out.alert);
   }
 }
 
