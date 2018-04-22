@@ -25,7 +25,7 @@ router.sockets = (io, socket, rooms, func) => {
     if (!user) {
       console.log('ERROR: an unauthorized user attempted to enter ' + room.name);
       // Send response to user
-      socket.emit('alert', 'Error: You do not have permission to join this room or your session has expired. Please try again');
+      socket.emit('alert', { kick: true, alert: 'Error: You do not have permission to join this room or your session has expired. Please try again'});
       return;
     }
     // Stop user timeout
@@ -71,9 +71,13 @@ router.sockets = (io, socket, rooms, func) => {
     var room = find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = find_user_socket(room, socket);
-    if (user) { 
-      user.dice.push(dice);
-      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+    if (user) {
+      if (user.dice.length >= global.MAX_DICE) {
+        socket.emit('alert', { kick: false, alert: 'Error: You unable to add more dice (max:' + global.MAX_DICE + ')'});
+      } else {
+        user.dice.push(dice);
+        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+      }
     }
   });
 
@@ -168,7 +172,7 @@ function find_room(rooms, id, socket) {
     console.log('ERROR: a user requested an unregistered room');
     
     // Send response to user
-    socket.emit('alert', 'Error: Unknow room');
+    socket.emit('alert', { kick: true, alert: 'Error: Unknow room' });
     return null;
   }
   return rooms.get(id);

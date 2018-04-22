@@ -20,10 +20,14 @@ var dice_color = {
   d10: '#ff0000', d12: '#ff9900', d20: '#993366' };
 
 function show_alert(data) {
-  alert(data + ', returning to index');
-  //setTimeout(function() { Will be needed when alert moved to modal
-    window.location.href = '/';
-  //}, 2500);
+  if (data.kick) {
+    alert(data.alert + ', returning to index');
+    //setTimeout(function() { Will be needed when alert moved to modal
+      window.location.href = '/';
+    //}, 2500);
+  } else {
+    alert(data.alert);
+  }
 }
 
 function user_data(data) {
@@ -149,7 +153,7 @@ $(document).ready(function() {
     socket.emit('join', room_id); socket.send('');
     socket.emit('enter-room', room_id); socket.send('');
   });
-  socket.on('alert',      function(text) { show_alert(text); });
+  socket.on('alert',      function(data) { show_alert(data); });
   socket.on('user-data',  function(data) { user_data(data); });
   socket.on('room-data',  function(data) { room_data(data); });
   socket.on('room-log',   function(data) { room_log(data); });

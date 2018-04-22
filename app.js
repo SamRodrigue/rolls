@@ -27,6 +27,7 @@ app.use(session);
 app.io.use(sharedsession(session, { autoSave: true }));
 
 global.JOIN_TIMEOUT = 10 * 1000; // 10 seconds
+global.MAX_DICE = 20;
 
 // Rooms
 app.rooms = new Map();
