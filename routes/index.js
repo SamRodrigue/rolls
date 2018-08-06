@@ -61,7 +61,8 @@ router.sockets = (io, socket, rooms, func) => {
         admin: data.admin_password,
         user: data.user_password
       },
-      users: []
+      users: [],
+      timeout: null
     };
     room.users.push(user);
     rooms.set(id, room);

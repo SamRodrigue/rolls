@@ -27,6 +27,7 @@ app.use(session);
 app.io.use(sharedsession(session, { autoSave: true }));
 
 global.JOIN_TIMEOUT = 10 * 1000; // 10 seconds
+global.ROOM_TIMEOUT = 5 * 60 * 1000; // 5 min
 global.MAX_DICE = 20;
 
 // Rooms
@@ -189,10 +190,26 @@ app.func.remove_user = (sid, func, rooms, room_id) => {
     user.socket.in(room_id).emit('room-data', func.room_array(room));
     console.log('users remaining ' + room.users.length);
     if (room.users.length === 0) {
-      console.log('removing room ' + room_id);
-      rooms.delete(room_id);
+      room.timeout = setTimeout(() => {
+        app.func.remove_room(func, rooms, room_id)}, 
+        global.ROOM_TIMEOUT);
+      console.log('room is empty ' + room_id);
+      
     }
     user.socket.in('index').emit('update-rooms', func.rooms_array(rooms));
+  }
+}
+
+app.func.remove_room = (func, rooms, room_id) => {
+  if (!rooms.has(room_id)) {
+    console.log('ERROR: trying to remove an unregistered room ' + room_id);
+    return;
+  }
+  var room = rooms.get(room_id);
+  if (room.users.length === 0) {
+    rooms.delete(room_id);
+    console.log('removing room ' + room_id);
+    app.io.sockets.in('index').emit('update-rooms', app.func.rooms_array(app.rooms));
   }
 }
 
