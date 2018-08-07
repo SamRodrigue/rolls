@@ -210,6 +210,10 @@ a {
   width: 132px;
 }
 
+.preset-container {
+  width: 164px;
+}
+
 .user-dice {
   background: rgba(248, 249, 250, 0.5);
 }

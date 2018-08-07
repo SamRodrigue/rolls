@@ -28,65 +28,82 @@ block content
         .modal-header
           h2 Dice
           button.close(data-dismiss='modal') &times;
-        .modal-body.row
-          .dice-container.mx-auto
-            .d4.text-center
-              span.die-number d4
-            .dice-buttons.text-center
-              button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d4')")
-                span +
-              span#d4-count.die-count.text-center 0
-              button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d4')")
-                span -
-          .dice-container.mx-auto
-            .d6.text-center
-              span.die-number d6
-            .dice-buttons.text-center
-              button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d6')")
-                span +
-              span#d6-count.die-count.text-center 0
-              button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d6')")
-                span -
-          .dice-container.mx-auto
-            .d8.text-center
-              span.die-number d8
-            .dice-buttons.text-center
-              button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d8')")
-                span +
-              span#d8-count.die-count.text-center 0
-              button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d8')")
-                span -
-          .dice-container.mx-auto
-            .d10.text-center
-              span.die-number d10
-            .dice-buttons.text-center
-              button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d10')")
-                span +
-              span#d10-count.die-count.text-center 0
-              button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d10')")
-                span -
-          .dice-container.mx-auto
-            .d12.text-center
-              span.die-number d12
-            .dice-buttons.text-center
-              button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d12')")
-                span +
-              span#d12-count.die-count.text-center 0
-              button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d12')")
-                span -
-          .dice-container.mx-auto
-            .d20.text-center
-              span.die-number d20
-            .dice-buttons.text-center
-              button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d20')")
-                span +
-              span#d20-count.die-count.text-center 0
-              button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d20')")
-                span -
+        .modal-body
+          .row#dice-containers
+            .dice-container.mx-auto
+              .d4.text-center
+                span.die-number d4
+              .dice-buttons.text-center
+                button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d4')")
+                  span +
+                span#d4-count.die-count.text-center 0
+                button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d4')")
+                  span -
+            .dice-container.mx-auto
+              .d6.text-center
+                span.die-number d6
+              .dice-buttons.text-center
+                button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d6')")
+                  span +
+                span#d6-count.die-count.text-center 0
+                button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d6')")
+                  span -
+            .dice-container.mx-auto
+              .d8.text-center
+                span.die-number d8
+              .dice-buttons.text-center
+                button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d8')")
+                  span +
+                span#d8-count.die-count.text-center 0
+                button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d8')")
+                  span -
+            .dice-container.mx-auto
+              .d10.text-center
+                span.die-number d10
+              .dice-buttons.text-center
+                button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d10')")
+                  span +
+                span#d10-count.die-count.text-center 0
+                button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d10')")
+                  span -
+            .dice-container.mx-auto
+              .d12.text-center
+                span.die-number d12
+              .dice-buttons.text-center
+                button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d12')")
+                  span +
+                span#d12-count.die-count.text-center 0
+                button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d12')")
+                  span -
+            .dice-container.mx-auto
+              .d20.text-center
+                span.die-number d20
+              .dice-buttons.text-center
+                button.btn.btn-success.col-3.mr-1(type="button" onClick="add_dice('d20')")
+                  span +
+                span#d20-count.die-count.text-center 0
+                button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d20')")
+                  span -
+          hr.row
+          .row#preset-containers
+            .preset-container.mx-auto
+              .preset1.text-center
+                h5 Preset 1
+                button.btn.btn-success.mr-1(type="button" onClick="preset(0, 0)")
+                  span Save
+                button.btn.btn-primary.ml-1(type="button" onClick="preset(1, 0)")
+                  span Load
+            .preset-container.mx-auto
+              .preset2.text-center
+                h5 Preset 2
+                button.btn.btn-success.mr-1(type="button" onClick="preset(0, 1)")
+                  span Save
+                button.btn.btn-primary.ml-1(type="button" onClick="preset(1, 1)")
+                  span Load
         .modal-footer
           button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_dice()")
             span Clear
-          button#clear-roll.btn.btn-primary(data-dismiss='modal' onClick="roll_dice()")
+          button.btn.btn-primary(data-dismiss='modal' onClick="roll_dice()")
             span Roll
           button.btn.btn-default(data-dismiss='modal')
             span Close

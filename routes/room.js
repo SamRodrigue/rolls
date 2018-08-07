@@ -171,6 +171,49 @@ router.sockets = (io, socket, rooms, func) => {
       }
     }
   });
+
+  socket.on('preset', (data) => { // Save = 0, Load = 1
+    if (data.type === 0) console.log('a user is saving a preset');
+    else if (data.type === 1) console.log('a user is loading a preset');
+    else {
+      console.log('a user is using an unsupported preset type');
+      return;
+    }
+    if (data.preset < 0 || data.preset > 1) {
+      console.log('a user is using an unsupported preset number');
+      return;
+    }
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
+    var preset = user.preset[data.preset];
+
+    switch (data.type) {
+      case 0: // Save
+        user.preset[data.preset].dice = [];
+        user.dice.forEach((die) => {
+          user.preset[data.preset].dice.push({
+            type: die.type,
+            value: -1,
+            time: Date.now()
+          });
+        });
+        user.preset[data.preset].counter = user.counter;
+        break;
+      case 1: // Load
+        user.dice = [];
+        user.preset[data.preset].dice.forEach((die) => {
+          user.dice.push({
+            type: die.type,
+            value: -1,
+            time: Date.now()
+          });
+        });
+        user.counter = user.preset[data.preset].counter;
+        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+        break;
+    }
+  });
 };
 
 function find_room(rooms, id, socket) {
@@ -178,7 +221,7 @@ function find_room(rooms, id, socket) {
     console.log('ERROR: a user requested an unregistered room');
     
     // Send response to user
-    socket.emit('alert', { kick: true, alert: 'Error: Unknow room' });
+    socket.emit('alert', { kick: true, alert: 'Error: Unknown room' });
     return null;
   }
   return rooms.get(id);

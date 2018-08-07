@@ -153,6 +153,13 @@ function counter(counter, name) {
   }
   socket.emit('counter', { room_id: room_id, counter: counter, name: name }); socket.send('');
 }
+
+function preset(load, set) { // Save = 0, Load = 1
+  if (load < 0 || load > 1) return;
+  if (set < 0 || set > 1) return;
+  
+  socket.emit('preset', { room_id: room_id, type: load, preset: set }); socket.send('');
+}
   
 $(document).ready(function() {
   // Load web socket

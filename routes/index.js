@@ -51,7 +51,14 @@ router.sockets = (io, socket, rooms, func) => {
       name: data.user_name,
       role: 'admin',
       dice: [],
-      counter: 0
+      counter: 0,
+      preset: [{
+        dice: [],
+        counter: 0
+      }, {
+        dice: [],
+        counter: 0
+      }]
     };
     
     var room = {
@@ -102,7 +109,14 @@ router.sockets = (io, socket, rooms, func) => {
       name: data.user_name,
       role: '',
       dice: [],
-      counter: 0
+      counter: 0,
+      preset: [{
+        dice: [],
+        counter: 0
+      }, {
+        dice: [],
+        counter: 0
+      }]
     };
 
     // Check password
