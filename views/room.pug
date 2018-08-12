@@ -2,12 +2,16 @@ extends layout
 
 block scripts
   script(src='/javascripts/room.js')
+  script(src='/javascripts/map.js')
 
 block content
   .top.text-center
     h3.text-light Room: #{room.name}
   
-  .content
+  .toggle
+    button#toggle-dice.btn.btn-warning.col-1.float-right(type="button" onClick="toggle_dice()")
+      span#toggle-dice-status Map
+  #dice-content.content
     .container-fluid.mt-2.col-12.col-lg-10.col-xl-8
       .row.user-roll.col-12.col-md-8.col-lg-6.mx-auto.input-group
         button#roll.btn.btn-primary.col-8(onClick="roll_dice()")
@@ -19,6 +23,17 @@ block content
           .loader
         #log-container.col-12.col-sm-6.col-md-5.col-lg-4.pt-1.pb-1
           #log.col-12.border.border-secondary.bg-light.content
+  #map-content.content(style="display: none;")
+    .container-fluid.mt-2.col-12.col-lg-10.col-xl-8
+      .row.user-roll.col-12.col-md-8.col-lg-6.mx-auto.input-group
+        button#roll.btn.btn-primary.col-4(onClick="hide_map()")
+          span Hide
+        button#roll.btn.btn-primary.col-3.offset-1(data-toggle="modal" data-target="#tools-modal")
+          span Tools
+        button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#objects-modal")
+          span Objects
+      .row.mt-2
+        #map
 
   .footer
 
@@ -108,10 +123,28 @@ block content
           button.btn.btn-default(data-dismiss='modal')
             span Close
 
-  #dice-overlay-hide.d-none
-    #dice-overlay.row
-      button#dice-overlay-remove.btn.btn-danger(type="button" onClick="remove_dice()")
-        span.oi(data-glyph="x") 
-      #dice-overlay-glow
-      button#dice-overlay-roll.btn.btn-warning(type="button" onClick="roll_dice(true)")
-        span.oi(data-glyph="random")
+  #tools-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h2 Tools
+          button.close(data-dismiss='modal') &times;
+        .modal-body
+
+        .modal-footer
+          button.btn.btn-default(data-dismiss='modal')
+            span Close
+
+  #objects-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h2 Objects
+          button.close(data-dismiss='modal') &times;
+        .modal-body
+
+        .modal-footer
+          button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_objects()")
+            span Clear
+          button.btn.btn-default(data-dismiss='modal')
+            span Close

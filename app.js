@@ -26,12 +26,26 @@ app.io.attach(app.server);
 app.use(session);
 app.io.use(sharedsession(session, { autoSave: true }));
 
+global.DEBUG = true;
 global.JOIN_TIMEOUT = 10 * 1000; // 10 seconds
 global.ROOM_TIMEOUT = 5 * 60 * 1000; // 5 min
 global.MAX_DICE = 20;
 
 // Rooms
 app.rooms = new Map();
+
+if (global.DEBUG) {
+  app.rooms.set('debug', {
+    name: 'Debug',
+    locked: false,
+    password: {
+      admin: '1',
+      user: ''
+    },
+    users: [],
+    timeout: null
+  });
+}
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

@@ -2,6 +2,7 @@
 var socket;
 var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') + 1);
 var user = { name: '', role: 'user'};
+var show_dice = true;
 var dice_type = 'd4';
 var selected_dice = null;
 var die_glow_time = 1000;
@@ -37,6 +38,23 @@ function show_alert(data) {
     //}, 2500);
   } else {
     alert(out.alert);
+  }
+}
+
+function toggle_dice() {
+  var dice = $('#dice-content');
+  var map = $('#map-content');
+  var toggle_status = $('#toggle-dice-status');
+  show_dice = !show_dice;
+
+  if (show_dice) {
+    map.hide();
+    dice.show();
+    toggle_status.html('Map');
+  } else {
+    dice.hide();
+    map.show();
+    toggle_status.html('Dice');
   }
 }
 

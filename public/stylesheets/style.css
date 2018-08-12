@@ -58,6 +58,10 @@ a {
   cursor: pointer;  
 }
 
+#toggle-dice {
+  z-index: 1;
+}
+
 #dice {
   background-color: transparent;
   border: double 5px grey;
