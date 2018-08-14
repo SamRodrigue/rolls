@@ -67,6 +67,10 @@ a {
   border: double 5px grey;
 }
 
+#map {
+  cursor: none;
+}
+
 #log-container {
   background-color: transparent;
   border: double 5px grey;
