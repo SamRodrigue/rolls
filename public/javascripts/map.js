@@ -10,7 +10,8 @@ var map = {
     width: 1
   },
   walls: [],
-  objects: []
+  objects: [],
+  texture: {}
 };
 
 var view = {
@@ -18,21 +19,33 @@ var view = {
   height: 480,
   x: 50,
   y: 50,
-  zoom: 10,
+  zoom: {
+    val: 10,
+    MIN: 1,
+    MAX: 10,
+    set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
+  },
   mx: 50,
   my: 50,
   wx: 50,
-  wy: 50
+  wy: 50,
+  brush: {
+    val: 10,
+    MIN: 2,
+    MAX: 20,
+    set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
+  }
 };
 
 var mode = {
   set: 0, // default to MAP
 
-  MAP:    0, // Move map
-  WALL:   1, // Modify walls
-  OBJECT: 2, // Modify objects
-  ERASE:  3,
-  COUNT:  4
+  MAP:     0, // Move map
+  WALL:    1, // Modify walls
+  OBJECT:  2, // Modify objects
+  ERASE:   3, // Remove walls and objects
+  TEXTURE: 4,
+  COUNT:   5
 }
 
 var wall = null;
@@ -192,6 +205,7 @@ sketch.setup = function() {
   canvas.mouseOut(function () {
     onCanvas = false;
   });
+  map.texture = sketch.createImage(map.width, map.height);
   //noLoop();
 };
 
@@ -200,7 +214,7 @@ sketch.draw = function () {
   sketch.fill(0);
   sketch.text(view.x, 2, 10);
   sketch.text(view.y, 2, 20);
-  sketch.text(view.zoom, 2, 30);
+  sketch.text(view.zoom.val, 2, 30);
   sketch.text(sketch.mouseY, 2, 40);
   sketch.text(sketch.mouseY, 2 ,50);
 
@@ -211,9 +225,9 @@ sketch.draw = function () {
 	// sketch.rect(x, y, 10, 10);
 
   //sketch.push();
-  sketch.translate(-view.x * view.zoom, -view.y * view.zoom);
-  sketch.scale(view.zoom);
-  sketch.translate(sketch.width/(2 * view.zoom), sketch.height/(2 * view.zoom));
+  sketch.translate(-view.x * view.zoom.val, -view.y * view.zoom.val);
+  sketch.scale(view.zoom.val);
+  sketch.translate(sketch.width/(2 * view.zoom.val), sketch.height/(2 * view.zoom.val));
   draw_map();
 
   //sketch.pop();
@@ -252,16 +266,29 @@ sketch.mouseDragged = function() {
   if (!onCanvas) return;
   switch (mode.set) {
     case mode.MAP:
-      view.x += (sketch.pmouseX - sketch.mouseX) / view.zoom;
-      view.y += (sketch.pmouseY - sketch.mouseY) / view.zoom;
+      view.x += (sketch.pmouseX - sketch.mouseX) / view.zoom.val;
+      view.y += (sketch.pmouseY - sketch.mouseY) / view.zoom.val;
+      break;
+    case mode.TEXTURE:
+      map.texture.loadPixels();
+      var dLimit = view.brush.val * view.brush.val / 4;
+      for (var i = -view.brush.val / 2; i < view.brush.val / 2; ++i) {
+        var di = i * i;
+        for (var j = -view.brush.val / 2; j < view.brush.val / 2; ++j) {
+          var d = di + j * j;
+          if (d < dLimit) {
+            map.texture.set(view.mx + i, view.my + j, [110, 110, 110, 255]);
+          }
+        }
+      }
+      map.texture.updatePixels();
       break;
   }
 };
 
 sketch.mouseWheel = function(event) {
   if (!onCanvas) return;
-  view.zoom -= 0.1 * event.delta;
-  view.zoom = sketch.constrain(view.zoom, 1, 10);
+  view.zoom.set(view.zoom.val - 0.1 * event.delta);
 };
 
 sketch.keyPressed = function() {
@@ -275,6 +302,21 @@ sketch.keyPressed = function() {
     case 'e':
       sketch.setMode(mode.ERASE);
       break;
+    case 't':
+      sketch.setMode(mode.TEXTURE);
+      break;
+    case '+':
+      view.zoom.set(view.zoom.val * 1.1);
+      break;
+    case '_':
+      view.zoom.set(view.zoom.val * 0.9);
+      break;
+    case '=':
+      view.brush.set(view.brush.val * 1.1);
+      break;
+    case '-':
+      view.brush.set(view.brush.val * 0.9);
+      break;
   }
 }
 
@@ -286,14 +328,19 @@ sketch.setMode = function(m) {
 }
 
 function draw_map() {
+  draw_texture();
   draw_grid();
   draw_walls();
   draw_objects();
   draw_players();
 }
 
+function draw_texture() {
+  sketch.image(map.texture, 0, 0);
+}
+
 function draw_grid() {
-  sketch.strokeWeight(1/view.zoom);
+  sketch.strokeWeight(1/view.zoom.val);
   sketch.stroke(0, 0, 0);
   for (var i = 0; i <= map.width; i += map.grid.spacing) {
     sketch.line(i, 0, i, map.height);
@@ -322,29 +369,33 @@ function draw_players() {
 }
 
 function draw_cursor() {
-  view.mx = (sketch.mouseX - sketch.width/2) / view.zoom + view.x;
-  view.my = (sketch.mouseY - sketch.height/2) / view.zoom + view.y;
+  view.mx = (sketch.mouseX - sketch.width/2) / view.zoom.val + view.x;
+  view.my = (sketch.mouseY - sketch.height/2) / view.zoom.val + view.y;
+  view.wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
+  view.wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
+
   sketch.rectMode(sketch.CENTER);
 
   switch (mode.set) {
     case mode.MAP:
       sketch.fill(0);
-      sketch.rect(view.mx, view.my, 10 / view.zoom, 10 / view.zoom);
+      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
       break;
     case mode.WALL:
-      view.wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
-      view.wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
       sketch.fill(0, 255, 255);
-      sketch.rect(view.wx, view.wy, 10 / view.zoom, 10 / view.zoom);
+      sketch.rect(view.wx, view.wy, 10 / view.zoom.val, 10 / view.zoom.val);
       sketch.fill(0);
-      sketch.rect(view.mx, view.my, 10 / view.zoom, 10 / view.zoom);
+      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
       break;
     case mode.ERASE:
-      view.wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
-      view.wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
       sketch.fill(255, 0, 0);
-      sketch.rect(view.mx, view.my, 10 / view.zoom, 10 / view.zoom);
+      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
       break;
+    case mode.TEXTURE:
+      sketch.noFill();
+      sketch.stroke(0);
+      sketch.strokeWeight(2/view.zoom.val);
+      sketch.ellipse(view.mx, view.my, view.brush.val, view.brush.val);
   }
 }
 }; // End of sketch
