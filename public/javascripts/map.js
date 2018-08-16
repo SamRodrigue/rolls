@@ -45,7 +45,52 @@ var mode = {
   OBJECT:  2, // Modify objects
   ERASE:   3, // Remove walls and objects
   TEXTURE: 4,
-  COUNT:   5
+  COUNT:   5,
+
+  do: {
+    map: function() { // Drag
+      view.x += (sketch.pmouseX - sketch.mouseX) / view.zoom.val;
+      view.y += (sketch.pmouseY - sketch.mouseY) / view.zoom.val;
+    },
+    wall: function() { // Press
+      if (wall === null) {
+        wall = new Wall(view.wx, view.wy);
+      } else {
+        wall.end(view.wx, view.wy);
+        if (wall.mode === 2) {
+          map.walls.push(wall.copy());
+          wall = new Wall(view.wx, view.wy);
+        } else {
+          wall = null;
+        }
+      }
+    },
+    object: function() { // Press
+
+    },
+    erase: function() { // Press/Drag
+      for (var i = map.walls.length - 1; i >= 0; --i) {
+        if (map.walls[i].contains(view.mx, view.my)) {
+          map.walls.splice(i, 1);
+          break;
+        }
+      }
+    },
+    texture: function() { // Press/Drag
+      map.texture.loadPixels();
+      var dLimit = view.brush.val * view.brush.val / 4;
+      for (var i = -view.brush.val / 2; i < view.brush.val / 2; ++i) {
+        var di = i * i;
+        for (var j = -view.brush.val / 2; j < view.brush.val / 2; ++j) {
+          var d = di + j * j;
+          if (d < dLimit) {
+            map.texture.set(view.mx + i, view.my + j, [110, 110, 110, 255]);
+          }
+        }
+      }
+      map.texture.updatePixels();
+    }
+  }
 }
 
 var wall = null;
@@ -238,26 +283,13 @@ sketch.mousePressed = function() {
   if (!onCanvas) return;
   switch (mode.set) {
     case mode.WALL:
-      if (wall === null) {
-        wall = new Wall(view.wx, view.wy);
-      } else {
-        wall.end(view.wx, view.wy);
-        if (wall.mode === 2) {
-          map.walls.push(wall.copy());
-          wall = new Wall(view.wx, view.wy);
-        } else {
-          wall = null;
-        }
-      }
+      mode.do.wall();
       break;
     case mode.ERASE:
-      // Find wall/object below cursor
-      for (var i = map.walls.length - 1; i >= 0; --i) {
-        if (map.walls[i].contains(view.mx, view.my)) {
-          map.walls.splice(i, 1);
-          i = 0;
-        }
-      }
+      mode.do.erase();
+      break;
+    case mode.TEXTURE:
+      mode.do.texture();
       break;
   }
 };
@@ -266,22 +298,10 @@ sketch.mouseDragged = function() {
   if (!onCanvas) return;
   switch (mode.set) {
     case mode.MAP:
-      view.x += (sketch.pmouseX - sketch.mouseX) / view.zoom.val;
-      view.y += (sketch.pmouseY - sketch.mouseY) / view.zoom.val;
+      mode.do.map();
       break;
     case mode.TEXTURE:
-      map.texture.loadPixels();
-      var dLimit = view.brush.val * view.brush.val / 4;
-      for (var i = -view.brush.val / 2; i < view.brush.val / 2; ++i) {
-        var di = i * i;
-        for (var j = -view.brush.val / 2; j < view.brush.val / 2; ++j) {
-          var d = di + j * j;
-          if (d < dLimit) {
-            map.texture.set(view.mx + i, view.my + j, [110, 110, 110, 255]);
-          }
-        }
-      }
-      map.texture.updatePixels();
+      mode.do.texture();
       break;
   }
 };
