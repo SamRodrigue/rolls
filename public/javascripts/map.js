@@ -11,7 +11,11 @@ var map = {
   },
   walls: [],
   objects: [],
-  texture: {}
+  texture: {
+    val: {},
+    image: {}
+  },
+  textures: []
 };
 
 var view = {
@@ -47,6 +51,16 @@ var mode = {
   TEXTURE: 4,
   COUNT:   5,
 
+  texture: {
+    set: 0,
+
+    NONE:  0,
+    GRASS: 1,
+    STONE: 2,
+    WOOD:  3,
+    COUNT: 4
+  },
+
   do: {
     map: function() { // Drag
       view.x += (sketch.pmouseX - sketch.mouseX) / view.zoom.val;
@@ -77,18 +91,43 @@ var mode = {
       }
     },
     texture: function() { // Press/Drag
-      map.texture.loadPixels();
+      if (mode.texture.set < 0 || mode.texture.set >= mode.texture.COUNT) return;
+
       var dLimit = view.brush.val * view.brush.val / 4;
       for (var i = -view.brush.val / 2; i < view.brush.val / 2; ++i) {
         var di = i * i;
-        for (var j = -view.brush.val / 2; j < view.brush.val / 2; ++j) {
-          var d = di + j * j;
-          if (d < dLimit) {
-            map.texture.set(view.mx + i, view.my + j, [110, 110, 110, 255]);
+        var x = Math.floor(view.mx + i);
+        if (x >= 0 && x < map.width) {
+          for (var j = -view.brush.val / 2; j < view.brush.val / 2; ++j) {
+            var y = Math.floor(view.my + j);
+            if (y >= 0 && y < map.height) {
+              var d = di + j * j;
+              if (d < dLimit) {
+                map.texture.val[x][y] = mode.texture.set;
+              }
+            }
           }
         }
       }
-      map.texture.updatePixels();
+      // Update map texture
+      map.texture.image.loadPixels();
+      map.textures[mode.texture.GRASS].loadPixels();
+      map.textures[mode.texture.STONE].loadPixels();
+      map.textures[mode.texture.WOOD].loadPixels();
+      
+      for (var i = 0; i < map.width; ++i) {
+        for (var j = 0; j < map.height; ++j) {
+          if (map.texture.val[i][j] === 0) {
+            map.texture.image.set(i, j, [0, 0, 0, 0]);
+          } else {
+            var x = i % 24;
+            var y = j % 24;
+            var tex = map.textures[map.texture.val[i][j]].get(x, y);
+            map.texture.image.set(i, j, tex);
+          }
+        }
+      }
+      map.texture.image.updatePixels();
     }
   }
 }
@@ -250,7 +289,19 @@ sketch.setup = function() {
   canvas.mouseOut(function () {
     onCanvas = false;
   });
-  map.texture = sketch.createImage(map.width, map.height);
+
+  map.textures[mode.texture.GRASS] = sketch.loadImage('/images/grass.png');
+  map.textures[mode.texture.STONE] = sketch.loadImage('/images/stone.png');
+  map.textures[mode.texture.WOOD] = sketch.loadImage('/images/wood.png');
+
+  map.texture.image = sketch.createImage(map.width, map.height);
+
+  for (var i = 0; i < map.width; ++i) {
+    map.texture.val[i] = [];
+    for (var j = 0; j < map.height; ++j) {
+      map.texture.val[i][j] = 0;
+    }
+  }
   //noLoop();
 };
 
@@ -337,6 +388,18 @@ sketch.keyPressed = function() {
     case '-':
       view.brush.set(view.brush.val * 0.9);
       break;
+    case '0':
+      mode.texture.set = mode.texture.NONE;
+      break;
+    case '1':
+      mode.texture.set = mode.texture.GRASS;
+      break;
+    case '2':
+      mode.texture.set = mode.texture.STONE;
+      break;
+    case '3':
+      mode.texture.set = mode.texture.WOOD;
+      break;
   }
 }
 
@@ -356,7 +419,7 @@ function draw_map() {
 }
 
 function draw_texture() {
-  sketch.image(map.texture, 0, 0);
+  sketch.image(map.texture.image, 0, 0);
 }
 
 function draw_grid() {
