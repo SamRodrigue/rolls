@@ -30,8 +30,8 @@ block content
           span Hide
         button#roll.btn.btn-primary.col-3.offset-1(data-toggle="modal" data-target="#tools-modal")
           span Tools
-        button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#objects-modal")
-          span Objects
+        button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#assets-modal")
+          span Assets
       .row.mt-2
         #map
 
@@ -135,16 +135,16 @@ block content
           button.btn.btn-default(data-dismiss='modal')
             span Close
 
-  #objects-modal.modal.fade
+  #assets-modal.modal.fade
     .modal-dialog
       .modal-content
         .modal-header
-          h2 Objects
+          h2 Assets
           button.close(data-dismiss='modal') &times;
         .modal-body
 
         .modal-footer
-          button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_objects()")
+          button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_assets()")
             span Clear
           button.btn.btn-default(data-dismiss='modal')
             span Close
