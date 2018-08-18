@@ -6,14 +6,17 @@ var map = {
     spacing: 5
   },
   wall: {
-    spacing: 5,
+    spacing: 2.5,
     width: 1
   },
   walls: [],
   objects: [],
   texture: {
+    width: null, // to be calculated
+    height: null, // to be calculated
     val: {},
-    image: {}
+    image: {},
+    spacing: 0.5
   },
   textures: []
 };
@@ -94,13 +97,13 @@ var mode = {
       if (mode.texture.set < 0 || mode.texture.set >= mode.texture.COUNT) return;
 
       var dLimit = view.brush.val * view.brush.val / 4;
-      for (var i = -view.brush.val / 2; i < view.brush.val / 2; ++i) {
-        var di = i * i;
-        var x = Math.floor(view.mx + i);
-        if (x >= 0 && x < map.width) {
-          for (var j = -view.brush.val / 2; j < view.brush.val / 2; ++j) {
-            var y = Math.floor(view.my + j);
-            if (y >= 0 && y < map.height) {
+      for (var i = -view.brush.val / 2; i < view.brush.val / 2; i += map.texture.spacing) {
+        var x = Math.floor((view.mx + i) / map.texture.spacing);
+        if (x >= 0 && x < map.texture.width) {
+          var di = i * i;
+          for (var j = -view.brush.val / 2; j < view.brush.val / 2; j += map.texture.spacing) {
+            var y = Math.floor((view.my + j) / map.texture.spacing);
+            if (y >= 0 && y < map.texture.height) {
               var d = di + j * j;
               if (d < dLimit) {
                 map.texture.val[x][y] = mode.texture.set;
@@ -115,8 +118,8 @@ var mode = {
       map.textures[mode.texture.STONE].loadPixels();
       map.textures[mode.texture.WOOD].loadPixels();
       
-      for (var i = 0; i < map.width; ++i) {
-        for (var j = 0; j < map.height; ++j) {
+      for (var i = 0; i < map.texture.width; ++i) {
+        for (var j = 0; j < map.texture.height; ++j) {
           if (map.texture.val[i][j] === 0) {
             map.texture.image.set(i, j, [0, 0, 0, 0]);
           } else {
@@ -130,7 +133,11 @@ var mode = {
       map.texture.image.updatePixels();
     }
   }
-}
+};
+
+var objects = {
+  boulder: {}
+};
 
 var wall = null;
 
@@ -294,11 +301,13 @@ sketch.setup = function() {
   map.textures[mode.texture.STONE] = sketch.loadImage('/images/stone.png');
   map.textures[mode.texture.WOOD] = sketch.loadImage('/images/wood.png');
 
-  map.texture.image = sketch.createImage(map.width, map.height);
+  map.texture.width = map.width / map.texture.spacing;
+  map.texture.height = map.height / map.texture.spacing;
+  map.texture.image = sketch.createImage(map.texture.width, map.texture.height);
 
-  for (var i = 0; i < map.width; ++i) {
+  for (var i = 0; i < map.texture.width; ++i) {
     map.texture.val[i] = [];
-    for (var j = 0; j < map.height; ++j) {
+    for (var j = 0; j < map.texture.height; ++j) {
       map.texture.val[i][j] = 0;
     }
   }
@@ -308,22 +317,20 @@ sketch.setup = function() {
 sketch.draw = function () {
   sketch.background(235);
   sketch.fill(0);
-  sketch.text(view.x, 2, 10);
-  sketch.text(view.y, 2, 20);
-  sketch.text(view.zoom.val, 2, 30);
-  sketch.text(sketch.mouseY, 2, 40);
-  sketch.text(sketch.mouseY, 2 ,50);
-
-  // sketch.rectMode(sketch.CENTER);
-  // sketch.fill(0, 0, 255);
-  // var x = sketch.mouseX;
-  // var y = sketch.mouseY;
-	// sketch.rect(x, y, 10, 10);
+  // sketch.text(view.x, 2, 10);
+  // sketch.text(view.y, 2, 20);
+  // sketch.text(view.zoom.val, 2, 30);
+  // sketch.text(sketch.mouseY, 2, 40);
+  // sketch.text(sketch.mouseY, 2 ,50);
 
   //sketch.push();
   sketch.translate(-view.x * view.zoom.val, -view.y * view.zoom.val);
   sketch.scale(view.zoom.val);
   sketch.translate(sketch.width/(2 * view.zoom.val), sketch.height/(2 * view.zoom.val));
+  sketch.push();
+    sketch.scale(map.texture.spacing);
+    draw_texture();
+  sketch.pop();
   draw_map();
 
   //sketch.pop();
@@ -332,34 +339,56 @@ sketch.draw = function () {
 
 sketch.mousePressed = function() {
   if (!onCanvas) return;
-  switch (mode.set) {
-    case mode.WALL:
-      mode.do.wall();
-      break;
-    case mode.ERASE:
-      mode.do.erase();
-      break;
-    case mode.TEXTURE:
-      mode.do.texture();
-      break;
+  if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
+    mode.do.map();
+  } else {
+    switch (mode.set) {
+      case mode.WALL:
+        mode.do.wall();
+        break;
+      case mode.ERASE:
+        mode.do.erase();
+        break;
+      case mode.TEXTURE:
+        mode.do.texture();
+        break;
+    }
   }
 };
 
 sketch.mouseDragged = function() {
   if (!onCanvas) return;
-  switch (mode.set) {
-    case mode.MAP:
-      mode.do.map();
-      break;
-    case mode.TEXTURE:
-      mode.do.texture();
-      break;
+  if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
+    mode.do.map();
+  } else {
+    switch (mode.set) {
+      case mode.MAP:
+        mode.do.map();
+        break;
+      case mode.TEXTURE:
+        mode.do.texture();
+        break;
+    }
   }
 };
 
 sketch.mouseWheel = function(event) {
   if (!onCanvas) return;
-  view.zoom.set(view.zoom.val - 0.1 * event.delta);
+  if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
+    view.zoom.set(view.zoom.val - 0.1 * event.delta);
+  } else {
+    switch (mode.set) {
+      case mode.MAP:
+      case mode.WALL:
+      case mode.OBJECT:
+      case mode.ERASE:
+        view.zoom.set(view.zoom.val - 0.1 * event.delta);
+        break;
+      case mode.TEXTURE:
+        view.brush.set(view.brush.val - 0.5 * event.delta);
+        break;
+    }
+  }
 };
 
 sketch.keyPressed = function() {
@@ -401,17 +430,16 @@ sketch.keyPressed = function() {
       mode.texture.set = mode.texture.WOOD;
       break;
   }
-}
+};
 
 sketch.setMode = function(m) {
   if (m >= 0 && m < mode.COUNT) {
     wall = null;
     mode.set = m;
   }
-}
+};
 
 function draw_map() {
-  draw_texture();
   draw_grid();
   draw_walls();
   draw_objects();
@@ -459,26 +487,32 @@ function draw_cursor() {
 
   sketch.rectMode(sketch.CENTER);
 
-  switch (mode.set) {
-    case mode.MAP:
-      sketch.fill(0);
-      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-      break;
-    case mode.WALL:
-      sketch.fill(0, 255, 255);
-      sketch.rect(view.wx, view.wy, 10 / view.zoom.val, 10 / view.zoom.val);
-      sketch.fill(0);
-      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-      break;
-    case mode.ERASE:
-      sketch.fill(255, 0, 0);
-      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-      break;
-    case mode.TEXTURE:
-      sketch.noFill();
-      sketch.stroke(0);
-      sketch.strokeWeight(2/view.zoom.val);
-      sketch.ellipse(view.mx, view.my, view.brush.val, view.brush.val);
+  if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
+    sketch.fill(0);
+    sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+  } else {
+    switch (mode.set) {
+      case mode.MAP:
+        sketch.fill(0);
+        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+        break;
+      case mode.WALL:
+        sketch.fill(0, 255, 255);
+        sketch.rect(view.wx, view.wy, 10 / view.zoom.val, 10 / view.zoom.val);
+        sketch.fill(0);
+        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+        break;
+      case mode.ERASE:
+        sketch.fill(255, 0, 0);
+        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+        break;
+      case mode.TEXTURE:
+        sketch.noFill();
+        sketch.stroke(0);
+        sketch.strokeWeight(2/view.zoom.val);
+        sketch.ellipse(view.mx, view.my, view.brush.val, view.brush.val);
+        break;
+    }
   }
 }
 }; // End of sketch
