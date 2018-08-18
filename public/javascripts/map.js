@@ -21,6 +21,10 @@ var map = {
     spacing: 0.5
   },
 
+  cursor: {
+    spacing: 1.9
+  },
+
   walls: [],
   assets: [],
 
@@ -36,38 +40,35 @@ var map = {
 var view = {
   width: 680,
   height: 480,
-  x: 50,
-  y: 50,
+  x: 0,
+  y: 0,
   zoom: {
     val: 10,
     MIN: 1,
     MAX: 10,
     set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
   },
-  mx: 50,
-  my: 50,
-  wx: 50,
-  wy: 50,
+  mx: 0,
+  my: 0,
+  wx: 0,
+  wy: 0,
   brush: {
     val: 10,
     MIN: 2,
     MAX: 20,
     set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
+  },
+  asset: {
+    val: 1,
+    MIN: 0.5,
+    MAX: 4,
+    set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
   }
 };
 
 var mode = {
-  set: 0, // default to MAP
-
-  MAP:     0, // Move map
-  WALL:    1, // Add walls
-  ASSET:  2, // Add assets
-  ERASE:   3, // Remove walls and assets
-  TEXTURE: 4,
-  COUNT:   5,
-
+  cursor: 0,
   texture: 0,
-
   wall: null,
   asset: 0,
 
@@ -75,6 +76,8 @@ var mode = {
     map: function() { // Drag
       view.x += (sketch.pmouseX - sketch.mouseX) / view.zoom.val;
       view.y += (sketch.pmouseY - sketch.mouseY) / view.zoom.val;
+      view.x = sketch.constrain(view.x, 0, map.width);
+      view.y = sketch.constrain(view.y, 0, map.height);
     },
 
     wall: function() { // Press
@@ -97,7 +100,7 @@ var mode = {
       var x = view.mx / map.asset.spacing;
       var y = view.my / map.asset.spacing;
 
-      map.assets.push(new Asset(mode.asset, x, y));
+      map.assets.push(new Asset(mode.asset, x, y, view.asset.val));
     },
 
     erase: function() { // Press/Drag
@@ -150,6 +153,26 @@ var mode = {
   }
 };
 
+var cursors = {
+  NONE:    0,
+  MAP:     1, // Move map
+  WALL:    2, // Add walls
+  ASSET:   3, // Add assets
+  ERASE:   4, // Remove walls and assets
+  TEXTURE: 5,
+  COUNT:   6,
+
+  images: [
+    null,
+    sketch.loadImage('/images/cursors/map.png'),
+    sketch.loadImage('/images/cursors/wall.png'),
+    sketch.loadImage('/images/cursors/asset.png'),
+    sketch.loadImage('/images/cursors/erase.png'),  
+    null  
+  ]
+
+}
+
 var textures = {
   NONE:  0,
   GRASS: 1,
@@ -168,23 +191,40 @@ var textures = {
 var assets = {
   NONE:    0,
   BOULDER: 1,
-  COUNT:   2,
+  CHEST:   2,
+  COUNT:   3,
 
   images: [
     null,
-    sketch.loadImage('/images/assets/boulder.png')
+    sketch.loadImage('/images/assets/boulder.png'),
+    sketch.loadImage('/images/assets/chest.png')
   ]
 };
 
 class Asset {
-  constructor(type, x, y) {
+  // Todo: add asset rotation
+  constructor(type, x, y, zoom) {
     this.type = type;
-    this.x = x;
-    this.y = y;
+    this.x = x / zoom;
+    this.y = y / zoom;
+    this.zoom = zoom;
+  }
+
+  data() {
+    return {
+      type: this.type,
+      x: this.x,
+      y: this.y,
+      zoom: this.zoom
+    };
   }
 
   draw() {
-    sketch.image(assets.images[this.type], this.x, this.y);
+    sketch.imageMode(sketch.CENTER);
+    sketch.push();
+      sketch.scale(this.zoom);
+      sketch.image(assets.images[this.type], this.x, this.y);
+    sketch.pop();
   }
 }
 
@@ -390,77 +430,94 @@ sketch.draw = function () {
 
 sketch.mousePressed = function() {
   if (!onCanvas) return;
+  
+  var oldCursor = mode.cursor;
   if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
-    mode.do.map();
-  } else {
-    switch (mode.set) {
-      case mode.WALL:
-        mode.do.wall();
-        break;
-      case mode.ASSET:
-        mode.do.asset();
-        break;
-      case mode.ERASE:
-        mode.do.erase();
-        break;
-      case mode.TEXTURE:
-        mode.do.texture();
-        break;
-    }
+    mode.cursor = cursors.MAP;
   }
+
+  switch (mode.cursor) {
+    case cursors.MAPS:
+      mode.do.map();
+      break;
+    case cursors.WALL:
+      mode.do.wall();
+      break;
+    case cursors.ASSET:
+      mode.do.asset();
+      break;
+    case cursors.ERASE:
+      mode.do.erase();
+      break;
+    case cursors.TEXTURE:
+      mode.do.texture();
+      break;
+  }
+
+  mode.cursor = oldCursor;
 };
 
 sketch.mouseDragged = function() {
   if (!onCanvas) return;
+
+  var oldCursor = mode.cursor;
   if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
-    mode.do.map();
-  } else {
-    switch (mode.set) {
-      case mode.MAP:
-        mode.do.map();
-        break;
-      case mode.TEXTURE:
-        mode.do.texture();
-        break;
-    }
+    mode.cursor = cursors.MAP;
   }
+
+  switch (mode.cursor) {
+    case cursors.MAP:
+      mode.do.map();
+      break;
+    case cursors.TEXTURE:
+      mode.do.texture();
+      break;
+  }
+  
+  mode.cursor = oldCursor;
 };
 
 sketch.mouseWheel = function(event) {
   if (!onCanvas) return;
+
+  var oldCursor = mode.cursor;
   if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
-    view.zoom.set(view.zoom.val - 0.1 * event.delta);
-  } else {
-    switch (mode.set) {
-      case mode.MAP:
-      case mode.WALL:
-      case mode.ASSET:
-      case mode.ERASE:
-        view.zoom.set(view.zoom.val - 0.1 * event.delta);
-        break;
-      case mode.TEXTURE:
-        view.brush.set(view.brush.val - 0.5 * event.delta);
-        break;
-    }
+    mode.cursor = cursors.MAP;
   }
+
+  switch (mode.cursor) {
+    case cursors.MAP:
+    case cursors.WALL:
+    case cursors.ERASE:
+      view.zoom.set(view.zoom.val - 0.1 * event.delta);
+      break;
+    case cursors.ASSET:
+      view.asset.set(view.asset.val - 0.1 * event.delta);
+      break;
+    case cursors.TEXTURE:
+      view.brush.set(view.brush.val - 0.5 * event.delta);
+      break;
+  }
+  
+  mode.cursor = oldCursor;
 };
 
 sketch.keyPressed = function() {
   switch (sketch.key) {
     case 'm':
-      sketch.setMode(mode.MAP);
+      sketch.setMode(cursors.MAP);
       break;
     case 'w':
-      sketch.setMode(mode.WALL);
+      sketch.setMode(cursors.WALL);
       break;
     case 'a':
-      sketch.setMode(mode.ASSET);
+      sketch.setMode(cursors.ASSET);
       break;
     case 'e':
-      sketch.setMode(mode.ERASE);
+      sketch.setMode(cursors.ERASE);
       break;
     case 't':
-      sketch.setMode(mode.TEXTURE);
+      sketch.setMode(cursors.TEXTURE);
       break;
     case '+':
       view.zoom.set(view.zoom.val * 1.1);
@@ -475,41 +532,41 @@ sketch.keyPressed = function() {
       view.brush.set(view.brush.val * 0.9);
       break;
     case '0':
-      switch (mode.set) {
-        case mode.ASSET:
+      switch (mode.cursor) {
+        case cursors.ASSET:
           mode.asset = assets.NONE;
           break;
-        case mode.TEXTURE:
+        case cursors.TEXTURE:
           mode.texture = textures.NONE;
           break;
       }
       break;
     case '1':
-      switch (mode.set) {
-        case mode.ASSET:
+      switch (mode.cursor) {
+        case cursors.ASSET:
           mode.asset = assets.BOULDER;
           break;
-        case mode.TEXTURE:
+        case cursors.TEXTURE:
           mode.texture = textures.GRASS;
           break;
       }
       break;
     case '2':
-      switch (mode.set) {
-        case mode.ASSET:
-          //mode.asset = assets.NONE;
+      switch (mode.cursor) {
+        case cursors.ASSET:
+          mode.asset = assets.CHEST;
           break;
-        case mode.TEXTURE:
+        case cursors.TEXTURE:
           mode.texture = textures.STONE;
           break;
       }
       break;
     case '3':
-      switch (mode.set) {
-        case mode.ASSET:
+      switch (mode.cursor) {
+        case cursors.ASSET:
           //mode.asset = assets.NONE;
           break;
-        case mode.TEXTURE:
+        case cursors.TEXTURE:
           mode.texture = textures.WOOD;
           break;
       }
@@ -518,9 +575,9 @@ sketch.keyPressed = function() {
 };
 
 sketch.setMode = function(m) {
-  if (m >= 0 && m < mode.COUNT) {
+  if (m >= 0 && m < cursors.COUNT) {
     mode.wall = null;
-    mode.set = m;
+    mode.cursor = m;
   }
 };
 
@@ -578,44 +635,60 @@ function draw_cursor() {
 
   sketch.rectMode(sketch.CENTER);
 
+  var oldCursor = mode.cursor;
   if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
-    sketch.fill(0);
-    sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-  } else {
-    switch (mode.set) {
-      case mode.MAP:
-        sketch.fill(0);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
-      case mode.WALL:
-        sketch.fill(0, 255, 255);
-        sketch.rect(view.wx, view.wy, 10 / view.zoom.val, 10 / view.zoom.val);
-        sketch.fill(0);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
-      case mode.ASSET:
-        if (mode.asset > 0 && mode.asset < assets.COUNT) {
-          sketch.imageMode(sketch.CENTER);
-          sketch.push();
-            sketch.scale(map.asset.spacing);
-            sketch.image(assets.images[mode.asset], view.mx / map.asset.spacing, view.my / map.asset.spacing);
-          sketch.pop();
-        } 
-        sketch.fill(0, 0, 255);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
-      case mode.ERASE:
-        sketch.fill(255, 0, 0);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
-      case mode.TEXTURE:
-        sketch.noFill();
-        sketch.stroke(0);
-        sketch.strokeWeight(2/view.zoom.val);
-        sketch.ellipse(view.mx, view.my, view.brush.val, view.brush.val);
-        break;
-    }
+    mode.cursor = cursors.MAP;
   }
+
+  switch (mode.cursor) {
+    case cursors.MAP:
+      draw_cursor_image();
+      sketch.fill(0);
+      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+      break;
+    case cursors.WALL:
+      sketch.fill(0, 255, 255);
+      sketch.rect(view.wx, view.wy, 10 / view.zoom.val, 10 / view.zoom.val);
+
+      draw_cursor_image();
+      sketch.fill(0);
+      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+      break;
+    case cursors.ASSET:
+      if (mode.asset > 0 && mode.asset < assets.COUNT) {
+        sketch.imageMode(sketch.CENTER);
+        sketch.push();
+          sketch.scale(map.asset.spacing * view.asset.val);
+          sketch.image(assets.images[mode.asset], view.mx / view.asset.val / map.asset.spacing, view.my / view.asset.val / map.asset.spacing);
+        sketch.pop();
+      } 
+      
+      draw_cursor_image();
+      sketch.fill(0, 0, 255);
+      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+      break;
+    case cursors.ERASE:
+      draw_cursor_image();
+      sketch.fill(255, 0, 0);
+      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+      break;
+    case cursors.TEXTURE:
+      sketch.noFill();
+      sketch.stroke(0);
+      sketch.strokeWeight(2/view.zoom.val);
+      sketch.ellipse(view.mx, view.my, view.brush.val, view.brush.val);
+      break;
+  }
+
+  mode.cursor = oldCursor;
+}
+
+function draw_cursor_image() {
+  sketch.imageMode(sketch.CORNER);
+  sketch.push();
+    sketch.scale(map.cursor.spacing / view.zoom.val);
+    sketch.image(cursors.images[mode.cursor], view.mx * view.zoom.val / map.cursor.spacing, view.my * view.zoom.val / map.cursor.spacing);
+  sketch.pop();
 }
 }; // End of sketch
 
