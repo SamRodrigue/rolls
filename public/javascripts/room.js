@@ -54,6 +54,8 @@ function toggle_dice() {
   } else {
     dice.hide();
     map.show();
+    // Resize map
+    myp5.resize();
     toggle_status.html('Dice');
   }
 }
@@ -300,6 +302,8 @@ $(document).ready(function() {
   $(window).on('resize', function() {
     $('#log').css('height', 0);
     $('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
+    // Resize map
+    myp5.resize();
   });
 
   // Reset selected dice

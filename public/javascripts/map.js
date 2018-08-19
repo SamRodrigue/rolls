@@ -104,9 +104,22 @@ var mode = {
     },
 
     erase: function() { // Press/Drag
+      var found = false;
       for (var i = map.walls.length - 1; i >= 0; --i) {
         if (map.walls[i].contains(view.mx, view.my)) {
           map.walls.splice(i, 1);
+          found = true;
+          break;
+        }
+      }
+
+      if (found) return;
+
+      var ax = view.mx / map.asset.spacing;
+      var ay = view.my / map.asset.spacing;
+      for (var i = map.assets.length - 1; i >= 0; --i) {
+        if (map.assets[i].contains(ax, ay)) {
+          map.assets.splice(i, 1);
           break;
         }
       }
@@ -225,6 +238,15 @@ class Asset {
       sketch.scale(this.zoom);
       sketch.image(assets.images[this.type], this.x, this.y);
     sketch.pop();
+  }
+
+  contains(x, y) {
+    var dx = Math.abs(x / this.zoom - this.x) * 2.5;
+    var dy = Math.abs(y / this.zoom - this.y) * 2.5;
+
+    if (dx <= assets.images[this.type].width &&
+        dy <= assets.images[this.type].height) return true;
+    return false;
   }
 }
 
@@ -402,6 +424,14 @@ sketch.setup = function() {
       map.texture.val[i][j] = 0;
     }
   }
+
+  view.x = map.width / 2;
+  view.y = map.height / 2;
+  var zx = view.width / map.width;
+  var zy = view.height / map.height;
+  view.zoom.MIN = Math.min(zx, zy) * 0.8;
+  view.zoom.set(0);
+  mode.cursor = cursors.MAP;
   //noLoop();
 };
 
@@ -427,6 +457,17 @@ sketch.draw = function () {
 
   draw_cursor();
 };
+
+sketch.resize = function() {
+  view.width = $('#map').width();
+  view.height = $(window).height() - 160; // Todo: make more dynamic
+  sketch.resizeCanvas(view.width, view.height);
+
+  var zx = view.width / map.width;
+  var zy = view.height / map.height;
+  view.zoom.MIN = Math.min(zx, zy) * 0.8;
+  view.zoom.set(view.zoom.val);
+}
 
 sketch.mousePressed = function() {
   if (!onCanvas) return;
@@ -492,7 +533,7 @@ sketch.mouseWheel = function(event) {
       view.zoom.set(view.zoom.val - 0.1 * event.delta);
       break;
     case cursors.ASSET:
-      view.asset.set(view.asset.val - 0.1 * event.delta);
+      view.asset.set(view.asset.val - 0.05 * event.delta);
       break;
     case cursors.TEXTURE:
       view.brush.set(view.brush.val - 0.5 * event.delta);
@@ -628,6 +669,8 @@ function draw_players() {
 }
 
 function draw_cursor() {
+  if (!onCanvas) return;
+  
   view.mx = (sketch.mouseX - sketch.width/2) / view.zoom.val + view.x;
   view.my = (sketch.mouseY - sketch.height/2) / view.zoom.val + view.y;
   view.wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
