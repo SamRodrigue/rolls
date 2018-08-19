@@ -118,9 +118,9 @@ block content
         .modal-footer
           button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_dice()")
             span Clear
-          button.btn.btn-primary(data-dismiss='modal' onClick="roll_dice()")
+          button.btn.btn-primary(data-dismiss="modal" onClick="roll_dice()")
             span Roll
-          button.btn.btn-default(data-dismiss='modal')
+          button.btn.btn-dark(data-dismiss="modal")
             span Close
 
   #tools-modal.modal.fade
@@ -128,11 +128,15 @@ block content
       .modal-content
         .modal-header
           h2 Tools
-          button.close(data-dismiss='modal') &times;
+          button.close(data-dismiss="modal") &times;
         .modal-body
-
+          button.btn.btn-success(onClick="save_map()")
+            span Save
+          input#map-data-input(type="file")
+          button.btn.btn-primary(onClick="load_map()")
+            span Load
         .modal-footer
-          button.btn.btn-default(data-dismiss='modal')
+          button.btn.btn-dark(data-dismiss="modal")
             span Close
 
   #assets-modal.modal.fade
@@ -140,11 +144,11 @@ block content
       .modal-content
         .modal-header
           h2 Assets
-          button.close(data-dismiss='modal') &times;
+          button.close(data-dismiss="modal") &times;
         .modal-body
 
         .modal-footer
           button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_assets()")
             span Clear
-          button.btn.btn-default(data-dismiss='modal')
+          button.btn.btn-dark(data-dismiss="modal")
             span Close

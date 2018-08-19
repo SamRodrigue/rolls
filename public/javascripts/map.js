@@ -150,8 +150,8 @@ var mode = {
                 if (map.texture.val[x][y] === 0) {
                   map.texture.image.set(x, y, [0, 0, 0, 0]);
                 } else {
-                  var tx = x % 24;
-                  var ty = y % 24;
+                  var tx = x % textures.width;
+                  var ty = y % textures.height;
                   var tex = textures.images[map.texture.val[x][y]].get(tx, ty);
                   map.texture.image.set(x, y, tex);
                 }
@@ -198,7 +198,10 @@ var textures = {
     sketch.loadImage('/images/textures/grass.png'),
     sketch.loadImage('/images/textures/stone.png'),
     sketch.loadImage('/images/textures/wood.png')
-  ]
+  ],
+  
+  width: 24,
+  height: 24
 };
 
 var assets = {
@@ -216,11 +219,21 @@ var assets = {
 
 class Asset {
   // Todo: add asset rotation
-  constructor(type, x, y, zoom) {
-    this.type = type;
-    this.x = x / zoom;
-    this.y = y / zoom;
-    this.zoom = zoom;
+  constructor(first, x, y, zoom) {
+    switch (arguments.length) {
+      case 1:
+        this.type = first.type;
+        this.x = first.x;
+        this.y = first.y;
+        this.zoom = first.zoom;
+        break;
+      case 4:
+        this.type = first;
+        this.x = x / zoom;
+        this.y = y / zoom;
+        this.zoom = zoom;
+        break;
+    }
   }
 
   data() {
@@ -258,6 +271,11 @@ class Wall {
     switch (arguments.length) {
       case 0:
         this.mode = 0;
+        break;
+      case 1:
+        this.x = first.x;
+        this.y = first.y;
+        this.mode = 2;
         break;
       case 2:
         this.start(first, second);
@@ -468,6 +486,66 @@ sketch.resize = function() {
   view.zoom.MIN = Math.min(zx, zy) * 0.8;
   view.zoom.set(view.zoom.val);
 }
+
+sketch.load = function(newData) {
+  data = {
+    walls: newData.walls,
+    assets: newData.assets,
+    texture: decompress_texture(newData.texture)
+  };
+
+  map.walls = [];
+  for (w of data.walls) {
+    map.walls.push(new Wall(w));
+  }
+
+  map.assets = [];
+  for (a of data.assets) {
+    map.assets.push(new Asset(a));
+  }
+
+  if (data.texture.width !== map.texture.width || data.texture.height !== map.texture.height) {
+    alert('Resizing of texture not supported');
+    return;
+  }
+
+  map.texture.width = data.texture.width;
+  map.texture.height = data.texture.height;
+  map.texture.val = data.texture.val;
+  map.texture.image.loadPixels();
+
+  for (var i = 0; i < data.texture.width; ++i) {
+    for (var j = 0; j < data.texture.height; ++j) {
+      var curr = data.texture.val[i][j];
+      if (curr === 0) {
+        map.texture.image.set(i, j, [0, 0, 0, 0]);
+      } else {
+        var ti = i % textures.width;
+        var tj = j % textures.height;
+        var tex = textures.images[curr].get(ti, tj);
+        map.texture.image.set(i, j, tex);
+      }
+    }
+  }
+
+  map.texture.image.updatePixels();
+};
+
+sketch.save = function() {
+  data = {
+    walls: [],
+    assets: [],
+    texture: [[]]
+  };
+  for (w of map.walls) {
+    data.walls.push(w.data());
+  }
+  for (a of map.assets) {
+    data.assets.push(a.data());
+  }
+  data.texture = compress_texture();
+  return data;
+};
 
 sketch.mousePressed = function() {
   if (!onCanvas) return;
@@ -732,6 +810,58 @@ function draw_cursor_image() {
     sketch.scale(map.cursor.spacing / view.zoom.val);
     sketch.image(cursors.images[mode.cursor], view.mx * view.zoom.val / map.cursor.spacing, view.my * view.zoom.val / map.cursor.spacing);
   sketch.pop();
+}
+
+function compress_texture() {
+  var tex = {
+    width: map.texture.width,
+    height: map.texture.height,
+    val: []
+  };
+
+  var count = 0;
+  var val = map.texture.val[0][0];
+  for (var i = 0; i < tex.width; ++i) {
+    for (var j = 0; j < tex.height; ++j) {
+      var curr = map.texture.val[i][j];
+      if (val === curr) {
+        count++;
+      } else {
+        tex.val.push([val, count]);
+        val = curr;
+        count = 1;
+      }
+    }
+  }
+  tex.val.push([val, count]);
+
+  return tex;
+}
+
+function decompress_texture(tex) {
+  var out = {
+    width: tex.width,
+    height: tex.height,
+    val: null
+  };
+
+  var i = 0;
+  var j = 0;
+  out.val = new Array(tex.width);
+  out.val[0] = new Array(tex.height);
+  for (val of tex.val) {
+    for (var v = 0; v < val[1]; ++v) {
+      out.val[i][j] = val[0];
+      if (++j === tex.height) {
+        j = 0;
+        if (++i !== tex.width) {
+          out.val[i] = new Array(tex.height);
+        }
+      }
+    }
+  }
+
+  return out;
 }
 }; // End of sketch
 

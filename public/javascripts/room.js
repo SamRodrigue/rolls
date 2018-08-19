@@ -72,6 +72,48 @@ function remove_user(data) {
   }
 }
 
+// Map
+function save_map() {
+  var data = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(myp5.save()));
+  var a = document.createElement('a');
+  a.href = 'data:' + data;
+  a.download = 'mapData.json';
+  a.download = 'mapData.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function load_map() {
+  var input, file, fr;
+
+  if (typeof window.FileReader !== 'function') {
+    alert("The file API isn't supported on this browser yet.");
+    return;
+  }
+
+  input = document.getElementById('map-data-input');
+  if (!input) {
+    alert("Um, couldn't find the map data element.");
+  }
+  else if (!input.files) {
+    alert("This browser doesn't seem to support the `files` property of file inputs.");
+  }
+  else if (!input.files[0]) {
+    alert("Please select a file before clicking 'Load'");
+  }
+  else {
+    file = input.files[0];
+    fr = new FileReader();
+    fr.onload = function(e) {
+      var lines = e.target.result;
+      var newMapData = JSON.parse(lines);
+      myp5.load(newMapData);
+    };
+    fr.readAsText(file);
+  }
+}
+
 // Dice
 function set_dice_type(type) {
   dice_type = type;
