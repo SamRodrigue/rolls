@@ -48,7 +48,17 @@ router.sockets = (io, socket, rooms, func) => {
     }
   });
 
-  socket.on('remove_user', (data) => {
+  socket.on('update-map', (data) => {
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
+    if (user && (user.role === 'admin')) {
+      room.map = data.map;
+      socket.broadcast.to(data.room_id).emit('map-data', data.map);
+    }
+  });
+
+  socket.on('remove-user', (data) => {
     var room = find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = find_user_socket(room, socket);

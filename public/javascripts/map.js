@@ -4,7 +4,7 @@ var data = {
   // All data that is transfered over socket
   walls: [],
   assets: [],
-  texture: [[]]
+  texture: null
 };
 
 var map = {
@@ -83,11 +83,14 @@ var mode = {
     wall: function() { // Press
       if (mode.wall === null) {
         mode.wall = new Wall(view.wx, view.wy);
+
       } else {
         mode.wall.end(view.wx, view.wy);
+
         if (mode.wall.mode === 2) {
           map.walls.push(mode.wall.copy());
           mode.wall = new Wall(view.wx, view.wy);
+
         } else {
           mode.wall = null;
         }
@@ -95,12 +98,26 @@ var mode = {
     },
 
     asset: function() { // Press
-      if (mode.asset <= 0 || mode.asset >= assets.COUNT) return;
+      if (mode.asset < assets.NONE || mode.asset >= assets.COUNT) return;
 
-      var x = view.mx / map.asset.spacing;
-      var y = view.my / map.asset.spacing;
+      if (mode.asset === assets.NONE) { // Move mode
+        var ax = view.mx / map.asset.spacing;
+        var ay = view.my / map.asset.spacing;
+        for (var i = map.assets.length - 1; i >= 0; --i) {
+          if (map.assets[i].contains(ax, ay)) {
+            var oldAsset = map.assets.splice(i, 1)[0];
+            mode.asset = oldAsset.type;
+            view.asset.set(oldAsset.zoom);
+            break;
+          }
+        }
 
-      map.assets.push(new Asset(mode.asset, x, y, view.asset.val));
+      } else {
+        var x = view.mx / map.asset.spacing;
+        var y = view.my / map.asset.spacing;
+
+        map.assets.push(new Asset(mode.asset, x, y, view.asset.val));
+      }
     },
 
     erase: function() { // Press/Drag
@@ -149,6 +166,7 @@ var mode = {
 
                 if (map.texture.val[x][y] === 0) {
                   map.texture.image.set(x, y, [0, 0, 0, 0]);
+
                 } else {
                   var tx = x % textures.width;
                   var ty = y % textures.height;
@@ -182,8 +200,14 @@ var cursors = {
     sketch.loadImage('/images/cursors/asset.png'),
     sketch.loadImage('/images/cursors/erase.png'),  
     null  
+  ],
+  
+  names: [
+    'Map',
+    'Wall',
+    'Assets',
+    'Erase'
   ]
-
 }
 
 var textures = {
@@ -198,6 +222,13 @@ var textures = {
     sketch.loadImage('/images/textures/grass.png'),
     sketch.loadImage('/images/textures/stone.png'),
     sketch.loadImage('/images/textures/wood.png')
+  ],
+
+  names: [
+    '',
+    'Grass',
+    'Stone',
+    'Wood'
   ],
   
   width: 24,
@@ -214,6 +245,12 @@ var assets = {
     null,
     sketch.loadImage('/images/assets/boulder.png'),
     sketch.loadImage('/images/assets/chest.png')
+  ],
+
+  names: [
+    'Move Tool',
+    'Boulder',
+    'Chest'
   ]
 };
 
@@ -456,11 +493,14 @@ sketch.setup = function() {
 sketch.draw = function () {
   sketch.background(235);
   sketch.fill(0);
-  // sketch.text(view.x, 2, 10);
-  // sketch.text(view.y, 2, 20);
-  // sketch.text(view.zoom.val, 2, 30);
-  // sketch.text(sketch.mouseY, 2, 40);
-  // sketch.text(sketch.mouseY, 2 ,50);
+  switch (mode.cursor) {
+    case cursors.TEXTURE:
+      sketch.text(textures.names[mode.texture], 2, 10);
+      break;
+    case cursors.ASSET:
+      sketch.text(assets.names[mode.asset], 2, 10);
+      break;
+  }
 
   sketch.translate(-view.x * view.zoom.val, -view.y * view.zoom.val);
   sketch.scale(view.zoom.val);

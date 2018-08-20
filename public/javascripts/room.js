@@ -68,7 +68,7 @@ function user_data(data) {
 function remove_user(data) {
   if (user.role === 'admin' || user.name === data) {
     console.log('removing user ' + data);
-    socket.emit('remove_user', { room_id: room_id, name: data }); socket.send('');
+    socket.emit('remove-user', { room_id: room_id, name: data }); socket.send('');
   }
 }
 
@@ -112,6 +112,19 @@ function load_map() {
     };
     fr.readAsText(file);
   }
+}
+
+function send_map() {
+  console.log('sending map');
+  socket.emit('update-map', { 
+    room_id: room_id,
+    map: myp5.save() 
+  }); socket.send('');
+}
+
+function map_data(data) {
+  console.log('receiving map');
+  myp5.load(data);
 }
 
 // Dice
@@ -233,9 +246,10 @@ $(document).ready(function() {
     socket.emit('enter-room', room_id); socket.send('');
   });
   socket.on('alert',      function(data) { show_alert(data); });
-  socket.on('user-data',  function(data) { user_data(data); });
-  socket.on('room-data',  function(data) { room_data(data); });
-  socket.on('room-log',   function(data) { room_log(data); });
+  socket.on('user-data',  function(data) { user_data(data);  });
+  socket.on('room-data',  function(data) { room_data(data);  });
+  socket.on('map-data',   function(data) { map_data(data);   });
+  socket.on('room-log',   function(data) { room_log(data);   });
   socket.on('disconnect', function(data) {
       console.log('disconnected');
   });

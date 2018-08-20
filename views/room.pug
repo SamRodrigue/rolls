@@ -26,11 +26,13 @@ block content
   #map-content.content(style="display: none;")
     .container-fluid.mt-2.col-12
       .row.user-roll.col-12.col-md-8.col-lg-6.mx-auto.input-group
-        button#roll.btn.btn-primary.col-4(onClick="hide_map()")
+        button.btn.btn-primary.col-1(onClick="send_map()")
+          span Up
+        button.btn.btn-primary.col-3(onClick="hide_map()")
           span Hide
-        button#roll.btn.btn-primary.col-3.offset-1(data-toggle="modal" data-target="#tools-modal")
+        button.btn.btn-primary.col-3.offset-1(data-toggle="modal" data-target="#tools-modal")
           span Tools
-        button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#assets-modal")
+        button.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#assets-modal")
           span Assets
       .row.mt-2
         #map.col-12
