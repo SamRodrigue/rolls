@@ -2,8 +2,9 @@ var s = function( sketch ) {
 
 var data = {
   // All data that is transfered over socket
-  walls: [],
-  assets: [],
+  walls:    [],
+  entities: [],
+  assets:   [],
   texture: null
 };
 
@@ -17,6 +18,9 @@ var map = {
     spacing: 2.5,
     width: 1
   },
+  entity: {
+    spacing: 5/200
+  },
   asset: {
     spacing: 0.5
   },
@@ -25,8 +29,9 @@ var map = {
     spacing: 1.9
   },
 
-  walls: [],
-  assets: [],
+  walls:    [],
+  entities: [],
+  assets:   [],
 
   texture: {
     width: null, // to be calculated
@@ -97,12 +102,33 @@ var mode = {
       }
     },
 
+    entity: function() { // Press
+      if (mode.entity < entities.NONE || mode.entity >= entities.COUNT) return;
+
+      var ex = view.mx / map.entity.spacing;
+      var ey = view.my / map.entity.spacing;
+
+      if (mode.entity === entities.NONE) { // Move mode
+        for (var i = map.entities.length - 1; i >= 0; --i) {
+          if (map.entities[i].contains(ex, ey)) {
+            var oldEntity = map.entities.splice(i, 1)[0];
+            mode.entity = oldEntity.type;
+            break;
+          }
+        }
+
+      } else {
+        map.entities.push(new Entity(mode.entity, ex, ey, [255, 0, 0]));
+      }
+    },
+
     asset: function() { // Press
       if (mode.asset < assets.NONE || mode.asset >= assets.COUNT) return;
 
+      var ax = view.mx / map.asset.spacing;
+      var ay = view.my / map.asset.spacing;
+
       if (mode.asset === assets.NONE) { // Move mode
-        var ax = view.mx / map.asset.spacing;
-        var ay = view.my / map.asset.spacing;
         for (var i = map.assets.length - 1; i >= 0; --i) {
           if (map.assets[i].contains(ax, ay)) {
             var oldAsset = map.assets.splice(i, 1)[0];
@@ -113,10 +139,7 @@ var mode = {
         }
 
       } else {
-        var x = view.mx / map.asset.spacing;
-        var y = view.my / map.asset.spacing;
-
-        map.assets.push(new Asset(mode.asset, x, y, view.asset.val));
+        map.assets.push(new Asset(mode.asset, ax, ay, view.asset.val));
       }
     },
 
@@ -188,25 +211,30 @@ var cursors = {
   NONE:    0,
   MAP:     1, // Move map
   WALL:    2, // Add walls
-  ASSET:   3, // Add assets
-  ERASE:   4, // Remove walls and assets
-  TEXTURE: 5,
-  COUNT:   6,
+  ENTITY:  3, // Add entity
+  ASSET:   4, // Add assets
+  ERASE:   5, // Remove walls and assets
+  TEXTURE: 6,
+  COUNT:   7,
 
   images: [
     null,
     sketch.loadImage('/images/cursors/map.png'),
     sketch.loadImage('/images/cursors/wall.png'),
     sketch.loadImage('/images/cursors/asset.png'),
+    sketch.loadImage('/images/cursors/asset.png'),
     sketch.loadImage('/images/cursors/erase.png'),  
     null  
   ],
   
   names: [
+    'None',
     'Map',
     'Wall',
+    'Entiies',
     'Assets',
-    'Erase'
+    'Erase',
+    'Texture'
   ]
 }
 
@@ -235,6 +263,43 @@ var textures = {
   height: 24
 };
 
+var entities = {
+  NONE:       0,
+  AARAKOCRA:  1,
+  AASIMAR:    2,
+  DRAGONBORN: 3,
+  ELF:        4,
+  ELF_1:      5,
+  FIRBOLG:    6,
+  HALF_ELF:   7,
+  KENKU:      8,
+  COUNT:      9,
+
+  images: [
+    null,
+    sketch.loadImage('/images/entities/Aarakocra.png'),
+    sketch.loadImage('/images/entities/Aasimar.png'),
+    sketch.loadImage('/images/entities/Dragonborn.png'),
+    sketch.loadImage('/images/entities/Elf.png'),
+    sketch.loadImage('/images/entities/Elf_1.png'),
+    sketch.loadImage('/images/entities/Firbolg.png'),
+    sketch.loadImage('/images/entities/Half-Elf.png'),
+    sketch.loadImage('/images/entities/Kenku.png')
+  ],
+
+  names: [
+    'Move Tool',
+    'Aarakocra',
+    'Aasimar',
+    'Dragonborn',
+    'Elf',
+    'Elf_1',
+    'Firbolg',
+    'Half-Elf',
+    'Kenku'
+  ]
+};
+
 var assets = {
   NONE:    0,
   BOULDER: 1,
@@ -253,52 +318,6 @@ var assets = {
     'Chest'
   ]
 };
-
-class Asset {
-  // Todo: add asset rotation
-  constructor(first, x, y, zoom) {
-    switch (arguments.length) {
-      case 1:
-        this.type = first.type;
-        this.x = first.x;
-        this.y = first.y;
-        this.zoom = first.zoom;
-        break;
-      case 4:
-        this.type = first;
-        this.x = x / zoom;
-        this.y = y / zoom;
-        this.zoom = zoom;
-        break;
-    }
-  }
-
-  data() {
-    return {
-      type: this.type,
-      x: this.x,
-      y: this.y,
-      zoom: this.zoom
-    };
-  }
-
-  draw() {
-    sketch.imageMode(sketch.CENTER);
-    sketch.push();
-      sketch.scale(this.zoom);
-      sketch.image(assets.images[this.type], this.x, this.y);
-    sketch.pop();
-  }
-
-  contains(x, y) {
-    var dx = Math.abs(x / this.zoom - this.x) * 2.5;
-    var dy = Math.abs(y / this.zoom - this.y) * 2.5;
-
-    if (dx <= assets.images[this.type].width &&
-        dy <= assets.images[this.type].height) return true;
-    return false;
-  }
-}
 
 class Wall {
   constructor(first, second) { // (x0, y0), (wall)
@@ -391,6 +410,7 @@ class Wall {
       this.points[3].x, this.points[3].y
     );
 
+    sketch.ellipseMode(sketch.CENTER);
     sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
     sketch.ellipse(this.x[1], this.y[1], map.wall.width, map.wall.width);
   }
@@ -434,6 +454,7 @@ class Wall {
       points[3].x, points[3].y
     );
 
+    sketch.ellipseMode(sketch.CENTER);
     sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
     sketch.ellipse(x, y, map.wall.width, map.wall.width);
   }
@@ -456,6 +477,101 @@ class Wall {
     return true;
   }
 }
+
+class Entity {
+  // Todo: add asset rotation
+  constructor(first, x, y, color) {
+    switch (arguments.length) {
+      case 1:
+        this.type = first.type;
+        this.x = first.x;
+        this.y = first.y;
+        this.color = first.color;
+        break;
+      case 4:
+        this.type = first;
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        break;
+    }
+  }
+
+  data() {
+    return {
+      type: this.type,
+      x: this.x,
+      y: this.y,
+      color: this.color
+    };
+  }
+
+  draw() {
+    sketch.ellipseMode(sketch.CENTER);
+    sketch.noStroke();
+    sketch.fill(this.color[0], this.color[1], this.color[2], 255);
+    sketch.ellipse(this.x, this.y, entities.images[this.type].width + 50, entities.images[this.type].height + 50);
+
+    sketch.imageMode(sketch.CENTER);
+    sketch.image(entities.images[this.type], this.x, this.y);
+  }
+
+  contains(x, y) {
+    var dx = Math.abs(x - this.x) * 2.5;
+    var dy = Math.abs(y - this.y) * 2.5;
+
+    if (dx <= entities.images[this.type].width &&
+        dy <= entities.images[this.type].height) return true;
+    return false;
+  }
+}
+
+class Asset {
+  // Todo: add asset rotation
+  constructor(first, x, y, zoom) {
+    switch (arguments.length) {
+      case 1:
+        this.type = first.type;
+        this.x = first.x;
+        this.y = first.y;
+        this.zoom = first.zoom;
+        break;
+      case 4:
+        this.type = first;
+        this.x = x / zoom;
+        this.y = y / zoom;
+        this.zoom = zoom;
+        break;
+    }
+  }
+
+  data() {
+    return {
+      type: this.type,
+      x: this.x,
+      y: this.y,
+      zoom: this.zoom
+    };
+  }
+
+  draw() {
+    sketch.imageMode(sketch.CENTER);
+    sketch.push();
+      sketch.scale(this.zoom);
+      sketch.image(assets.images[this.type], this.x, this.y);
+    sketch.pop();
+  }
+
+  contains(x, y) {
+    var dx = Math.abs(x / this.zoom - this.x) * 2.5;
+    var dy = Math.abs(y / this.zoom - this.y) * 2.5;
+
+    if (dx <= assets.images[this.type].width &&
+        dy <= assets.images[this.type].height) return true;
+    return false;
+  }
+}
+
 
 var onCanvas = false;
 
@@ -500,6 +616,9 @@ sketch.draw = function () {
     case cursors.ASSET:
       sketch.text(assets.names[mode.asset], 2, 10);
       break;
+    case cursors.ENTITY:
+      sketch.text(entities.names[mode.entity], 2, 10);
+      break;
   }
 
   sketch.translate(-view.x * view.zoom.val, -view.y * view.zoom.val);
@@ -530,6 +649,7 @@ sketch.resize = function() {
 sketch.load = function(newData) {
   data = {
     walls: newData.walls,
+    entities: newData.entities,
     assets: newData.assets,
     texture: decompress_texture(newData.texture)
   };
@@ -537,6 +657,11 @@ sketch.load = function(newData) {
   map.walls = [];
   for (w of data.walls) {
     map.walls.push(new Wall(w));
+  }
+
+  map.entities = [];
+  for (e of data.entities) {
+    map.entities.push(new Entity(w));
   }
 
   map.assets = [];
@@ -573,12 +698,16 @@ sketch.load = function(newData) {
 
 sketch.save = function() {
   data = {
-    walls: [],
-    assets: [],
-    texture: [[]]
+    walls:    [],
+    entities: [],
+    assets:   [],
+    texture:  [[]]
   };
   for (w of map.walls) {
     data.walls.push(w.data());
+  }
+  for (e of map.entities) {
+    data.entities.push(e.data());
   }
   for (a of map.assets) {
     data.assets.push(a.data());
@@ -601,6 +730,9 @@ sketch.mousePressed = function() {
       break;
     case cursors.WALL:
       mode.do.wall();
+      break;
+    case cursors.ENTITY:
+      mode.do.entity();
       break;
     case cursors.ASSET:
       mode.do.asset();
@@ -669,10 +801,13 @@ sketch.keyPressed = function() {
     case 'w':
       sketch.setMode(cursors.WALL);
       break;
+    case 'e':
+      sketch.setMode(cursors.ENTITY);
+      break;
     case 'a':
       sketch.setMode(cursors.ASSET);
       break;
-    case 'e':
+    case 'd':
       sketch.setMode(cursors.ERASE);
       break;
     case 't':
@@ -691,42 +826,25 @@ sketch.keyPressed = function() {
       view.brush.set(view.brush.val * 0.9);
       break;
     case '0':
-      switch (mode.cursor) {
-        case cursors.ASSET:
-          mode.asset = assets.NONE;
-          break;
-        case cursors.TEXTURE:
-          mode.texture = textures.NONE;
-          break;
-      }
-      break;
     case '1':
-      switch (mode.cursor) {
-        case cursors.ASSET:
-          mode.asset = assets.BOULDER;
-          break;
-        case cursors.TEXTURE:
-          mode.texture = textures.GRASS;
-          break;
-      }
-      break;
     case '2':
-      switch (mode.cursor) {
-        case cursors.ASSET:
-          mode.asset = assets.CHEST;
-          break;
-        case cursors.TEXTURE:
-          mode.texture = textures.STONE;
-          break;
-      }
-      break;
     case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      var key = sketch.key - '0';
       switch (mode.cursor) {
+        case cursors.ENTITY:
+          mode.entity = key;
+          break;
         case cursors.ASSET:
-          //mode.asset = assets.NONE;
+          mode.asset = key;
           break;
         case cursors.TEXTURE:
-          mode.texture = textures.WOOD;
+          mode.texture = key;
           break;
       }
       break;
@@ -744,7 +862,7 @@ function draw_map() {
   draw_grid();
   draw_walls();
   draw_assets();
-  draw_players();
+  draw_entities();
 }
 
 function draw_texture() {
@@ -773,6 +891,15 @@ function draw_walls() {
   }
 }
 
+function draw_entities() {
+  sketch.push();
+    sketch.scale(map.entity.spacing);
+    for (entity of map.entities) {
+      entity.draw();
+    }
+  sketch.pop();
+}
+
 function draw_assets() {
   sketch.push();
     sketch.scale(map.asset.spacing);
@@ -780,10 +907,6 @@ function draw_assets() {
       asset.draw();
     }
   sketch.pop();
-}
-
-function draw_players() {
-
 }
 
 function draw_cursor() {
@@ -807,6 +930,7 @@ function draw_cursor() {
       sketch.fill(0);
       sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
       break;
+
     case cursors.WALL:
       sketch.fill(0, 255, 255);
       sketch.rect(view.wx, view.wy, 10 / view.zoom.val, 10 / view.zoom.val);
@@ -815,6 +939,30 @@ function draw_cursor() {
       sketch.fill(0);
       sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
       break;
+
+    case cursors.ENTITY:
+      if (mode.entity > 0 && mode.entity < entities.COUNT) {
+        sketch.push();
+          sketch.scale(map.entity.spacing);
+
+          var ex = view.mx / map.entity.spacing;
+          var ey = view.my / map.entity.spacing;
+
+          sketch.ellipseMode(sketch.CENTER);
+          sketch.noStroke();
+          sketch.fill(255, 0, 0, 255);
+          sketch.ellipse(ex, ey, entities.images[mode.entity].width + 50, entities.images[mode.entity].height + 50);
+
+          sketch.imageMode(sketch.CENTER);
+          sketch.image(entities.images[mode.entity], ex, ey);
+        sketch.pop();
+      } 
+      
+      draw_cursor_image();
+      sketch.fill(0, 0, 255);
+      sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+      break;
+
     case cursors.ASSET:
       if (mode.asset > 0 && mode.asset < assets.COUNT) {
         sketch.imageMode(sketch.CENTER);
@@ -828,12 +976,15 @@ function draw_cursor() {
       sketch.fill(0, 0, 255);
       sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
       break;
+
     case cursors.ERASE:
       draw_cursor_image();
       sketch.fill(255, 0, 0);
       sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
       break;
+
     case cursors.TEXTURE:
+      sketch.ellipseMode(sketch.CENTER);
       sketch.noFill();
       sketch.stroke(0);
       sketch.strokeWeight(2/view.zoom.val);
