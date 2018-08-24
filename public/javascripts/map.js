@@ -76,6 +76,11 @@ var mode = {
   texture: 0,
   wall: null,
   asset: 0,
+  entity: 0,
+  moving: {
+    val: false,
+    user: null
+  },
 
   do: {
     map: function() { // Drag
@@ -111,14 +116,25 @@ var mode = {
       if (mode.entity === entities.NONE) { // Move mode
         for (var i = map.entities.length - 1; i >= 0; --i) {
           if (map.entities[i].contains(ex, ey)) {
-            var oldEntity = map.entities.splice(i, 1)[0];
-            mode.entity = oldEntity.type;
-            break;
+            if (user.role === 'admin' || 
+               (user.role === 'user' && user.name === map.entities[i].user.name)) {
+              var oldEntity = map.entities.splice(i, 1)[0];
+              mode.entity = oldEntity.type;
+              mode.moving.val = true;
+              mode.moving.user = oldEntity.user;
+              break;
+            }
           }
         }
 
       } else {
-        map.entities.push(new Entity(mode.entity, ex, ey, [255, 0, 0]));
+        var newEntity = new Entity(mode.entity, ex, ey, [255, 0, 0]);
+        if (mode.moving.val) {
+          mode.moving.val = false;
+          mode.entity = entities.NONE;
+          newEntity.user = mode.moving.user;
+        }
+        map.entities.push(newEntity);
       }
     },
 
@@ -143,11 +159,28 @@ var mode = {
       }
     },
 
+    // TODO: Add move tool for walls, entities and assets
+    move: function() { // Drag
+
+    },
+
     erase: function() { // Press/Drag
       var found = false;
       for (var i = map.walls.length - 1; i >= 0; --i) {
         if (map.walls[i].contains(view.mx, view.my)) {
           map.walls.splice(i, 1);
+          found = true;
+          break;
+        }
+      }
+
+      if (found) return;
+
+      var ex = view.mx / map.entity.spacing;
+      var ey = view.my / map.entity.spacing;
+      for (var i = map.entities.length - 1; i >= 0; --i) {
+        if (map.entities[i].contains(ex, ey)) {
+          map.entities.splice(i, 1);
           found = true;
           break;
         }
@@ -486,12 +519,18 @@ class Entity {
         this.type = first.type;
         this.x = first.x;
         this.y = first.y;
+        if (typeof first.user === 'undefined') {
+          this.user = { name:'', role:'admin' };
+        } else {
+          this.user = first.user;
+        }
         this.color = first.color;
         break;
       case 4:
         this.type = first;
         this.x = x;
         this.y = y;
+        this.user = user;
         this.color = color;
         break;
     }
@@ -502,6 +541,7 @@ class Entity {
       type: this.type,
       x: this.x,
       y: this.y,
+      user: this.user,
       color: this.color
     };
   }
@@ -647,6 +687,14 @@ sketch.resize = function() {
 }
 
 sketch.load = function(newData) {
+  if (typeof newData.texture === 'undefined' || newData.texture === null) {
+    newData.texture = {
+      width: map.texture.width,
+      height: map.texture.height,
+      val: [[0, map.texture.width * map.texture.height]]
+    }
+  }
+
   data = {
     walls: newData.walls,
     entities: newData.entities,
@@ -661,7 +709,7 @@ sketch.load = function(newData) {
 
   map.entities = [];
   for (e of data.entities) {
-    map.entities.push(new Entity(w));
+    map.entities.push(new Entity(e));
   }
 
   map.assets = [];
@@ -714,6 +762,32 @@ sketch.save = function() {
   }
   data.texture = compress_texture();
   return data;
+};
+
+// TODO: replace with per entity get/set
+sketch.client_load = function(newData) {
+  for (var i = map.entities.length - 1; i >= 0; --i) {
+    if (newData.user.role === 'admin' || 
+       (newData.user.role === 'user' && newData.user.name === map.entities[i].user.name)) {
+      map.entities.splice(i, 1)[0];
+    }
+  }
+
+  for (e of newData.entities) {
+    map.entities.push(new Entity(e));
+  }
+};
+
+sketch.client_save = function() {
+  var out = [];
+  for (e of map.entities) {
+    if (user.role === 'admin' || 
+       (user.role === 'user' && user.name === e.user.name)) {
+      out.push(e.data());
+    }
+  }
+
+  return out;
 };
 
 sketch.mousePressed = function() {

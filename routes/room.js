@@ -45,6 +45,7 @@ router.sockets = (io, socket, rooms, func) => {
     var user = find_user_socket(room, socket);
     if (user) { 
       socket.emit('room-data', func.room_array(room));
+      socket.emit('map-data', room.map);
     }
   });
 
@@ -55,6 +56,49 @@ router.sockets = (io, socket, rooms, func) => {
     if (user && (user.role === 'admin')) {
       room.map = data.map;
       socket.broadcast.to(data.room_id).emit('map-data', data.map);
+    }
+  });
+
+  socket.on('update-client-map', (data) => {
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
+    
+    var verify = true;
+    if (user) {
+      if(user.role === 'user') {
+        for (e of data.entities) {
+          if (e.user.name !== user.name) {
+            verify = false;
+            break;
+          }
+        }
+      }
+    } else {
+      verify = false;
+    }
+
+    if (verify) {
+      for (var i = room.map.entities.length - 1; i >= 0; --i) {
+        if (user.role === 'admin' || 
+           (user.role === 'user' && user.name === room.map.entities[i].user.name)) {
+          room.map.entities.splice(i, 1)[0];
+        }
+      }
+
+      for (e of data.entities) {
+        room.map.entities.push(e);
+      }
+
+      var out = {
+        entities: data.entities,
+        user: {
+          name: user.name,
+          role: user.role
+        }
+      };
+
+      socket.broadcast.to(data.room_id).emit('client-map-data', out);
     }
   });
 

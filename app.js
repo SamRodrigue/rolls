@@ -43,7 +43,13 @@ if (global.DEBUG) {
       user: ''
     },
     users: [],
-    timeout: null
+    timeout: null,
+    map: {
+      walls:    [],
+      entities: [],
+      assets:   [],
+      texture: null
+    }
   });
 }
 
