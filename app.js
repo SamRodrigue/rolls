@@ -26,7 +26,7 @@ app.io.attach(app.server);
 app.use(session);
 app.io.use(sharedsession(session, { autoSave: true }));
 
-global.DEBUG = true;
+global.DEBUG = ((process.argv[2] !== 'undefined' && process.argv[2] === 'debug') ? process.argv[2] : false);
 global.JOIN_TIMEOUT = 10 * 1000; // 10 seconds
 global.ROOM_TIMEOUT = 5 * 60 * 1000; // 5 min
 global.MAX_DICE = 20;
