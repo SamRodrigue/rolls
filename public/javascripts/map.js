@@ -128,11 +128,13 @@ var mode = {
         }
 
       } else {
-        var newEntity = new Entity(mode.entity, ex, ey, [255, 0, 0]);
+        var newEntity;
         if (mode.moving.val) {
+          var newEntity = new Entity(mode.entity, ex, ey, mode.moving.user);
           mode.moving.val = false;
           mode.entity = entities.NONE;
-          newEntity.user = mode.moving.user;
+        } else {
+          var newEntity = new Entity(mode.entity, ex, ey);
         }
         map.entities.push(newEntity);
       }
@@ -513,7 +515,7 @@ class Wall {
 
 class Entity {
   // Todo: add asset rotation
-  constructor(first, x, y, color) {
+  constructor(first, x, y, usr) {
     switch (arguments.length) {
       case 1:
         this.type = first.type;
@@ -526,12 +528,19 @@ class Entity {
         }
         this.color = first.color;
         break;
-      case 4:
+      case 3:
         this.type = first;
         this.x = x;
         this.y = y;
         this.user = user;
-        this.color = color;
+        this.color = colorString(user.name);
+        break;
+      case 4:
+        this.type = first;
+        this.x = x;
+        this.y = y;
+        this.user = usr;
+        this.color = colorString(usr.name);
         break;
     }
   }
@@ -1125,6 +1134,29 @@ function decompress_texture(tex) {
       }
     }
   }
+
+  return out;
+}
+
+function hashString(str) {
+  var hash = 0, i, chr;
+  if (str.length === 0) return hash;
+  for (i = 0; i < str.length; i++) {
+    chr   = str.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
+
+function colorString(str) {
+  var hash = hashString(str);
+
+  var out = [
+    ((hash & 0xFF000000) >> 24) + 128,
+    ((hash & 0x00FF0000) >> 16) + 128,
+    ((hash & 0x0000FF00) >> 8) + 128
+  ];
 
   return out;
 }
