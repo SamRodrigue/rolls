@@ -45,16 +45,47 @@ router.sockets = (io, socket, rooms, func) => {
     var user = find_user_socket(room, socket);
     if (user) { 
       socket.emit('room-data', func.room_array(room));
+      room.map.update = {
+        walls: true,
+        entities: true,
+        assets: true,
+        texture: true
+      };
       socket.emit('map-data', room.map);
     }
   });
 
+  // var data = {
+  //   // All data that is transfered over socket
+  //   walls:    [],
+  //   entities: [],
+  //   assets:   [],
+  //   texture: null
+  // };
+  
   socket.on('update-map', (data) => {
     var room = find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = find_user_socket(room, socket);
     if (user && (user.role === 'admin')) {
-      room.map = data.map;
+      var update = data.map.update;
+      if (update.walls) {
+        room.map.walls = data.map.walls;
+      }
+
+      if (update.entities) {
+        room.map.entities = data.map.entities;
+      }
+
+      if (update.assets) {
+        room.map.assets = data.map.assets;
+      }
+
+      if (update.texture) {
+        room.map.texture = data.map.texture;
+      }
+
+      //room.map = data.map;
       socket.broadcast.to(data.room_id).emit('map-data', data.map);
     }
   });
@@ -226,9 +257,10 @@ router.sockets = (io, socket, rooms, func) => {
     }
   });
 
-  socket.on('preset', (data) => { // Save = 0, Load = 1
-    if (data.type === 0) console.log('a user is saving a preset');
-    else if (data.type === 1) console.log('a user is loading a preset');
+  var PRESET = { SAVE: 0, LOAD: 1 };
+  socket.on('preset', (data) => {
+    if (data.type === PRESET.SAVE) console.log('a user is saving a preset');
+    else if (data.type === PRESET.LOAD) console.log('a user is loading a preset');
     else {
       console.log('a user is using an unsupported preset type');
       return;
@@ -243,7 +275,7 @@ router.sockets = (io, socket, rooms, func) => {
     var preset = user.preset[data.preset];
 
     switch (data.type) {
-      case 0: // Save
+      case PRESET.SAVE: // Save
         user.preset[data.preset].dice = [];
         user.dice.forEach((die) => {
           user.preset[data.preset].dice.push({
@@ -254,7 +286,7 @@ router.sockets = (io, socket, rooms, func) => {
         });
         user.preset[data.preset].counter = user.counter;
         break;
-      case 1: // Load
+      case PRESET.LOAD: // Load
         user.dice = [];
         user.preset[data.preset].dice.forEach((die) => {
           user.dice.push({

@@ -8,6 +8,13 @@ var data = {
   texture: null
 };
 
+var update = {
+  walls: false,
+  entities: false,
+  assets: false,
+  texture: false
+};
+
 var map = {
   width: 150,
   height: 100,
@@ -91,6 +98,8 @@ var mode = {
     },
 
     wall: function() { // Press
+      update.walls = true;
+
       if (mode.wall === null) {
         mode.wall = new Wall(view.wx, view.wy);
 
@@ -109,6 +118,8 @@ var mode = {
 
     entity: function() { // Press
       if (mode.entity < entities.NONE || mode.entity >= entities.COUNT) return;
+
+      update.entities = true;
 
       var ex = view.mx / map.entity.spacing;
       var ey = view.my / map.entity.spacing;
@@ -143,6 +154,8 @@ var mode = {
     asset: function() { // Press
       if (mode.asset < assets.NONE || mode.asset >= assets.COUNT) return;
 
+      update.assets = true;
+
       var ax = view.mx / map.asset.spacing;
       var ay = view.my / map.asset.spacing;
 
@@ -170,6 +183,8 @@ var mode = {
       var found = false;
       for (var i = map.walls.length - 1; i >= 0; --i) {
         if (map.walls[i].contains(view.mx, view.my)) {
+          update.walls = true;
+
           map.walls.splice(i, 1);
           found = true;
           break;
@@ -182,6 +197,8 @@ var mode = {
       var ey = view.my / map.entity.spacing;
       for (var i = map.entities.length - 1; i >= 0; --i) {
         if (map.entities[i].contains(ex, ey)) {
+          update.entities = true;
+
           map.entities.splice(i, 1);
           found = true;
           break;
@@ -194,6 +211,8 @@ var mode = {
       var ay = view.my / map.asset.spacing;
       for (var i = map.assets.length - 1; i >= 0; --i) {
         if (map.assets[i].contains(ax, ay)) {
+          update.assets = true;
+
           map.assets.splice(i, 1);
           break;
         }
@@ -202,6 +221,8 @@ var mode = {
 
     texture: function() { // Press/Drag
       if (mode.texture < 0 || mode.texture >= textures.COUNT) return;
+
+      update.texture = true;
 
       // Update map texture
       map.texture.image.loadPixels(); 
@@ -711,46 +732,56 @@ sketch.load = function(newData) {
     texture: decompress_texture(newData.texture)
   };
 
-  map.walls = [];
-  for (w of data.walls) {
-    map.walls.push(new Wall(w));
-  }
+  update = newData.update;
 
-  map.entities = [];
-  for (e of data.entities) {
-    map.entities.push(new Entity(e));
-  }
-
-  map.assets = [];
-  for (a of data.assets) {
-    map.assets.push(new Asset(a));
-  }
-
-  if (data.texture.width !== map.texture.width || data.texture.height !== map.texture.height) {
-    alert('Resizing of texture not supported');
-    return;
-  }
-
-  map.texture.width = data.texture.width;
-  map.texture.height = data.texture.height;
-  map.texture.val = data.texture.val;
-  map.texture.image.loadPixels();
-
-  for (var i = 0; i < data.texture.width; ++i) {
-    for (var j = 0; j < data.texture.height; ++j) {
-      var curr = data.texture.val[i][j];
-      if (curr === 0) {
-        map.texture.image.set(i, j, [0, 0, 0, 0]);
-      } else {
-        var ti = i % textures.width;
-        var tj = j % textures.height;
-        var tex = textures.images[curr].get(ti, tj);
-        map.texture.image.set(i, j, tex);
-      }
+  if (update.walls) {
+    map.walls = [];
+    for (w of data.walls) {
+      map.walls.push(new Wall(w));
     }
   }
 
-  map.texture.image.updatePixels();
+  if (update.entities) {
+    map.entities = [];
+    for (e of data.entities) {
+      map.entities.push(new Entity(e));
+    }
+  }
+
+  if (update.assets) {
+    map.assets = [];
+    for (a of data.assets) {
+      map.assets.push(new Asset(a));
+    }
+  }
+
+  if (update.texture) {
+    if (data.texture.width !== map.texture.width || data.texture.height !== map.texture.height) {
+      alert('Resizing of texture not supported');
+      return;
+    }
+
+    map.texture.width = data.texture.width;
+    map.texture.height = data.texture.height;
+    map.texture.val = data.texture.val;
+    map.texture.image.loadPixels();
+
+    for (var i = 0; i < data.texture.width; ++i) {
+      for (var j = 0; j < data.texture.height; ++j) {
+        var curr = data.texture.val[i][j];
+        if (curr === 0) {
+          map.texture.image.set(i, j, [0, 0, 0, 0]);
+        } else {
+          var ti = i % textures.width;
+          var tj = j % textures.height;
+          var tex = textures.images[curr].get(ti, tj);
+          map.texture.image.set(i, j, tex);
+        }
+      }
+    }
+
+    map.texture.image.updatePixels();
+  }
 };
 
 sketch.save = function() {
@@ -758,18 +789,32 @@ sketch.save = function() {
     walls:    [],
     entities: [],
     assets:   [],
-    texture:  [[]]
+    texture:  [[]],
+    update: update
   };
-  for (w of map.walls) {
-    data.walls.push(w.data());
+
+  if (update.walls) {
+    for (w of map.walls) {
+      data.walls.push(w.data());
+    }
   }
-  for (e of map.entities) {
-    data.entities.push(e.data());
+
+  if (update.entities) {
+    for (e of map.entities) {
+      data.entities.push(e.data());
+    }
   }
-  for (a of map.assets) {
-    data.assets.push(a.data());
+
+  if (update.assets) {
+    for (a of map.assets) {
+      data.assets.push(a.data());
+    }
   }
-  data.texture = compress_texture();
+
+  if (update.texture) {
+    data.texture = compress_texture();
+  }
+
   return data;
 };
 

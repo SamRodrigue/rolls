@@ -108,6 +108,12 @@ function load_map() {
     fr.onload = function(e) {
       var lines = e.target.result;
       var newMapData = JSON.parse(lines);
+      newMapData.update = {
+        walls: true,
+        entities: true,
+        assets: true,
+        texture: true,
+      };
       myp5.load(newMapData);
     };
     fr.readAsText(file);
