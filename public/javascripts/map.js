@@ -360,7 +360,10 @@ var entities = {
   FIRBOLG:    6,
   HALF_ELF:   7,
   KENKU:      8,
-  COUNT:      9,
+  BLUE:       9,
+  GREEN:      10,
+  RED:        11,
+  COUNT:      12,
 
   images: [
     null,
@@ -371,7 +374,10 @@ var entities = {
     sketch.loadImage('/images/entities/Elf_1.png'),
     sketch.loadImage('/images/entities/Firbolg.png'),
     sketch.loadImage('/images/entities/Half-Elf.png'),
-    sketch.loadImage('/images/entities/Kenku.png')
+    sketch.loadImage('/images/entities/Kenku.png'),
+    sketch.loadImage('/images/entities/Blue.png'),
+    sketch.loadImage('/images/entities/Green.png'),
+    sketch.loadImage('/images/entities/Red.png')
   ],
 
   names: [
@@ -383,7 +389,10 @@ var entities = {
     'Elf_1',
     'Firbolg',
     'Half-Elf',
-    'Kenku'
+    'Kenku',
+    'Blue',
+    'Green',
+    'Red'
   ]
 };
 
@@ -1020,7 +1029,19 @@ sketch.keyPressed = function() {
       var key = sketch.key - '0';
       switch (mode.cursor) {
         case cursors.ENTITY:
-          mode.entity = key;
+          // Temp fix for Entity 9 (colors)
+          if (key === 9) {
+            if (mode.entity > 8 && mode.entity < 12) {
+              mode.entity++;
+              if (mode.entity > 11) {
+                mode.entity = 9;
+              }
+            } else {
+              mode.entity = key;
+            }
+          } else {
+            mode.entity = key;
+          }
           break;
         case cursors.ASSET:
           mode.asset = key;
