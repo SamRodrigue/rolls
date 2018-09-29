@@ -88,6 +88,7 @@ var mode = {
     val: false,
     user: null
   },
+  fill: false,
 
   do: {
     map: function() { // Drag
@@ -225,34 +226,64 @@ var mode = {
       update.texture = true;
 
       // Update map texture
-      map.texture.image.loadPixels(); 
+      map.texture.image.loadPixels();
 
-      var dLimit = view.brush.val * view.brush.val / 4;
-      for (var i = -view.brush.val / 2; i < view.brush.val / 2; i += map.texture.spacing) {
-        var x = Math.floor((view.mx + i) / map.texture.spacing);
+      if (!mode.fill) {
+        var dLimit = view.brush.val * view.brush.val / 4;
+        for (var i = -view.brush.val / 2; i < view.brush.val / 2; i += map.texture.spacing) {
+          var x = Math.floor((view.mx + i) / map.texture.spacing);
 
-        if (x >= 0 && x < map.texture.width) {
+          if (x < 0 && x >= map.texture.width) continue;
           var di = i * i;
 
           for (var j = -view.brush.val / 2; j < view.brush.val / 2; j += map.texture.spacing) {
             var y = Math.floor((view.my + j) / map.texture.spacing);
 
-            if (y >= 0 && y < map.texture.height) {
-              var d = di + j * j;
-              
-              if (d < dLimit) {
-                map.texture.val[x][y] = mode.texture;
+            if (y < 0 && y >= map.texture.height) continue;
+            var d = di + j * j;
+            
+            if (d < dLimit) {
+              map.texture.val[x][y] = mode.texture;
 
-                if (map.texture.val[x][y] === 0) {
-                  map.texture.image.set(x, y, [0, 0, 0, 0]);
+              if (map.texture.val[x][y] === 0) {
+                map.texture.image.set(x, y, [0, 0, 0, 0]);
 
-                } else {
-                  var tx = x % textures.width;
-                  var ty = y % textures.height;
-                  var tex = textures.images[map.texture.val[x][y]].get(tx, ty);
-                  map.texture.image.set(x, y, tex);
-                }
+              } else {
+                var tx = x % textures.width;
+                var ty = y % textures.height;
+                var tex = textures.images[map.texture.val[x][y]].get(tx, ty);
+                map.texture.image.set(x, y, tex);
               }
+            }
+          }
+        }
+      } else {
+        var x = Math.floor(view.mx / map.texture.spacing);
+        if (x < 0 && x >= map.texture.width) return;
+        var y = Math.floor(view.my / map.texture.spacing);
+        if (y < 0 && y >= map.texture.height) return;
+
+        var gx = map.grid.spacing * map.texture.width / map.width;
+        var gy = map.grid.spacing * map.texture.height / map.height;
+        // Get top left corner of current grid
+        var fx = Math.floor(x / gx) * gx;
+        var fy = Math.floor(y / gy) * gy;
+
+        for (var i = 0; i < gx; ++i) {
+          x = fx + i;
+          for (var j = 0; j < gy; ++j) {
+            y = fy + j;
+
+            map.texture.val[x][y] = mode.texture;
+
+            if (map.texture.val[x][y] === 0) {
+              map.texture.image.set(x, y, [0, 0, 0, 0]);
+
+            } else {
+              var tx = x % textures.width;
+              var ty = y % textures.height;
+              var tex = textures.images[map.texture.val[x][y]].get(tx, ty);
+              map.texture.image.set(x, y, tex);
             }
           }
         }
@@ -939,19 +970,42 @@ sketch.keyPressed = function() {
       sketch.setMode(cursors.ERASE);
       break;
     case 't':
+      mode.fill = false;
       sketch.setMode(cursors.TEXTURE);
       break;
-    case '+':
-      view.zoom.set(view.zoom.val * 1.1);
-      break;
-    case '_':
-      view.zoom.set(view.zoom.val * 0.9);
+    case 'f':
+      mode.fill = true;
+      sketch.setMode(cursors.TEXTURE);
       break;
     case '=':
-      view.brush.set(view.brush.val * 1.1);
+      switch (mode.cursor) {
+        case cursors.MAP:
+        case cursors.WALL:
+        case cursors.ERASE:
+          view.zoom.set(view.zoom.val * 1.1);
+          break;
+        case cursors.ASSET:
+          view.asset.set(view.asset.val * 1.1);
+          break;
+        case cursors.TEXTURE:
+          view.brush.set(view.brush.val * 1.1);
+          break;
+      }
       break;
     case '-':
-      view.brush.set(view.brush.val * 0.9);
+      switch (mode.cursor) {
+        case cursors.MAP:
+        case cursors.WALL:
+        case cursors.ERASE:
+          view.zoom.set(view.zoom.val * 0.9);
+          break;
+        case cursors.ASSET:
+          view.asset.set(view.asset.val * 0.9);
+          break;
+        case cursors.TEXTURE:
+          view.brush.set(view.brush.val * 0.9);
+          break;
+      }
       break;
     case '0':
     case '1':
@@ -973,6 +1027,9 @@ sketch.keyPressed = function() {
           break;
         case cursors.TEXTURE:
           mode.texture = key;
+          if (key > 0 && key < textures.COUNT) {
+            textures.images[key].loadPixels();
+          }
           break;
       }
       break;
@@ -1112,11 +1169,16 @@ function draw_cursor() {
       break;
 
     case cursors.TEXTURE:
+      var radius = view.brush.val;
+      if (mode.fill) {
+        radius = view.brush.MIN;
+      }
+
       sketch.ellipseMode(sketch.CENTER);
       sketch.noFill();
       sketch.stroke(0);
       sketch.strokeWeight(2/view.zoom.val);
-      sketch.ellipse(view.mx, view.my, view.brush.val, view.brush.val);
+      sketch.ellipse(view.mx, view.my, radius, radius);
       break;
   }
 
