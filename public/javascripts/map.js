@@ -233,13 +233,13 @@ var mode = {
         for (var i = -view.brush.val / 2; i < view.brush.val / 2; i += map.texture.spacing) {
           var x = Math.floor((view.mx + i) / map.texture.spacing);
 
-          if (x < 0 && x >= map.texture.width) continue;
+          if (x < 0 || x >= map.texture.width) continue;
           var di = i * i;
 
           for (var j = -view.brush.val / 2; j < view.brush.val / 2; j += map.texture.spacing) {
             var y = Math.floor((view.my + j) / map.texture.spacing);
 
-            if (y < 0 && y >= map.texture.height) continue;
+            if (y < 0 || y >= map.texture.height) continue;
             var d = di + j * j;
             
             if (d < dLimit) {
@@ -259,9 +259,9 @@ var mode = {
         }
       } else {
         var x = Math.floor(view.mx / map.texture.spacing);
-        if (x < 0 && x >= map.texture.width) return;
+        if (x < 0 || x >= map.texture.width) return;
         var y = Math.floor(view.my / map.texture.spacing);
-        if (y < 0 && y >= map.texture.height) return;
+        if (y < 0 || y >= map.texture.height) return;
 
         var gx = map.grid.spacing * map.texture.width / map.width;
         var gy = map.grid.spacing * map.texture.height / map.height;
