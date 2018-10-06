@@ -294,6 +294,7 @@ var mode = {
   }
 };
 
+const MEDIA_MAPS = '/media/images/maps';
 var cursors = {
   NONE:    0,
   MAP:     1, // Move map
@@ -306,11 +307,11 @@ var cursors = {
 
   images: [
     null,
-    sketch.loadImage('/images/cursors/map.png'),
-    sketch.loadImage('/images/cursors/wall.png'),
-    sketch.loadImage('/images/cursors/asset.png'),
-    sketch.loadImage('/images/cursors/asset.png'),
-    sketch.loadImage('/images/cursors/erase.png'),  
+    sketch.loadImage(MEDIA_MAPS + '/cursors/map.png'),
+    sketch.loadImage(MEDIA_MAPS + '/cursors/wall.png'),
+    sketch.loadImage(MEDIA_MAPS + '/cursors/asset.png'),
+    sketch.loadImage(MEDIA_MAPS + '/cursors/asset.png'),
+    sketch.loadImage(MEDIA_MAPS + '/cursors/erase.png'),  
     null  
   ],
   
@@ -334,9 +335,9 @@ var textures = {
 
   images: [
     null,
-    sketch.loadImage('/images/textures/grass.png'),
-    sketch.loadImage('/images/textures/stone.png'),
-    sketch.loadImage('/images/textures/wood.png')
+    sketch.loadImage(MEDIA_MAPS + '/textures/grass.png'),
+    sketch.loadImage(MEDIA_MAPS + '/textures/stone.png'),
+    sketch.loadImage(MEDIA_MAPS + '/textures/wood.png')
   ],
 
   names: [
@@ -367,17 +368,17 @@ var entities = {
 
   images: [
     null,
-    sketch.loadImage('/images/entities/Aarakocra.png'),
-    sketch.loadImage('/images/entities/Aasimar.png'),
-    sketch.loadImage('/images/entities/Dragonborn.png'),
-    sketch.loadImage('/images/entities/Elf.png'),
-    sketch.loadImage('/images/entities/Elf_1.png'),
-    sketch.loadImage('/images/entities/Firbolg.png'),
-    sketch.loadImage('/images/entities/Half-Elf.png'),
-    sketch.loadImage('/images/entities/Kenku.png'),
-    sketch.loadImage('/images/entities/Blue.png'),
-    sketch.loadImage('/images/entities/Green.png'),
-    sketch.loadImage('/images/entities/Red.png')
+    sketch.loadImage(MEDIA_MAPS + '/entities/Aarakocra.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Aasimar.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Dragonborn.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Elf.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Elf_1.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Firbolg.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Half-Elf.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Kenku.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Blue.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Green.png'),
+    sketch.loadImage(MEDIA_MAPS + '/entities/Red.png')
   ],
 
   names: [
@@ -404,8 +405,8 @@ var assets = {
 
   images: [
     null,
-    sketch.loadImage('/images/assets/boulder.png'),
-    sketch.loadImage('/images/assets/chest.png')
+    sketch.loadImage(MEDIA_MAPS + '/assets/boulder.png'),
+    sketch.loadImage(MEDIA_MAPS + '/assets/chest.png')
   ],
 
   names: [

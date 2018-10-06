@@ -2,7 +2,7 @@ body {
   padding: 50px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
   background-color: rgb(32, 32, 32);
-  background-image: url('/images/table.png');
+  background-image: url('/media/images/rolls/table.png');
   background-size: contain;
   background-position: top;
   background-repeat: repeat-y;
@@ -98,12 +98,12 @@ a {
   background-color: transparent;
   border: 0;
 }
-.d4 {  background-image: url('/images/d4.png'); }
-.d6 {  background-image: url('/images/d6.png'); }
-.d8 {  background-image: url('/images/d8.png'); }
-.d10 { background-image: url('/images/d10.png'); }
-.d12 { background-image: url('/images/d12.png'); }
-.d20 { background-image: url('/images/d20.png'); }
+.d4 {  background-image: url('/media/images/rolls/dice/d4.png'); }
+.d6 {  background-image: url('/media/images/rolls/dice/d6.png'); }
+.d8 {  background-image: url('/media/images/rolls/dice/d8.png'); }
+.d10 { background-image: url('/media/images/rolls/dice/d10.png'); }
+.d12 { background-image: url('/media/images/rolls/dice/d12.png'); }
+.d20 { background-image: url('/media/images/rolls/dice/d20.png'); }
 
 @keyframes d4-glow {  
   0% { 
