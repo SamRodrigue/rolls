@@ -1,0 +1,3 @@
+[submodule "rolls-media"]
+	path = public/media
+	url = https://bitbucket.org/sam_rodrigue/rolls-media
