@@ -26,6 +26,7 @@ app.io.attach(app.server);
 app.use(session);
 app.io.use(sharedsession(session, { autoSave: true }));
 
+global.DEBUG = ((process.argv[2] !== 'undefined' && process.argv[2] === 'debug') ? process.argv[2] : false);
 global.JOIN_TIMEOUT = 10 * 1000; // 10 seconds
 global.ROOM_TIMEOUT = 5 * 60 * 1000; // 5 min
 global.MAX_DICE = 20;
@@ -33,13 +34,33 @@ global.MAX_DICE = 20;
 // Rooms
 app.rooms = new Map();
 
+// Debug mode. Enabled by running 'npm test' or 'bin/www debug'
+if (global.DEBUG) {
+  app.rooms.set('debug', {
+    name: 'Debug',
+    locked: false,
+    password: {
+      admin: '1',
+      user: ''
+    },
+    users: [],
+    timeout: null,
+    map: {
+      walls:    [],
+      entities: [],
+      assets:   [],
+      texture: null
+    }
+  });
+
+  app.use(logger('dev'));
+}
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
-// uncomment after placing your favicon in /public
-app.use(favicon(path.join(__dirname, 'public', 'images/favicon.ico')));
-//app.use(logger('dev'));
+app.use(favicon(path.join(__dirname, 'public', 'media/favicon.ico')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());

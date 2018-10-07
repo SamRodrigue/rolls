@@ -69,7 +69,13 @@ router.sockets = (io, socket, rooms, func) => {
         user: data.user_password
       },
       users: [],
-      timeout: null
+      timeout: null,
+      map: {
+        walls:    [],
+        entities: [],
+        assets:   [],
+        texture: null
+      }
     };
     room.users.push(user);
     rooms.set(id, room);

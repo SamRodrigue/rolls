@@ -2,6 +2,7 @@
 var socket;
 var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') + 1);
 var user = { name: '', role: 'user'};
+var show_dice = true;
 var dice_type = 'd4';
 var selected_dice = null;
 var die_glow_time = 1000;
@@ -40,6 +41,25 @@ function show_alert(data) {
   }
 }
 
+function toggle_dice() {
+  var dice = $('#dice-content');
+  var map = $('#map-content');
+  var toggle_status = $('#toggle-dice-status');
+  show_dice = !show_dice;
+
+  if (show_dice) {
+    map.hide();
+    dice.show();
+    toggle_status.html('Map');
+  } else {
+    dice.hide();
+    map.show();
+    // Resize map
+    myp5.resize();
+    toggle_status.html('Dice');
+  }
+}
+
 function user_data(data) {
   user = data;
   socket.emit('get-room', { room_id: room_id }); socket.send('');
@@ -48,8 +68,86 @@ function user_data(data) {
 function remove_user(data) {
   if (user.role === 'admin' || user.name === data) {
     console.log('removing user ' + data);
-    socket.emit('remove_user', { room_id: room_id, name: data }); socket.send('');
+    socket.emit('remove-user', { room_id: room_id, name: data }); socket.send('');
   }
+}
+
+// Map
+function save_map() {
+  var data = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(myp5.save()));
+  var a = document.createElement('a');
+  a.href = 'data:' + data;
+  a.download = 'mapData.json';
+  a.download = 'mapData.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function load_map() {
+  var input, file, fr;
+
+  if (typeof window.FileReader !== 'function') {
+    alert("The file API isn't supported on this browser yet.");
+    return;
+  }
+
+  input = document.getElementById('map-data-input');
+  if (!input) {
+    alert("Um, couldn't find the map data element.");
+  }
+  else if (!input.files) {
+    alert("This browser doesn't seem to support the `files` property of file inputs.");
+  }
+  else if (!input.files[0]) {
+    alert("Please select a file before clicking 'Load'");
+  }
+  else {
+    file = input.files[0];
+    fr = new FileReader();
+    fr.onload = function(e) {
+      var lines = e.target.result;
+      var newMapData = JSON.parse(lines);
+      newMapData.update = {
+        walls: true,
+        entities: true,
+        assets: true,
+        texture: true,
+      };
+      myp5.load(newMapData);
+    };
+    fr.readAsText(file);
+  }
+}
+
+function send_map() {
+  if (user.role !== 'admin') {
+    send_client_map();
+    return;
+  }
+  console.log('sending map');
+  socket.emit('update-map', { 
+    room_id: room_id,
+    map: myp5.save() 
+  }); socket.send('');
+}
+
+function map_data(data) {
+  console.log('receiving map');
+  myp5.load(data);
+}
+
+function send_client_map() {
+  console.log('sending client entities');
+  socket.emit('update-client-map', {
+    room_id: room_id,
+    entities: myp5.client_save()
+  }); socket.send('');
+}
+
+function client_map_data(data) {
+  console.log('receiving client entities');
+  myp5.client_load(data);
 }
 
 // Dice
@@ -170,11 +268,13 @@ $(document).ready(function() {
     socket.emit('join', room_id); socket.send('');
     socket.emit('enter-room', room_id); socket.send('');
   });
-  socket.on('alert',      function(data) { show_alert(data); });
-  socket.on('user-data',  function(data) { user_data(data); });
-  socket.on('room-data',  function(data) { room_data(data); });
-  socket.on('room-log',   function(data) { room_log(data); });
-  socket.on('disconnect', function(data) {
+  socket.on('alert',           function(data) { show_alert(data); });
+  socket.on('user-data',       function(data) { user_data(data);  });
+  socket.on('room-data',       function(data) { room_data(data);  });
+  socket.on('map-data',        function(data) { map_data(data);   });
+  socket.on('client-map-data', function(data) { client_map_data(data); });
+  socket.on('room-log',        function(data) { room_log(data);   });
+  socket.on('disconnect',      function(data) {
       console.log('disconnected');
   });
 
@@ -282,6 +382,8 @@ $(document).ready(function() {
   $(window).on('resize', function() {
     $('#log').css('height', 0);
     $('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
+    // Resize map
+    myp5.resize();
   });
 
   // Reset selected dice
