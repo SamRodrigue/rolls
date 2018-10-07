@@ -294,126 +294,32 @@ var mode = {
   }
 };
 
-const MEDIA_MAPS = '/media/images/maps';
-var cursors = {
-  NONE:    0,
-  MAP:     1, // Move map
-  WALL:    2, // Add walls
-  ENTITY:  3, // Add entity
-  ASSET:   4, // Add assets
-  ERASE:   5, // Remove walls and assets
-  TEXTURE: 6,
-  COUNT:   7,
+const MEDIA_MAPS = '/media/maps/';
 
-  images: [
-    null,
-    sketch.loadImage(MEDIA_MAPS + '/cursors/map.png'),
-    sketch.loadImage(MEDIA_MAPS + '/cursors/wall.png'),
-    sketch.loadImage(MEDIA_MAPS + '/cursors/asset.png'),
-    sketch.loadImage(MEDIA_MAPS + '/cursors/asset.png'),
-    sketch.loadImage(MEDIA_MAPS + '/cursors/erase.png'),  
-    null  
-  ],
-  
-  names: [
-    'None',
-    'Map',
-    'Wall',
-    'Entiies',
-    'Assets',
-    'Erase',
-    'Texture'
-  ]
-}
+var cursors = {
+  COUNT: 0,
+  names: [],
+  images: []
+};
 
 var textures = {
-  NONE:  0,
-  GRASS: 1,
-  STONE: 2,
-  WOOD:  3,
-  COUNT: 4,
-
-  images: [
-    null,
-    sketch.loadImage(MEDIA_MAPS + '/textures/grass.png'),
-    sketch.loadImage(MEDIA_MAPS + '/textures/stone.png'),
-    sketch.loadImage(MEDIA_MAPS + '/textures/wood.png')
-  ],
-
-  names: [
-    '',
-    'Grass',
-    'Stone',
-    'Wood'
-  ],
-  
+  COUNT:0,
+  names: [],
+  images: [],  
   width: 24,
   height: 24
 };
 
 var entities = {
-  NONE:       0,
-  AARAKOCRA:  1,
-  AASIMAR:    2,
-  DRAGONBORN: 3,
-  ELF:        4,
-  ELF_1:      5,
-  FIRBOLG:    6,
-  HALF_ELF:   7,
-  KENKU:      8,
-  BLUE:       9,
-  GREEN:      10,
-  RED:        11,
-  COUNT:      12,
-
-  images: [
-    null,
-    sketch.loadImage(MEDIA_MAPS + '/entities/Aarakocra.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Aasimar.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Dragonborn.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Elf.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Elf_1.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Firbolg.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Half-Elf.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Kenku.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Blue.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Green.png'),
-    sketch.loadImage(MEDIA_MAPS + '/entities/Red.png')
-  ],
-
-  names: [
-    'Move Tool',
-    'Aarakocra',
-    'Aasimar',
-    'Dragonborn',
-    'Elf',
-    'Elf_1',
-    'Firbolg',
-    'Half-Elf',
-    'Kenku',
-    'Blue',
-    'Green',
-    'Red'
-  ]
+  COUNT: 0,
+  names: [],
+  images: []
 };
 
 var assets = {
-  NONE:    0,
-  BOULDER: 1,
-  CHEST:   2,
-  COUNT:   3,
-
-  images: [
-    null,
-    sketch.loadImage(MEDIA_MAPS + '/assets/boulder.png'),
-    sketch.loadImage(MEDIA_MAPS + '/assets/chest.png')
-  ],
-
-  names: [
-    'Move Tool',
-    'Boulder',
-    'Chest'
-  ]
+  COUNT: 0,
+  names: [],
+  images: []
 };
 
 class Wall {
@@ -683,7 +589,6 @@ class Asset {
   }
 }
 
-
 var onCanvas = false;
 
 sketch.setup = function() {
@@ -695,6 +600,16 @@ sketch.setup = function() {
   canvas.mouseOut(function () {
     onCanvas = false;
   });
+
+  // Load media
+  // Cursors
+  sketch.loadJSON(MEDIA_MAPS + 'cursors/cursors.json', loadCursors);
+  // Textures
+  sketch.loadJSON(MEDIA_MAPS + 'textures/textures.json', loadTextures);
+  // Entities
+  sketch.loadJSON(MEDIA_MAPS + 'entities/entities.json', loadEntities);
+  // Assets
+  sketch.loadJSON(MEDIA_MAPS + 'assets/assets.json', loadAssets);
 
   map.texture.width = map.width / map.texture.spacing;
   map.texture.height = map.height / map.texture.spacing;
@@ -713,7 +628,6 @@ sketch.setup = function() {
   var zy = view.height / map.height;
   view.zoom.MIN = Math.min(zx, zy) * 0.8;
   view.zoom.set(0);
-  mode.cursor = cursors.MAP;
   //noLoop();
 };
 
@@ -1064,6 +978,41 @@ sketch.setMode = function(m) {
     mode.cursor = m;
   }
 };
+
+function loadMedia(data, folder) {
+  var dataKeys = Object.keys(data);
+
+  var target = {
+    COUNT: dataKeys.length,
+    names: new Array(dataKeys.length),
+    images: new Array(dataKeys.length)
+  };
+
+  for (key of dataKeys) {
+    target[key] = data[key][0];
+    target.names[target[key]] = data[key][1];
+    if (data[key][2] === null) {
+      target.images[target[key]] = null;
+    } else {
+      target.images[target[key]] = sketch.loadImage(MEDIA_MAPS + folder + data[key][2]);
+    }
+  }
+
+  return target;
+}
+
+function loadCursors(data)  {
+  cursors  = loadMedia(data, 'cursors/');
+  mode.cursor = cursors.MAP;
+}
+function loadTextures(data) { 
+  textures = loadMedia(data, 'textures/');
+  // Hard code texture width and height
+  textures.width = 24;
+  textures.height = 24;
+}
+function loadAssets(data)   { assets   = loadMedia(data, 'assets/'); }
+function loadEntities(data) { entities = loadMedia(data, 'entities/'); }
 
 function draw_map() {
   draw_grid();
