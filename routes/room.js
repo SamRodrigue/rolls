@@ -45,6 +45,14 @@ router.sockets = (io, socket, rooms, func) => {
     var user = find_user_socket(room, socket);
     if (user) { 
       socket.emit('room-data', func.room_array(room));
+    }
+  });
+
+  socket.on('get-map', (data) => {
+    var room = find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = find_user_socket(room, socket);
+    if (user) { 
       room.map.update = {
         walls: true,
         entities: true,

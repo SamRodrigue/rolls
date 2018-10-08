@@ -79,6 +79,8 @@ var view = {
 };
 
 var mode = {
+  loaded: false,
+
   cursor: 0,
   texture: 0,
   wall: null,
@@ -591,16 +593,7 @@ class Asset {
 
 var onCanvas = false;
 
-sketch.setup = function() {
-  var canvas = sketch.createCanvas(view.width, view.height);
-  canvas.parent('#map');
-  canvas.mouseOver(function () {
-    onCanvas = true;
-  });
-  canvas.mouseOut(function () {
-    onCanvas = false;
-  });
-
+sketch.preload = function() {
   // Load media
   // Cursors
   sketch.loadJSON(MEDIA_MAPS + 'cursors/cursors.json', loadCursors);
@@ -610,6 +603,17 @@ sketch.setup = function() {
   sketch.loadJSON(MEDIA_MAPS + 'entities/entities.json', loadEntities);
   // Assets
   sketch.loadJSON(MEDIA_MAPS + 'assets/assets.json', loadAssets);
+}
+
+sketch.setup = function() {
+  var canvas = sketch.createCanvas(view.width, view.height);
+  canvas.parent('#map');
+  canvas.mouseOver(function () {
+    onCanvas = true;
+  });
+  canvas.mouseOut(function () {
+    onCanvas = false;
+  });
 
   map.texture.width = map.width / map.texture.spacing;
   map.texture.height = map.height / map.texture.spacing;
@@ -628,7 +632,9 @@ sketch.setup = function() {
   var zy = view.height / map.height;
   view.zoom.MIN = Math.min(zx, zy) * 0.8;
   view.zoom.set(0);
-  //noLoop();
+
+  // Request map data
+  mode.loaded = true;
 };
 
 sketch.draw = function () {
@@ -656,7 +662,6 @@ sketch.draw = function () {
   sketch.pop();
 
   draw_map();
-
   draw_cursor();
 };
 
@@ -720,6 +725,11 @@ sketch.load = function(newData) {
     map.texture.height = data.texture.height;
     map.texture.val = data.texture.val;
     map.texture.image.loadPixels();
+    for (tex of textures.images) {
+      if (tex !== null) {
+        tex.loadPixels();
+      }
+    }
 
     for (var i = 0; i < data.texture.width; ++i) {
       for (var j = 0; j < data.texture.height; ++j) {
@@ -979,6 +989,10 @@ sketch.setMode = function(m) {
   }
 };
 
+sketch.isLoaded = function() {
+  return mode.loaded;
+}
+
 function loadMedia(data, folder) {
   var dataKeys = Object.keys(data);
 
@@ -994,15 +1008,18 @@ function loadMedia(data, folder) {
     if (data[key][2] === null) {
       target.images[target[key]] = null;
     } else {
+      console.log('loading '+ data[key][2]);
       target.images[target[key]] = sketch.loadImage(MEDIA_MAPS + folder + data[key][2]);
     }
   }
 
+  console.log('Loaded ' + folder);
+
   return target;
 }
 
-function loadCursors(data)  {
-  cursors  = loadMedia(data, 'cursors/');
+function loadCursors(data) {
+  cursors = loadMedia(data, 'cursors/');
   mode.cursor = cursors.MAP;
 }
 function loadTextures(data) { 
@@ -1011,8 +1028,12 @@ function loadTextures(data) {
   textures.width = 24;
   textures.height = 24;
 }
-function loadAssets(data)   { assets   = loadMedia(data, 'assets/'); }
-function loadEntities(data) { entities = loadMedia(data, 'entities/'); }
+function loadEntities(data) {
+  entities = loadMedia(data, 'entities/');
+}
+function loadAssets(data) {
+  assets = loadMedia(data, 'assets/');
+}
 
 function draw_map() {
   draw_grid();

@@ -65,6 +65,19 @@ function user_data(data) {
   socket.emit('get-room', { room_id: room_id }); socket.send('');
 }
 
+function get_map() {
+  console.log('checking for map');
+  // Check if map is fully loaded
+  if (typeof myp5 !== 'undefined' &&
+      myp5.isLoaded()) {
+    console.log('updating map');
+    socket.emit('get-map', { room_id: room_id }); socket.send('');
+  } else {
+    // Wait a second to check if loaded
+    setTimeout(get_map, 1000);
+  }
+}
+
 function remove_user(data) {
   if (user.role === 'admin' || user.name === data) {
     console.log('removing user ' + data);
@@ -267,6 +280,8 @@ $(document).ready(function() {
     console.log('connected to room');
     socket.emit('join', room_id); socket.send('');
     socket.emit('enter-room', room_id); socket.send('');
+    // Get map data
+    get_map();
   });
   socket.on('alert',           function(data) { show_alert(data); });
   socket.on('user-data',       function(data) { user_data(data);  });
