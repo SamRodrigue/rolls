@@ -9,23 +9,23 @@ block content
     h3.text-light Room: #{room.name}
   
   .toggle
-    button#toggle-dice.btn.btn-warning.col-1.float-right(type="button" onClick="toggle_dice()")
+    button#toggle-dice.btn.btn-warning.col-1.float-right(type="button" onClick="toggle_dice(!show_dice)")
       span#toggle-dice-status Map
   #dice-content.content
-    .container-fluid.mt-2.col-12.col-lg-10.col-xl-8
-      .row.user-roll.col-12.col-md-8.col-lg-6.mx-auto.input-group
+    .container-fluid.mt-2.col-12.col-lg-4.col-xl-3.float-lg-right
+      .row.user-roll.col-12.col-md-8.col-lg-12.mx-auto.input-group
         button#roll.btn.btn-primary.col-8(onClick="roll_dice()")
           span Roll
         button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#dice-modal")
           span Dice
       .row.mt-2
-        #dice.col-12.col-sm-6.col-md-7.col-lg-8.content
+        #dice.col-12.col-sm-6.col-md-7.col-lg-12.content
           .loader
-        #log-container.col-12.col-sm-6.col-md-5.col-lg-4.pt-1.pb-1
+        #log-container.col-12.col-sm-6.col-md-5.col-lg-12.pt-1.pb-1
           #log.col-12.border.border-secondary.bg-light.content
   #map-content.content(style="display: none;")
-    .container-fluid.mt-2.col-12
-      .row.user-roll.col-12.col-md-8.col-lg-6.mx-auto.input-group
+    .container-fluid.mt-2.col-12.col-lg-8.col-xl-9.float-lg-left
+      .row.user-roll.col-12.col-md-8.col-lg-12.mx-auto.input-group
         button.btn.btn-primary.col-1(onClick="send_map()")
           span Up
         button.btn.btn-primary.col-3(onClick="hide_map()")

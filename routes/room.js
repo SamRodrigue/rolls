@@ -153,7 +153,6 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('add-dice', (data) => {
-    console.log('a user added a ' + data.type);
     var dice = { type: '', value: -1, time: Date.now() };
     if (['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].includes(data.type)) {
       dice.type = data.type;
@@ -165,6 +164,7 @@ router.sockets = (io, socket, rooms, func) => {
     if (!room) return;
     var user = find_user_socket(room, socket);
     if (user) {
+      console.log('user ' + user.name + ' added a ' + data.type);
       if (user.dice.length >= global.MAX_DICE) {
         socket.emit('alert', { kick: false, alert: 'Error: You unable to add more dice (max:' + global.MAX_DICE + ')'});
       } else {
@@ -175,7 +175,6 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('remove-dice', (data) => {
-    console.log('a user removed a ' + data.type);
     var room = find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = find_user_socket(room, socket);
@@ -188,7 +187,7 @@ router.sockets = (io, socket, rooms, func) => {
       } else if (data.hasOwnProperty('type')) {
         user.dice.some((die, index) => {
           if (die.type === data.type) {
-            console.log('a user removed a ' + data.type + die.type);
+            console.log('user ' + user.name + ' removed a ' + data.type + die.type);
             user.dice.splice(index, 1);
             changed = true;
             return true;
@@ -201,7 +200,6 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('roll-dice', (data) => {
-    console.log('a user is rolling');
     var room = find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = find_user_socket(room, socket);
@@ -219,6 +217,7 @@ router.sockets = (io, socket, rooms, func) => {
       }
 
       if (changed) {
+        console.log('user ' + user.name + ' is rolling');
         io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
         var date = new Date();
         io.sockets.in(data.room_id).emit('room-log', 
@@ -232,11 +231,11 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('clear-dice', (data) => {
-    console.log('a user is clearing dice');
     var room = find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = find_user_socket(room, socket);
     if (user) {
+      console.log('user ' + user.name + ' is clearing dice');
       // Clear dice
       user.dice = [];
 
@@ -245,13 +244,18 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('counter', (data) => {
-    console.log('a user is changing a counter');
     var room = find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = find_user_socket(room, socket);
     var [target_user, target_user_index] = find_user_name(room, data.name);
     if (user && target_user && 
         (user.role === 'admin' || user.name === data.name)) {
+      if (user.role === 'admin' && user.name !== target_user.name) {
+        console.log('admin ' + user.name + ' is changing user ' + target_user.name + ' counter (' + data.counter + ')');
+      } else {
+        console.log('user ' + user.name + ' is changing a counter (' + data.counter + ')');
+      }
+
       var old_counter = target_user.counter;
       // Change counter
       if (data.counter === 0) {
@@ -267,20 +271,20 @@ router.sockets = (io, socket, rooms, func) => {
 
   var PRESET = { SAVE: 0, LOAD: 1 };
   socket.on('preset', (data) => {
-    if (data.type === PRESET.SAVE) console.log('a user is saving a preset');
-    else if (data.type === PRESET.LOAD) console.log('a user is loading a preset');
-    else {
-      console.log('a user is using an unsupported preset type');
-      return;
-    }
     if (data.preset < 0 || data.preset > 1) {
-      console.log('a user is using an unsupported preset number');
+      console.log('ERROR: a user is using an unsupported preset number');
       return;
     }
     var room = find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = find_user_socket(room, socket);
-    var preset = user.preset[data.preset];
+
+    if (data.type === PRESET.SAVE) console.log('user ' + user.name + ' is saving a preset');
+    else if (data.type === PRESET.LOAD) console.log('user ' + user.name + ' is loading a preset');
+    else {
+      console.log('user ' + user.name + ' is using an unsupported preset type');
+      return;
+    }
 
     switch (data.type) {
       case PRESET.SAVE: // Save

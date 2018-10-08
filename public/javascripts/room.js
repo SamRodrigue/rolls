@@ -41,22 +41,28 @@ function show_alert(data) {
   }
 }
 
-function toggle_dice() {
+function toggle_dice(val) {
   var dice = $('#dice-content');
   var map = $('#map-content');
-  var toggle_status = $('#toggle-dice-status');
-  show_dice = !show_dice;
 
-  if (show_dice) {
-    map.hide();
+  if (val === null) {
     dice.show();
-    toggle_status.html('Map');
-  } else {
-    dice.hide();
     map.show();
-    // Resize map
-    myp5.resize();
-    toggle_status.html('Dice');
+  } else {
+    var toggle_status = $('#toggle-dice-status');
+    show_dice = val;
+
+    if (show_dice) {
+      map.hide();
+      dice.show();
+      toggle_status.html('Map');
+    } else {
+      dice.hide();
+      map.show();
+      // Resize map
+      myp5.resize();
+      toggle_status.html('Dice');
+    }
   }
 }
 
@@ -394,12 +400,22 @@ $(document).ready(function() {
     $('#log').scrollTop(0);
   }
 
-  $(window).on('resize', function() {
+  function window_resize() {
     $('#log').css('height', 0);
     $('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
+
+    if ($(document).outerWidth() >= 992) {
+      $('.toggle').hide();
+      toggle_dice(null);
+    } else {
+      $('.toggle').show();
+      toggle_dice(show_dice);
+    }
     // Resize map
     myp5.resize();
-  });
+  }
+
+  $(window).on('resize', window_resize);
 
   // Reset selected dice
   $(document).on('click', function() {
@@ -440,4 +456,7 @@ $(document).ready(function() {
   function rem_px(rem) {
     return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
   }
+
+  // Call functions on load
+  window_resize();
 });
