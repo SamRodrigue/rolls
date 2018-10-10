@@ -403,8 +403,9 @@ $(document).ready(function() {
   function window_resize() {
     $('#log').css('height', 0);
     $('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
+    var ww = $(window).outerWidth();
 
-    if ($(document).outerWidth() >= 992) {
+    if (ww >= 992) {
       $('.toggle').hide();
       toggle_dice(null);
     } else {
@@ -451,6 +452,10 @@ $(document).ready(function() {
 
   $(document).on('click', '#user-counter', function() {
     counter(0, user.name); /* ToDo: Allow admin to reset other user's counter */
+  });
+
+  $(document).on('wheel', '#map canvas', function(event) {
+    event.preventDefault();
   });
 
   function rem_px(rem) {

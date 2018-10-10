@@ -638,7 +638,8 @@ sketch.setup = function() {
 };
 
 sketch.draw = function () {
-  sketch.background(235);
+  //sketch.background(235);
+  sketch.clear();
   sketch.fill(0);
   switch (mode.cursor) {
     case cursors.TEXTURE:
@@ -666,8 +667,9 @@ sketch.draw = function () {
 };
 
 sketch.resize = function() {
-  view.width = $('#map').width();
+  view.width = $('#map').outerWidth() - 44; // Remove padding and boarder
   view.height = $(window).height() - 160; // Todo: make more dynamic
+  $('#map').height(view.height);
   sketch.resizeCanvas(view.width, view.height);
 
   var zx = view.width / map.width;
@@ -1238,23 +1240,22 @@ function decompress_texture(tex) {
 }
 
 function hashString(str) {
-  var hash = 0, i, chr;
-  if (str.length === 0) return hash;
-  for (i = 0; i < str.length; i++) {
-    chr   = str.charCodeAt(i);
-    hash  = ((hash << 5) - hash) + chr;
-    hash |= 0; // Convert to 32bit integer
+  var hash = 5381,
+      i    = str.length;
+  while(i) {
+    hash = (hash * 33) ^ str.charCodeAt(--i);
   }
-  return hash;
+  
+  return hash >>> 0;
 }
 
 function colorString(str) {
   var hash = hashString(str);
 
   var out = [
-    ((hash & 0xFF000000) >> 24) + 128,
-    ((hash & 0x00FF0000) >> 16) + 128,
-    ((hash & 0x0000FF00) >> 8) + 128
+    (((hash & 0xFF000000) >> 24) % 8) * 32,
+    (((hash & 0x00FF0000) >> 16) % 8) * 32,
+    (((hash & 0x0000FF00) >> 8) % 8) * 32
   ];
 
   return out;
