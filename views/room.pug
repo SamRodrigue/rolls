@@ -28,11 +28,14 @@ block content
       .row.user-roll.col-12.col-md-8.col-lg-12.mx-auto.input-group
         button.btn.btn-primary.col-1(onClick="send_map()")
           span Up
-        button.btn.btn-primary.col-3(onClick="hide_map()")
+        // TODO: Add hide button for admin
+        //button.btn.btn-primary.col-3(onClick="hide_map()")
           span Hide
         button.btn.btn-primary.col-3.offset-1(data-toggle="modal" data-target="#tools-modal")
           span Tools
-        button.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#assets-modal")
+        button.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#entities-modal")
+          span Entities
+        button.btn.btn-success.col-3(data-toggle="modal" data-target="#assets-modal")
           span Assets
       .row.mt-2
         #map.col-12
@@ -132,12 +135,26 @@ block content
           h2 Tools
           button.close(data-dismiss="modal") &times;
         .modal-body
-          button.btn.btn-success(onClick="save_map()")
-            span Save
           input#map-data-input(type="file")
           button.btn.btn-primary(onClick="load_map()")
             span Load
+          button.btn.btn-success.offset-1(onClick="save_map()")
+            span Save
         .modal-footer
+          button.btn.btn-dark(data-dismiss="modal")
+            span Close
+        
+  #entities-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h2 Entities
+          button.close(data-dismiss="modal") &times;
+        .modal-body
+
+        .modal-footer
+          button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_entities()")
+            span Clear
           button.btn.btn-dark(data-dismiss="modal")
             span Close
 

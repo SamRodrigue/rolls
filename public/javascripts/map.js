@@ -17,7 +17,7 @@ var update = {
 
 var map = {
   width: 150,
-  height: 100,
+  height: 150,
   grid: {
     spacing: 5
   },
@@ -67,7 +67,7 @@ var view = {
   brush: {
     val: 10,
     MIN: 2,
-    MAX: 20,
+    MAX: 100,
     set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
   },
   asset: {
@@ -719,13 +719,11 @@ sketch.load = function(newData) {
 
   if (update.texture) {
     if (data.texture.width !== map.texture.width || data.texture.height !== map.texture.height) {
-      alert('Resizing of texture not supported');
-      return;
+      alert('Map will be resized from ' + 
+        data.texture.width + 'x' + data.texture.height +
+        ' to ' + map.texture.width + 'x' + map.texture.height);
     }
 
-    map.texture.width = data.texture.width;
-    map.texture.height = data.texture.height;
-    map.texture.val = data.texture.val;
     map.texture.image.loadPixels();
     for (tex of textures.images) {
       if (tex !== null) {
@@ -733,9 +731,14 @@ sketch.load = function(newData) {
       }
     }
 
-    for (var i = 0; i < data.texture.width; ++i) {
-      for (var j = 0; j < data.texture.height; ++j) {
-        var curr = data.texture.val[i][j];
+    for (var i = 0; i < map.texture.width; ++i) {
+      for (var j = 0; j < map.texture.height; ++j) {
+        var curr = 0;
+        if (i < data.texture.width && j < data.texture.height) {
+          var curr = data.texture.val[i][j];
+        }
+
+        map.texture.val[i][j] = curr;
         if (curr === 0) {
           map.texture.image.set(i, j, [0, 0, 0, 0]);
         } else {
@@ -914,6 +917,7 @@ sketch.keyPressed = function() {
       sketch.setMode(cursors.TEXTURE);
       break;
     case '=':
+    case '+':
       switch (mode.cursor) {
         case cursors.MAP:
         case cursors.WALL:
@@ -929,6 +933,7 @@ sketch.keyPressed = function() {
       }
       break;
     case '-':
+    case '_':
       switch (mode.cursor) {
         case cursors.MAP:
         case cursors.WALL:
@@ -988,6 +993,45 @@ sketch.setMode = function(m) {
   if (m >= 0 && m < cursors.COUNT) {
     mode.wall = null;
     mode.cursor = m;
+  }
+};
+
+// TODO: merge with keypress to use single function
+sketch.setSpecificMode = function(name, key) {
+  switch(name) {
+    case 'entity':
+      sketch.setMode(cursors.ENTITY);
+      mode.entity = key;
+      break;
+    case 'asset':
+      sketch.setMode(cursors.ASSET);
+      mode.asset = key;
+      break;
+    case 'texture':
+      mode.fill = false;
+      sketch.setMode(cursors.TEXTURE);
+      mode.texture = key;
+      if (key > 0 && key < textures.COUNT) {
+        textures.images[key].loadPixels();
+      }
+      break;
+    case 'fill':
+      mode.fill = true;
+      sketch.setMode(cursors.TEXTURE);
+      mode.texture = key;
+      if (key > 0 && key < textures.COUNT) {
+        textures.images[key].loadPixels();
+      }
+      break;
+    case 'map':
+      sketch.setMode(cursors.MAP);
+      break;
+    case 'wall':
+      sketch.setMode(cursors.WALL);
+      break;
+    case 'erase':
+      sketch.setMode(cursors.ERASE);
+      break;
   }
 };
 

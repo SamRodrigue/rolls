@@ -1,4 +1,5 @@
 // Elements
+const MEDIA_MAPS = '/media/maps/';
 var socket;
 var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') + 1);
 var user = { name: '', role: 'user'};
@@ -297,6 +298,46 @@ $(document).ready(function() {
   socket.on('room-log',        function(data) { room_log(data);   });
   socket.on('disconnect',      function(data) {
       console.log('disconnected');
+  });
+
+  // Load entities and assets modals
+  $.getJSON(MEDIA_MAPS + 'entities/entities.json', function(data) {
+    $.each(data, function(key, val) {
+      $('#entities-modal .modal-body').append(`
+<div class="">
+  <button onclick="myp5.setSpecificMode('entity', ` + val[0] + `); $('#entities-modal').modal('toggle');">` + val[1] + `</button>
+</div>`);
+    });
+  });
+
+  $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
+    $.each(data, function(key, val) {
+      $('#assets-modal .modal-body').append(`
+<div class="">
+  <button onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">` + val[1] + `</button>
+</div>`);
+    });
+  });
+
+  // Load tools
+  var toolModes = [['map', 'Map Mode'], ['wall', 'Wall Mode'], ['erase', 'Erase Mode']];
+  toolModes.forEach(function(data) {
+    $('#tools-modal .modal-body').append(`
+<div class="">
+  <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
+</div>`);
+  });
+
+  // Load textures
+  $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
+    $.each(data, function(key, val) {
+      if (key === 'NONE') return;
+      $('#tools-modal .modal-body').append(`
+<div class="">
+  <button onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">Texture: ` + val[1] + `</button>
+  <button onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">Fill: ` + val[1] + `</button>
+</div>`);
+    });
   });
 
   function room_data(data) {
