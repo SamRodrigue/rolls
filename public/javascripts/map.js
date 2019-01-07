@@ -525,14 +525,19 @@ class Entity {
     };
   }
 
-  draw() {
+  draw(x, y) {
+    if (arguments.length !== 2) {
+      x = this.x;
+      y = this.y;
+    }
+
     sketch.ellipseMode(sketch.CENTER);
     sketch.noStroke();
     sketch.fill(this.color[0], this.color[1], this.color[2], 255);
-    sketch.ellipse(this.x, this.y, entities.images[this.type].width + 50, entities.images[this.type].height + 50);
+    sketch.ellipse(x, y, entities.images[this.type].width + 50, entities.images[this.type].height + 50);
 
     sketch.imageMode(sketch.CENTER);
-    sketch.image(entities.images[this.type], this.x, this.y);
+    sketch.image(entities.images[this.type], x, y);
   }
 
   contains(x, y) {
@@ -608,12 +613,8 @@ sketch.preload = function() {
 sketch.setup = function() {
   var canvas = sketch.createCanvas(view.width, view.height);
   canvas.parent('#map');
-  canvas.mouseOver(function () {
-    onCanvas = true;
-  });
-  canvas.mouseOut(function () {
-    onCanvas = false;
-  });
+  canvas.mouseOver(function () { onCanvas = true; });
+  canvas.mouseOut(function () { onCanvas = false; });
 
   map.texture.width = map.width / map.texture.spacing;
   map.texture.height = map.height / map.texture.spacing;
@@ -635,21 +636,29 @@ sketch.setup = function() {
 
   // Request map data
   mode.loaded = true;
+
+  // Sketch config
+  sketch.noSmooth(); // May only be needed for assets
 };
 
 sketch.draw = function () {
+  view.mx = (sketch.mouseX - sketch.width/2) / view.zoom.val + view.x;
+  view.my = (sketch.mouseY - sketch.height/2) / view.zoom.val + view.y;
+  view.wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
+  view.wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
+
   //sketch.background(235);
   sketch.clear();
   sketch.fill(0);
   switch (mode.cursor) {
     case cursors.TEXTURE:
-      sketch.text(textures.names[mode.texture], 2, 10);
+      sketch.text("Texture: " + textures.names[mode.texture], 2, 10);
       break;
     case cursors.ASSET:
-      sketch.text(assets.names[mode.asset], 2, 10);
+      sketch.text("Asset: " + assets.names[mode.asset], 2, 10);
       break;
     case cursors.ENTITY:
-      sketch.text(entities.names[mode.entity], 2, 10);
+      sketch.text("Entity: " + entities.names[mode.entity], 2, 10);
       break;
   }
 
@@ -816,6 +825,7 @@ sketch.client_save = function() {
 
 sketch.mousePressed = function() {
   if (!onCanvas) return;
+  if (view.wx < 0 || view.wx > map.width || view.wy < 0 || view.wy > map.height) return;
   
   var oldCursor = mode.cursor;
   if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
@@ -1086,6 +1096,7 @@ function draw_map() {
   draw_walls();
   draw_assets();
   draw_entities();
+  draw_hover();
 }
 
 function draw_texture() {
@@ -1123,6 +1134,24 @@ function draw_entities() {
   sketch.pop();
 }
 
+function draw_hover() {
+  if (mode.cursor !== cursors.ENTITY || 
+      mode.entity !== entities.NONE) return;
+  
+  var scale = view.zoom.MAX / view.zoom.val;
+  var ex = view.mx / map.entity.spacing;
+  var ey = view.my / map.entity.spacing;
+  for (entity of map.entities) {
+    if (entity.contains(ex, ey)) {
+      sketch.push();
+        sketch.scale(scale * map.entity.spacing);
+        sketch.translate(-entity.x +  entity.x / scale, -entity.y + entity.y / scale);
+        entity.draw();
+      sketch.pop();
+    }
+  }
+}
+
 function draw_assets() {
   sketch.push();
     sketch.scale(map.asset.spacing);
@@ -1134,11 +1163,6 @@ function draw_assets() {
 
 function draw_cursor() {
   if (!onCanvas) return;
-  
-  view.mx = (sketch.mouseX - sketch.width/2) / view.zoom.val + view.x;
-  view.my = (sketch.mouseY - sketch.height/2) / view.zoom.val + view.y;
-  view.wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
-  view.wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
 
   sketch.rectMode(sketch.CENTER);
 
