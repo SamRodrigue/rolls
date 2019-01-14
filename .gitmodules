@@ -1,3 +1,3 @@
-[submodule "rolls-media"]
+[submodule "public/media"]
 	path = public/media
-	url = https://bitbucket.org/sam_rodrigue/rolls-media
+	url = https://github.com/SamRodrigue/rolls-media
