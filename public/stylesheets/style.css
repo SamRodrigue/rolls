@@ -2,8 +2,7 @@ body {
   padding: 0px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
   background-color: rgb(32, 32, 32);
-  /*
-  background-image: url('/media/rolls/background-test.jpg');
+  background-image: url('/media/rolls/table.png');
   background-size: cover;
   background-position: top;
   background-repeat: repeat-y;
@@ -12,11 +11,10 @@ body {
   image-rendering: -o-crisp-edges;
   image-rendering: -webkit-optimize-contrast;
   -ms-interpolation-mode: nearest-neighbor;
-  */
 }
 
 /* Pheno style changes */
-
+/* Background img 
 body::before {
   content:'';
   height: 100vh;
@@ -31,7 +29,7 @@ body::before {
   position: absolute;
   z-index: -2;
 }
-
+*/
 .header {
 	font-size: 70px;
 	color: #efecec;
@@ -44,7 +42,79 @@ h3 {
 	text-shadow: 1.5px 1.5px 0px #4d4d4d, 4px 4px 0px rgba(0,0,0,0.1);
 }
 
+
+.test{
+  margin: auto;
+  height: 100%;
+}
+
+.flexRight {
+  display: flex;
+  justify-content: right;
+} 
+
+/* accordion */
+
+.acc-flex-con {
+  display: flex;
+  flex-direction: column;
+  padding: .3em;
+  margin: .3em;    
+}
+
+.acc-btn-con {
+  display: flex;
+  flex-direction: column;
+  padding: .3em;
+  margin: .3em;
+
+}  
+
+.btn-acc{
+  padding: .1em;
+  margin: .1em;
+}
+
+/* sidebar */
+
+.btnSidebar {
+  height: 100%;
+  width: 0;
+  position: relative;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: opacity(8) ;
+  overflow: hidden;
+  transition: .5s;
+  padding-top: 60px;
+}
+
+.btnSidebar a {
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 25px;
+  color: #818181;
+  display: block;
+  transition: .3s;
+}
+
+.btnSidebar .closeBtnSidebar {
+  position: absolute;
+  top: 0;
+  right: 25px;
+  font-size: 36px;
+  margin-left: 50px;
+}
+
+@media screen and (max-height: 450px){
+  .btnSidebar {padding-top: 15px;}
+  .btnSidebar a {font-size: 18px;}
+}
+
+
 /* Pheno style changes end */
+
 :not(body) {
   image-rendering: auto;
 }

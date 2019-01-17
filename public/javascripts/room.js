@@ -1,3 +1,13 @@
+function openBtnSidebar() {
+  document.getElementById('btnSidebar').style.width = "250px";
+  document.getElementById('main').style.width = "250px"
+}
+
+function closeBtnSidebar() {
+  document.getElementById('btnSidebar').style.width = "0";
+  document.getElementById('main').style.width = "0";
+}
+
 // Elements
 const MEDIA_MAPS = '/media/maps/';
 var socket;
