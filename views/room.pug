@@ -13,77 +13,74 @@ block content
     button#toggle-dice.btn.btn-warning.col-1.float-right(type="button" onClick="toggle_dice(!show_dice)")
       span#toggle-dice-status Map
 
-  .container-fluid
-    .row.justify-content-center
-      .col-xl-5.tStyle1 
-        .row.mt-2
-          #map.col-12
-      .col-sm-1.tStyle1 
-        #btnSidebar.btnSidebar
-          a(href="javascript:void(0)").closeBtnSidebar(onClick="closeBtnSidebar()") x
-          .btnAccordion#btnAccordion
-            .card
-            h5.mb-0
-              #headingOne.cardHeader
-                button.btn.btn-link(data-toggle="collapse" data-target="#collapse-1") 
-                  h4 Tools!
-              #collapse-1.collapse
-                .acc-flex-con.cardbody
-                  h6 modes
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-map(onClick="myp5.setSpecificMode('map');")  Map mode      
-                  button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('wall');") Wall mode
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-eraser(onClick="myp5.setSpecificMode('erase');")  Eraser
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-eraser(onClick="myp5.setSpecificMode('texture', 0);")  Eraser0
-                  hr
-                .acc-btn-con
-                  h6.btn-acc Paint
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 1);")  Grass
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 1 );") Grass
-                .acc-btn-con
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 2);")  Stone
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 2 );")  Stone
-                .acc-btn-con
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 3);")  Wood
-                  button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 3 );")  Wood
-          .btnAccordion#btnAccordion
-            .card
-            .cardHeader#headingOne
-              h5.mb-0
-                button.btn.btn-link(data-toggle="collapse" data-target="#collapse-2") 
-                  h4 Assets!
-            #collapse-2.collapse  
+  .mainContainer 
+    #map.containerMapTwo
+    .tStyle1.containerSidebar 
+      #btnSidebar.btnSidebar
+        a(href="javascript:void(0)").closeBtnSidebar(onClick="closeBtnSidebar()") x
+        .btnAccordion#btnAccordion
+          .card
+          h5.mb-0
+            #headingOne.cardHeader
+              button.btn.btn-link(data-toggle="collapse" data-target="#collapse-1") 
+                h4 Tools!
+            #collapse-1.collapse
               .acc-flex-con.cardbody
-                button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 0);") Move
-                button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 1);") Boulder
-                button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 2);") Chest
-                button.btn.btn-sm.btn-warning(onClick="clear_assets()") Clear
-          .btnAccordion#btnAccordion
-            .card
-            .cardheader#headingOne
-              h5.mb-0
-              button.btn.btn-link(data-toggle="collapse" data-target="#collapse-3") 
-                h4 Entities!
-            #collapse-3.collapse  
-              .acc-flex-con.card-body
-                button.btn-acc.btn.btn-primary.btn-sm(onClick="") Move
-                button.btn.btn-sm.btn-warning(onClick="") Clear
-                button.btn.btn-sm.btn-warning(onClick="") not-done-yet
-        .main
-          button.openbtn(onClick="openBtnSidebar()") toggle menu! 
-      
-      .col-sm-3.offset-sm-3.tStyle1.test  
-        #dice-content.col-12.col-sm-6.col-md-7.col-lg-12.content
-            .row.user-roll.col-12.col-md-8.col-lg-12.mx-auto.input-group
-              button#roll.btn.btn-primary.col-8(onClick="roll_dice()")
-                span Roll
-              button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#dice-modal")
-                span Dice
-            //dice/history container
-            .row.mt-2
-              #dice.col-12.col-sm-6.col-md-7.col-lg-12.content
-                .loader
-              #log-container.col-12.col-sm-6.col-md-5.col-lg-12.pt-1.pb-1
-                #log.border.border-secondary.bg-light.content
+                h6 modes
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-map(onClick="myp5.setSpecificMode('map');")  Map mode      
+                button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('wall');") Wall mode
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-eraser(onClick="myp5.setSpecificMode('erase');")  Eraser
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-eraser(onClick="myp5.setSpecificMode('texture', 0);")  Eraser0
+                hr
+              .acc-btn-con
+                h6.btn-acc Paint
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 1);")  Grass
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 1 );") Grass
+              .acc-btn-con
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 2);")  Stone
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 2 );")  Stone
+              .acc-btn-con
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 3);")  Wood
+                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 3 );")  Wood
+        .btnAccordion#btnAccordion
+          .card
+          .cardHeader#headingOne
+            h5.mb-0
+              button.btn.btn-link(data-toggle="collapse" data-target="#collapse-2") 
+                h4 Assets!
+          #collapse-2.collapse  
+            .acc-flex-con.cardbody
+              button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 0);") Move
+              button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 1);") Boulder
+              button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 2);") Chest
+              button.btn.btn-sm.btn-warning(onClick="clear_assets()") Clear
+        .btnAccordion#btnAccordion
+          .card
+          .cardheader#headingOne
+            h5.mb-0
+            button.btn.btn-link(data-toggle="collapse" data-target="#collapse-3") 
+              h4 Entities!
+          #collapse-3.collapse  
+            .acc-flex-con.card-body
+              button.btn-acc.btn.btn-primary.btn-sm(onClick="") Move
+              button.btn.btn-sm.btn-warning(onClick="") Clear
+              button.btn.btn-sm.btn-warning(onClick="") not-done-yet
+      .main
+        button.openbtn(onClick="openBtnSidebar()") toggle menu! 
+    
+    .col-sm-3.offset-sm-3.tStyle1.test.containerDice  
+      #dice-content.col-12.col-sm-6.col-md-7.col-lg-12.content
+          .row.user-roll.col-12.col-md-8.col-lg-12.mx-auto.input-group
+            button#roll.btn.btn-primary.col-8(onClick="roll_dice()")
+              span Roll
+            button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#dice-modal")
+              span Dice
+          //dice/history container
+          .row.mt-2
+            #dice.col-12.col-sm-6.col-md-7.col-lg-12.content
+              .loader
+            #log-container.col-12.col-sm-6.col-md-5.col-lg-12.pt-1.pb-1
+              #log.border.border-secondary.bg-light.content
 
  
  

@@ -42,7 +42,6 @@ h3 {
 	text-shadow: 1.5px 1.5px 0px #4d4d4d, 4px 4px 0px rgba(0,0,0,0.1);
 }
 
-
 .test{
   margin: auto;
   height: 100%;
@@ -52,6 +51,38 @@ h3 {
   display: flex;
   justify-content: right;
 } 
+
+/* Postioning */
+.top {
+  margin: 2em;
+  padding: .5em;
+}
+
+.mainContainer {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%
+}
+
+.subContainerOne{
+  display: flex;
+}
+
+
+.containerMap {
+  display: flex;
+}
+
+.containerMapTwo {
+  display: flex;
+  width: 50%;
+  height: 50%;
+}
+
+.containerDice {
+  display: flex;
+}
 
 /* accordion */
 
