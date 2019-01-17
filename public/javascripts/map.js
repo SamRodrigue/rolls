@@ -26,12 +26,11 @@ var map = {
     width: 1
   },
   entity: {
-    spacing: 5/200
+    spacing: 0.025
   },
   asset: {
-    spacing: 0.5
+    spacing: 0.033
   },
-
   cursor: {
     spacing: 1.9
   },
@@ -56,8 +55,8 @@ var view = {
   y: 0,
   zoom: {
     val: 10,
-    MIN: 1,
-    MAX: 10,
+    MIN: 0.5,
+    MAX: 20,
     set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
   },
   mx: 0,
@@ -72,8 +71,8 @@ var view = {
   },
   asset: {
     val: 1,
-    MIN: 0.5,
-    MAX: 4,
+    MIN: 1, // 0.5 - disable asset scaling
+    MAX: 1, // 4
     set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
   }
 };
