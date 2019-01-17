@@ -1,11 +1,25 @@
 function openBtnSidebar() {
   document.getElementById('btnSidebar').style.width = "250px";
-  document.getElementById('main').style.width = "250px"
 }
 
 function closeBtnSidebar() {
   document.getElementById('btnSidebar').style.width = "0";
-  document.getElementById('main').style.width = "0";
+}
+
+function openBtnSidebarTwo() {
+  document.getElementById('btnSidebarTwo').style.width = "250px";
+}
+ 
+function closeBtnSidebarTwo() {
+  document.getElementById('btnSidebarTwo').style.width = "0";
+}
+
+function openBtnSidebarThree() {
+  document.getElementById('btnSidebarThree').style.width = "250px";
+}
+
+function closeBtnSidebarThree() {
+  document.getElementById('btnSidebarThree').style.width = "0";
 }
 
 // Elements
