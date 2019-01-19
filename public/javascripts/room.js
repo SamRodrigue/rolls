@@ -19,7 +19,8 @@ var dice_overlay = `
 </div>`;
 var dice_color = { 
   d4: '#3366ff', d6: '#ffff00', d8: '#008000', 
-  d10: '#ff0000', d12: '#ff9900', d20: '#993366' };
+  d10: '#ff0000', d12: '#ff9900', d20: '#993366'
+};
 
 function show_alert(data) {
   var out = { kick: true, alert: '' };
@@ -278,6 +279,39 @@ function preset(load, set) { // Save = 0, Load = 1
   
   socket.emit('preset', { room_id: room_id, type: load, preset: set }); socket.send('');
 }
+
+function hashString(str) {
+  var hash = 5381,
+      i    = str.length;
+  while(i) {
+    hash = (hash * 33) ^ str.charCodeAt(--i);
+  }
+  
+  return hash >>> 0;
+}
+
+function colorString(str) {
+  var hash = hashString(str);
+
+  var out = [
+    (((hash & 0xFF000000) >> 24) % 8) * 32,
+    (((hash & 0x00FF0000) >> 16) % 8) * 32,
+    (((hash & 0x0000FF00) >> 8) % 8) * 32
+  ];
+
+  return out;
+}
+
+/* function colorStringHex(str) {
+  var rgb = colorString(str);
+  var hex = rgb[0] << 16
+          | rgb[1] << 8
+          | rgb[2];
+  var out = '#' + hex.toString(16).padStart(6, '0');
+  console.log(out);
+
+  return out;
+} */
   
 $(document).ready(function() {
   // Load web socket
@@ -290,12 +324,12 @@ $(document).ready(function() {
     // Get map data
     get_map();
   });
-  socket.on('alert',           function(data) { show_alert(data); });
-  socket.on('user-data',       function(data) { user_data(data);  });
-  socket.on('room-data',       function(data) { room_data(data);  });
-  socket.on('map-data',        function(data) { map_data(data);   });
-  socket.on('client-map-data', function(data) { client_map_data(data); });
-  socket.on('room-log',        function(data) { room_log(data);   });
+  socket.on('alert',           show_alert);
+  socket.on('user-data',       user_data);
+  socket.on('room-data',       room_data);
+  socket.on('map-data',        map_data);
+  socket.on('client-map-data', client_map_data);
+  socket.on('room-log',        room_log);
   socket.on('disconnect',      function(data) {
       console.log('disconnected');
   });
@@ -331,7 +365,7 @@ $(document).ready(function() {
   // Load textures
   $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
     $.each(data, function(key, val) {
-      if (key === 'NONE') return;
+      if (key === 'NONE') val[1] = "Erase";
       $('#tools-modal .modal-body').append(`
 <div class="">
   <button onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">Texture: ` + val[1] + `</button>
@@ -347,6 +381,7 @@ $(document).ready(function() {
     var dice_count = { d4: 0, d6: 0, d8: 0, d10: 0, d12:0, d20:0 };
     for (var i = 0, len = data.users.length; i < len; i++) {
       var a_user = data.users[i];
+      var a_color = colorString(a_user.name);
       var a_dice = `
 <div class="user-area col-12 m-1 border border-dark rounded mx-auto">
   <div class="row user-status-bar bg-light">
@@ -391,7 +426,7 @@ $(document).ready(function() {
       </div>
     </div>
   </div>
-  <div class="row user-dice">`;
+  <div class="row user-dice" style="background-color: rgba(` + a_color[0] + `,` + a_color[1] + `,` + a_color[2] + `,0.8);">`;
       if (a_user.dice.length > 0) {
         for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
           var die = a_user.dice[j];
@@ -420,13 +455,17 @@ $(document).ready(function() {
     // Add user to top of list
     dice = user_dice + dice;
     $('#dice').html(dice);
-    $('#log').css('height', 0);
-    $('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
+    $('#dice').css('height', $('#map').outerHeight() - $('#log-container').outerHeight());
+    //$('#log').css('height', 0);
+    //$('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
     $('#log').scrollTop(0);
 
     Object.keys(dice_count).forEach(function(dice_type) {
       $('#' + dice_type + '-count').html(dice_count[dice_type]);
     });
+
+    // Execute resize on load
+    window_resize();
   }
 
   function room_log(data) {
@@ -442,19 +481,22 @@ $(document).ready(function() {
   }
 
   function window_resize() {
-    $('#log').css('height', 0);
-    $('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
+    //$('#log').css('height', 0);
+    //$('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
     var ww = $(window).outerWidth();
 
-    if (ww >= 992) {
+    // Resize map
+    myp5.resize();
+
+    if (ww >= 768) {
       $('.toggle').hide();
       toggle_dice(null);
+      $('#dice').css('height', $('#map').outerHeight() - $('#log-container').outerHeight());
     } else {
       $('.toggle').show();
       toggle_dice(show_dice);
+      $('#dice').css('height', window.outerHeight() - $('#log-container').outerHeight() - 80);
     }
-    // Resize map
-    myp5.resize();
   }
 
   $(window).on('resize', window_resize);

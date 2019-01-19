@@ -1305,28 +1305,6 @@ function decompress_texture(tex) {
 
   return out;
 }
-
-function hashString(str) {
-  var hash = 5381,
-      i    = str.length;
-  while(i) {
-    hash = (hash * 33) ^ str.charCodeAt(--i);
-  }
-  
-  return hash >>> 0;
-}
-
-function colorString(str) {
-  var hash = hashString(str);
-
-  var out = [
-    (((hash & 0xFF000000) >> 24) % 8) * 32,
-    (((hash & 0x00FF0000) >> 16) % 8) * 32,
-    (((hash & 0x0000FF00) >> 8) % 8) * 32
-  ];
-
-  return out;
-}
 }; // End of sketch
 
 var myp5 = new p5(s);

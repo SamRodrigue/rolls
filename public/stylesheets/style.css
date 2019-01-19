@@ -65,6 +65,7 @@ a {
 #dice {
   background-color: transparent;
   border: double 8px grey;
+  overflow-y: auto;
 }
 
 #map {
@@ -84,7 +85,8 @@ a {
 }
 
 #log {
-  overflow-y: scroll;
+  overflow-y: auto;
+  height: 80px;
 }
 
 #log span p {
@@ -229,9 +231,11 @@ a {
   width: 164px;
 }
 
+/*
 .user-dice {
   background: rgba(248, 249, 250, 0.5);
 }
+*/
 
 .dice-roll {
   -webkit-animation-name: rotate;
