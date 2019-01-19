@@ -14,6 +14,11 @@ body {
 }
 
 /* Pheno style changes */
+
+.btnSidebar, .btnSidebarTwo, .btnSidebarThree {
+  display: hidden;
+}
+
 /* Background img 
 body::before {
   content:'';

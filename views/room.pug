@@ -16,63 +16,63 @@ block content
   .mainContainer 
     #map.containerMapTwo
     .sideBarBtnsContain  
-      button.sideBarBtns.fas.fa-arrows-alt(onClick="setWidth('btnSidebar','250px')") T
-      button.sideBarBtns(onClick="setWidth('btnSidebarTwo','250px')") A
-      button.sideBarBtns(onClick="setWidth('btnSidebarThree','250px')") E
-    .tStyle1.containerSidebar 
-      #btnSidebar.btnSidebar
-        a(href="javascript:void(0)").closeBtnSidebar(onClick="setWidth('btnSidebar','0px')") x
+      button.sideBarBtns.fas.fa-arrows-alt(onClick="setWidth('btnSidebar','250')") T
+      button.sideBarBtns(onClick="setWidth('btnSidebarTwo','250')") A
+      button.sideBarBtns(onClick="setWidth('btnSidebarThree','250')") E
+    
+    #btnSidebar.btnSidebar
+      a(href="javascript:void(0)").closeBtnSidebar(onClick="setWidth('btnSidebar','0')") x
+      .btnAccordion#btnAccordion
+        .card
+        h5.mb-0
+          #headingOne.cardHeader
+            button.btn.btn-link(data-toggle="collapse" data-target="#collapse-1") 
+              h4 Tools!
+          #collapse-1.collapse
+            .acc-flex-con.cardbody
+              h6 modes
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-map(onClick="myp5.setSpecificMode('map');")  Map mode      
+              button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('wall');") Wall mode
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-eraser(onClick="myp5.setSpecificMode('erase');")  Eraser
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-eraser(onClick="myp5.setSpecificMode('texture', 0);")  Eraser0
+              hr
+            .acc-btn-con
+              h6.btn-acc Paint
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 1);")  Grass
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 1 );") Grass
+            .acc-btn-con
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 2);")  Stone
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 2 );")  Stone
+            .acc-btn-con
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 3);")  Wood
+              button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 3 );")  Wood
+    #btnSidebarTwo.btnSidebar
+        a(href="javascript:void(0)").closeBtnSidebarTwo(onClick="setWidth('btnSidebarTwo','0')") x
+        .btnAccordion#btnAccordion
+        .card
+        .cardHeader#headingOne
+          h5.mb-0
+            button.btn.btn-link(data-toggle="collapse" data-target="#collapse-2") 
+              h4 Assets!
+        #collapse-2.collapse  
+          .acc-flex-con.cardbody
+            button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 0);") Move
+            button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 1);") Boulder
+            button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 2);") Chest
+            button.btn.btn-sm.btn-warning(onClick="clear_assets()") Clear
+    #btnSidebarThree.btnSidebar
+        a(href="javascript:void(0)").closeBtnSidebarThree(onClick="setWidth('btnSidebarThree','0')") x
         .btnAccordion#btnAccordion
           .card
-          h5.mb-0
-            #headingOne.cardHeader
-              button.btn.btn-link(data-toggle="collapse" data-target="#collapse-1") 
-                h4 Tools!
-            #collapse-1.collapse
-              .acc-flex-con.cardbody
-                h6 modes
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-map(onClick="myp5.setSpecificMode('map');")  Map mode      
-                button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('wall');") Wall mode
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-eraser(onClick="myp5.setSpecificMode('erase');")  Eraser
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-eraser(onClick="myp5.setSpecificMode('texture', 0);")  Eraser0
-                hr
-              .acc-btn-con
-                h6.btn-acc Paint
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 1);")  Grass
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 1 );") Grass
-              .acc-btn-con
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 2);")  Stone
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 2 );")  Stone
-              .acc-btn-con
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-paint-brush(onClick="myp5.setSpecificMode('texture', 3);")  Wood
-                button.btn-acc.btn.btn-primary.btn-sm.fas.fa-fill(onClick="myp5.setSpecificMode('fill', 3 );")  Wood
-      #btnSidebarTwo.btnSidebar
-         a(href="javascript:void(0)").closeBtnSidebarTwo(onClick="setWidth('btnSidebarTwo','0px')") x
-         .btnAccordion#btnAccordion
-          .card
-          .cardHeader#headingOne
+          .cardheader#headingOne
             h5.mb-0
-              button.btn.btn-link(data-toggle="collapse" data-target="#collapse-2") 
-                h4 Assets!
-          #collapse-2.collapse  
-            .acc-flex-con.cardbody
-              button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 0);") Move
-              button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 1);") Boulder
-              button.btn-acc.btn.btn-primary.btn-sm(onClick="myp5.setSpecificMode('asset', 2);") Chest
-              button.btn.btn-sm.btn-warning(onClick="clear_assets()") Clear
-      #btnSidebarThree.btnSidebar
-          a(href="javascript:void(0)").closeBtnSidebarThree(onClick="setWidth('btnSidebarThree','0px')") x
-          .btnAccordion#btnAccordion
-            .card
-            .cardheader#headingOne
-              h5.mb-0
-              button.btn.btn-link(data-toggle="collapse" data-target="#collapse-3") 
-                h4 Entities!
-            #collapse-3.collapse  
-              .acc-flex-con.card-body
-                button.btn-acc.btn.btn-primary.btn-sm(onClick="") Move
-                button.btn.btn-sm.btn-warning(onClick="") Clear
-                button.btn.btn-sm.btn-warning(onClick="") not-done-yet
+            button.btn.btn-link(data-toggle="collapse" data-target="#collapse-3") 
+              h4 Entities!
+          #collapse-3.collapse  
+            .acc-flex-con.card-body
+              button.btn-acc.btn.btn-primary.btn-sm(onClick="") Move
+              button.btn.btn-sm.btn-warning(onClick="") Clear
+              button.btn.btn-sm.btn-warning(onClick="") not-done-yet
 
     
     .containerDice  

@@ -1,5 +1,13 @@
 function setWidth(id, width) {
-  document.getElementById(id).style.width = width;
+  if (width > 0){
+    console.log(id);
+    document.getElementById(id).style.display = "block";
+    document.getElementById(id).style.width = width.toString() + 'px';
+ }else{
+    console.log(id,width);
+    document.getElementById(id).style.display = "hidden";
+    document.getElementById(id).style.width = width.toString() + 'px';
+ }
 }
 
 // Elements
