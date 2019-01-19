@@ -167,8 +167,8 @@ h3 {
   top: 0;
   left: 0;
   background-color: opacity(8) ;
-  overflow: hidden;
-  transition: .5s;
+  overflow-y: auto;
+  transition: .3s;
   padding-top: 60px;
 }
 
