@@ -374,6 +374,9 @@ $(document).ready(function() {
     });
   });
 
+  // Execute resize on load
+  window_resize();
+
   function room_data(data) {
     console.log('updating room');
     var dice = '';
@@ -463,9 +466,6 @@ $(document).ready(function() {
     Object.keys(dice_count).forEach(function(dice_type) {
       $('#' + dice_type + '-count').html(dice_count[dice_type]);
     });
-
-    // Execute resize on load
-    window_resize();
   }
 
   function room_log(data) {
