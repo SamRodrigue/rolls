@@ -16,10 +16,12 @@ block content
   .mainContainer 
     #map.containerMapTwo
     .sideBarBtnsContain  
-      button.sideBarBtns.fas.fa-arrows-alt(onClick="setWidth('btnSidebar','250')") T
-      button.sideBarBtns(onClick="setWidth('btnSidebarTwo','250')") A
-      button.sideBarBtns(onClick="setWidth('btnSidebarThree','250')") E
-    
+      input#togOne(type="checkbox") 
+      label.sideBarBtns.sideBarBtnsStyle.fas.fa-arrows-alt(for="togOne" onClick="setWidth('btnSidebar','250',togOne)") T
+      input#togTwo(type="checkbox") 
+      label.sideBarBtns(for="togTwo" onClick="setWidth('btnSidebarTwo','250',togTwo)") A
+      input#togThree(type="checkbox") 
+      label.sideBarBtns(for="togThree" onClick="setWidth('btnSidebarThree','250',togThree)") E
     #btnSidebar.btnSidebar
       a(href="javascript:void(0)").closeBtnSidebar(onClick="setWidth('btnSidebar','0')") x
       .btnAccordion#btnAccordion
@@ -73,8 +75,6 @@ block content
               button.btn-acc.btn.btn-primary.btn-sm(onClick="") Move
               button.btn.btn-sm.btn-warning(onClick="") Clear
               button.btn.btn-sm.btn-warning(onClick="") not-done-yet
-
-    
     .containerDice  
       #dice-content.col-12.col-sm-6.col-md-7.col-lg-12.content
           .row.user-roll.col-12.col-md-8.col-lg-12.mx-auto.input-group

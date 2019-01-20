@@ -1,5 +1,7 @@
-function setWidth(id, width) {
-  if (width > 0){
+function setWidth(id, width, CboxId) {
+  if (CboxId.checked == true){
+    document.getElementById(id).style.width = "0px";
+  }else if (width > 0){
     console.log(id);
     document.getElementById(id).style.display = "block";
     document.getElementById(id).style.width = width.toString() + 'px';
