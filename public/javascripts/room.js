@@ -2,7 +2,7 @@
 const MEDIA_MAPS = '/media/maps/';
 var socket;
 var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') + 1);
-var user = { name: '', role: 'user'};
+var user = { name: '', role: 'user', id: ''};
 var show_dice = true;
 var dice_type = 'd4';
 var selected_dice = null;
@@ -232,7 +232,7 @@ function status_dice(dice, type, counter) {
       }
     }
     if (changed) {
-      var out = '<div class="total-label text-center mx-auto"><span class="mx-auto">Total: ' + total;
+      var out = '<div class="total-label text-center mx-auto p-0"><span class="mx-auto">Total: ' + total;
       if (counter !== 0) {
         out += ' (' + (total + counter) + ')';
       }
@@ -252,7 +252,7 @@ function status_dice(dice, type, counter) {
       }
     }
     if (changed) {
-      return '<div class="' + type + '-label col-6 col-md-4 col-lg-3 col-xl-2 text-center"><span>' + num + type + ':' + total + '</span></div>';
+      return '<div class="' + type + '-label col-6 col-md-4 col-lg-3 col-xl-2 text-center p-0"><span>' + num + type + ':' + total + '</span></div>';
     }
   }
   return '';
@@ -260,7 +260,7 @@ function status_dice(dice, type, counter) {
 
 function die_animation(type, delta, full) {
   if (delta > full) {
-    return;
+    return '';
   }
   var out = 'animation-name: ' + type + '-glow; animation-timing-function: linear; animation-duration: ' + full/1000 + 's; animation-delay: -' + delta/1000 + 's;';
   return out;
@@ -379,14 +379,56 @@ $(document).ready(function() {
 
   function room_data(data) {
     console.log('updating room');
+    $('#dice .loader').remove();
+
     var dice = '';
     var user_dice = '';
     var dice_count = { d4: 0, d6: 0, d8: 0, d10: 0, d12:0, d20:0 };
     for (var i = 0, len = data.users.length; i < len; i++) {
       var a_user = data.users[i];
-      var a_color = colorString(a_user.name);
-      var a_dice = `
-<div class="user-area col-12 m-1 border border-dark rounded mx-auto">
+      var changed = false;
+      // Get user dice area
+      var a_user_dice_id = '#' + a_user.id + '-dice';
+      if ($(a_user_dice_id).length === 0) { // New user or user dice div is missing
+        changed = true;
+        console.log('adding missing user dice ' + a_user.name);
+      } else if ($(a_user_dice_id).data('updated') !== a_user.updated) { // Existing user dice needs to be updated
+        changed = true;
+        console.log('updating user dice ' + a_user.name + ' ' + $(a_user_dice_id).data('updated') + ':' + a_user.updated);
+        $(a_user_dice_id).remove();
+      }
+      
+      if (changed) {
+        console.log('update ' + a_user.name);
+        var a_dice = create_user_dice(a_user, data.time);
+        
+        if (user.name === a_user.name) {
+          $('#dice').prepend(a_dice);
+          // Update die count
+          for (var k = 0, len_k = a_user.dice.length; k < len_k; k++) {
+            var die = a_user.dice[k];
+            dice_count[die.type]++;
+          }
+        } else {
+          if ($('#' + user.id + '-dice').length) {
+            $(a_dice).insertAfter('#' + user.id + '-dice');
+          } else {
+            $('#dice').prepend(a_dice);
+          }
+        }
+      }
+    }
+    $('#dice').css('height', $('#map').outerHeight() - $('#log-container').outerHeight());
+
+    Object.keys(dice_count).forEach(function(dice_type) {
+      $('#' + dice_type + '-count').html(dice_count[dice_type]);
+    });
+  }
+
+  function create_user_dice(a_user, time) {
+    var a_color = colorString(a_user.name);
+    var a_dice = `
+<div id="` + a_user.id + `-dice" class="user-area col-12 m-1 border border-dark rounded mx-auto" data-updated="` + a_user.updated + `">
   <div class="row user-status-bar bg-light">
     <div class="row user-name col-12 p-0 m-0 border border-success text-center">`;
       if (user.name === a_user.name) {
@@ -434,7 +476,7 @@ $(document).ready(function() {
         for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
           var die = a_user.dice[j];
           a_dice += `
-      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center mx-auto" style="height: 64px; ` + die_animation(die.type, (data.time - die.time), die_glow_time) + `" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `">
+      <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center mx-auto" style="height: 64px; ` + die_animation(die.type, (time - die.time), die_glow_time) + `" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `">
         <span class="die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
       </div>`;
         }
@@ -445,27 +487,8 @@ $(document).ready(function() {
       a_dice += `
   </div>
 </div>`;
-      if (user.name === a_user.name) {
-        user_dice = a_dice;
-        // Update die count
-        for (var k = 0, len_k = a_user.dice.length; k < len_k; k++) {
-          var die = a_user.dice[k];
-          dice_count[die.type]++;
-        }
-      }
-      else dice += a_dice;
-    }
-    // Add user to top of list
-    dice = user_dice + dice;
-    $('#dice').html(dice);
-    $('#dice').css('height', $('#map').outerHeight() - $('#log-container').outerHeight());
-    //$('#log').css('height', 0);
-    //$('#log').css('height', $('#dice').outerHeight() - rem_px(1.0));
-    $('#log').scrollTop(0);
 
-    Object.keys(dice_count).forEach(function(dice_type) {
-      $('#' + dice_type + '-count').html(dice_count[dice_type]);
-    });
+    return a_dice;
   }
 
   function room_log(data) {

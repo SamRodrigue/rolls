@@ -37,17 +37,14 @@ router.sockets = (io, socket, rooms, func) => {
     }
 
     // Add room
-    var id = func.create_id();
-    while (rooms.has(id)) {
-      console.log('ABN: Room ID collision');
-      id = func.create_id();
-    }
+    var id = func.create_id('room', rooms);
     console.log('created a new room ' + id);
 
     // Create user
     var user = {
       socket: socket,
       timeout: null,
+      id: func.create_id(),
       name: data.user_name,
       role: 'admin',
       dice: [],
@@ -58,7 +55,8 @@ router.sockets = (io, socket, rooms, func) => {
       }, {
         dice: [],
         counter: 0
-      }]
+      }],
+      updated: func.get_updated()
     };
     
     var room = {
@@ -90,8 +88,10 @@ router.sockets = (io, socket, rooms, func) => {
   // Join request
   socket.on('join-room', function(data) {
     console.log('a user requested to join room ' + data.room_id);
-    // Chech user name
-    if (!data.user_name || !data.user_name.trim() || data.user_name.length > 32) {
+    // Trim username
+    data.user_name = data.user_name.trim();
+    // Check user name
+    if (!data.user_name || data.user_name.length > 32) {
       socket.emit('alert', 'Error: Invalid user name');
       return;
     }
@@ -112,6 +112,7 @@ router.sockets = (io, socket, rooms, func) => {
     var user = {
       socket: socket,
       timeout: null,
+      id: func.create_id('user', room.users),
       name: data.user_name,
       role: '',
       dice: [],
@@ -122,7 +123,8 @@ router.sockets = (io, socket, rooms, func) => {
       }, {
         dice: [],
         counter: 0
-      }]
+      }],
+      updated: func.get_updated()
     };
 
     // Check password

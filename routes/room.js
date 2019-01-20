@@ -19,9 +19,9 @@ router.get('/:id', function(req, res, next) {
 
 router.sockets = (io, socket, rooms, func) => {
   socket.on('enter-room', (data) => {
-    var room = find_room(rooms, data, socket);
+    var room = func.find_room(rooms, data, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     if (!user) {
       console.log('ERROR: an unauthorized user attempted to enter ' + room.name);
       // Send response to user
@@ -35,23 +35,23 @@ router.sockets = (io, socket, rooms, func) => {
     user.socket = socket;
 
     // Send room data
-    socket.emit('user-data', { name: user.name, role: user.role });
+    socket.emit('user-data', { name: user.name, role: user.role, id: user.id });
     socket.broadcast.to(data).emit('room-data', func.room_array(room));
   });
 
   socket.on('get-room', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     if (user) { 
       socket.emit('room-data', func.room_array(room));
     }
   });
 
   socket.on('get-map', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     if (user) { 
       room.map.update = {
         walls: true,
@@ -72,9 +72,9 @@ router.sockets = (io, socket, rooms, func) => {
   // };
   
   socket.on('update-map', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     if (user && (user.role === 'admin')) {
       var update = data.map.update;
       if (update.walls) {
@@ -99,9 +99,9 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('update-client-map', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     
     var verify = true;
     if (user) {
@@ -142,10 +142,10 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('remove-user', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
-    var [target_user, target_user_index] = find_user_name(room, data.name);
+    var user = func.find_user_socket(room, socket);
+    var [target_user, target_user_index] = func.find_user_name(room, data.name);
     if (user && target_user && 
         (user.role === 'admin' || user.name === data.name)) {
       func.remove_user(target_user.socket.handshake.sessionID, func, rooms, data.room_id);
@@ -160,24 +160,25 @@ router.sockets = (io, socket, rooms, func) => {
       console.log('ERROR: a user tried to add an unknown die ' + data.type);
       return;
     }
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     if (user) {
       console.log('user ' + user.name + ' added a ' + data.type);
       if (user.dice.length >= global.MAX_DICE) {
         socket.emit('alert', { kick: false, alert: 'Error: You unable to add more dice (max:' + global.MAX_DICE + ')'});
       } else {
         user.dice.push(dice);
+        func.set_updated(user);
         io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
       }
     }
   });
 
   socket.on('remove-dice', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     if (user) { 
       // Remove dice
       var changed = false;
@@ -195,21 +196,24 @@ router.sockets = (io, socket, rooms, func) => {
         });
       }
 
-      if (changed) io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+      if (changed) {
+        func.set_updated(user);
+        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+      }
     }
   });
 
   socket.on('roll-dice', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     if (user) { 
       // Roll dice
       var changed = false;
-      if (data.hasOwnProperty('index')) {
+      if (data.hasOwnProperty('index')) { // Roll single dice
         changed = true;
         func.roll(user.dice[data.index]);
-      } else  {
+      } else  { // Roll all dice
         user.dice.forEach((die) => {
           changed = true;
           func.roll(die);
@@ -218,9 +222,10 @@ router.sockets = (io, socket, rooms, func) => {
 
       if (changed) {
         console.log('user ' + user.name + ' is rolling');
+        func.set_updated(user);
         io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
         var date = new Date();
-        io.sockets.in(data.room_id).emit('room-log', 
+        io.sockets.in(data.room_id).emit('room-log',
         { 
           user: user.name,
           time: date.getTime(),
@@ -231,23 +236,24 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('clear-dice', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
     if (user) {
       console.log('user ' + user.name + ' is clearing dice');
       // Clear dice
       user.dice = [];
 
+      func.set_updated(user);
       io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
     }
   });
 
   socket.on('counter', (data) => {
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
-    var [target_user, target_user_index] = find_user_name(room, data.name);
+    var user = func.find_user_socket(room, socket);
+    var [target_user, target_user_index] = func.find_user_name(room, data.name);
     if (user && target_user && 
         (user.role === 'admin' || user.name === data.name)) {
       if (user.role === 'admin' && user.name !== target_user.name) {
@@ -264,6 +270,7 @@ router.sockets = (io, socket, rooms, func) => {
         target_user.counter += data.counter;
       }
       if (target_user.counter !== old_counter) { // Only update on change
+        func.set_updated(target_user);
         io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
       }
     }
@@ -275,9 +282,9 @@ router.sockets = (io, socket, rooms, func) => {
       console.log('ERROR: a user is using an unsupported preset number');
       return;
     }
-    var room = find_room(rooms, data.room_id, socket);
+    var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
-    var user = find_user_socket(room, socket);
+    var user = func.find_user_socket(room, socket);
 
     if (data.type === PRESET.SAVE) console.log('user ' + user.name + ' is saving a preset');
     else if (data.type === PRESET.LOAD) console.log('user ' + user.name + ' is loading a preset');
@@ -308,45 +315,11 @@ router.sockets = (io, socket, rooms, func) => {
           });
         });
         user.counter = user.preset[data.preset].counter;
+        func.set_updated(user);
         io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
         break;
     }
   });
 };
-
-function find_room(rooms, id, socket) {
-  if (!rooms.has(id)) {
-    console.log('ERROR: a user requested an unregistered room');
-    
-    // Send response to user
-    socket.emit('alert', { kick: true, alert: 'Error: Unknown room' });
-    return null;
-  }
-  return rooms.get(id);
-}
-
-function find_user_socket(room, socket) {
-  var user = null;
-  room.users.some((a_user) => {
-    if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-      user = a_user;
-      return true;
-    }
-  });
-  return user;
-}
-
-function find_user_name(room, name) {
-  var target_user = null;
-  var target_user_index = -1;
-  room.users.some((a_user, index) => {
-    if (a_user.name === name) {
-      target_user = a_user;
-      target_user_index = index;
-      return true;
-    }
-  });
-  return [target_user, target_user_index];
-}
 
 module.exports = router;

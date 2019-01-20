@@ -15,7 +15,6 @@ var bodyParser = require('body-parser');
 
 // Routes
 var index = require('./routes/index');
-var users = require('./routes/users');
 var room  = require('./routes/room.js');
 
 // Express
@@ -34,28 +33,6 @@ global.MAX_DICE = 20;
 // Rooms
 app.rooms = new Map();
 
-// Debug mode. Enabled by running 'npm test' or 'bin/www debug'
-if (global.DEBUG) {
-  app.rooms.set('debug', {
-    name: 'Debug',
-    locked: false,
-    password: {
-      admin: '1',
-      user: ''
-    },
-    users: [],
-    timeout: null,
-    map: {
-      walls:    [],
-      entities: [],
-      assets:   [],
-      texture: null
-    }
-  });
-
-  app.use(logger('dev'));
-}
-
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
@@ -68,18 +45,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(logger('dev')); //!!!
 
 app.use('/', index);
-//app.use('/users', users);
 app.use('/room', room);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use((req, res, next) => {
   var err = new Error('Not Found');
   err.status = 404;
   next(err);
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use((err, req, res, next) => {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
@@ -89,13 +65,228 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
+// helper functions
+// TODO: Move to func module/file
+app.func = {
+  rooms_array: (rooms) => {
+    var data = [];
+    rooms.forEach((room, id) => {
+      data.push([ id, 
+      {
+        name: room.name,
+        users: room.users.length,
+        locked: room.locked
+      }]);
+    });
+    return data;
+  },
+
+  room_array: (room) => {
+    var data = {
+      name: room.name,
+      users: [],
+      time: Date.now()
+    };
+    room.users.forEach((user) => {
+      data.users.push({
+        id: user.id,
+        name: user.name,
+        dice: user.dice,
+        counter: user.counter,
+        updated: user.updated
+      });
+    });
+    return data;
+  },
+
+  remove_user: (sid, func, rooms, room_id) => {
+    var user = null;
+    var user_index = -1;
+    var room = null;
+    if (typeof room_id == 'undefined') {
+      // Find room with sid
+      for (var [id, a_room] of app.rooms) {
+        a_room.users.some((a_user, index) => {
+          if (a_user.socket.handshake.sessionID === sid) {
+            user_index = index;
+            user = a_user;
+            room_id = id;
+            room = a_room;
+            return true;
+          }
+        });
+      }
+    } else {
+      if (!rooms.has(room_id)) {
+        console.log('ERROR: a user requested an unregistered room ' + room_id);
+        return;
+      }
+      room = rooms.get(room_id);
+      room.users.some((a_user, index) => {
+        if (a_user.socket.handshake.sessionID === sid) {
+          user_index = index;
+          user = a_user;
+          return true;
+        }
+      });
+    }
+
+    if (room && user) {
+      console.log('removing user ' + user.name + ' from ' + room_id);
+      user.socket.emit('alert', 'You have been removed from the room');
+      user.socket.leave(room_id);
+      room.users.splice(user_index, 1);
+      user.socket.in(room_id).emit('room-data', func.room_array(room));
+      console.log('users remaining ' + room.users.length);
+      if (room.users.length === 0) {
+        room.timeout = setTimeout(() => {
+          app.func.remove_room(func, rooms, room_id)}, 
+          global.ROOM_TIMEOUT);
+        console.log('room is empty ' + room_id);
+        
+      }
+      user.socket.in('index').emit('update-rooms', func.rooms_array(rooms));
+    }
+  },
+
+  remove_room: (func, rooms, room_id) => {
+    if (!rooms.has(room_id)) {
+      console.log('ERROR: trying to remove an unregistered room ' + room_id);
+      return;
+    }
+    var room = rooms.get(room_id);
+    if (room.users.length === 0) {
+      rooms.delete(room_id);
+      console.log('removing room ' + room_id);
+      app.io.sockets.in('index').emit('update-rooms', app.func.rooms_array(app.rooms));
+    }
+  },
+
+  create_id: (type, arr) => {
+    var get_id = () => { return Math.random().toString(36).substr(2, 9); };
+    var id = get_id();
+    // check if id colides with existing array of id
+    switch (type) {
+      case 'room':
+        while (arr.has(id)) {
+          console.log('ABN: Room ID collision');
+          id = get_id();
+        }
+        break;
+      case 'user':
+        while (arr.filter((user) => {
+          return user.id === id;
+        }).length) {
+          console.log('ABN: User ID collision');
+          id = get_id();
+        }
+        break;
+    }
+
+    return id;
+  },
+
+  get_updated: () => {
+    var hash = Date.now().toString(36);
+    return hash;
+  },
+
+  set_updated: (user) => {
+    user.updated = app.func.get_updated();
+  },
+
+  roll: (die) => {
+    var floor = 0;
+    var offset = 0;
+    switch (die.type) {
+      case 'd4':  floor = 4;  offset = 1; break; 
+      case 'd6':  floor = 6;  offset = 1; break; 
+      case 'd8':  floor = 8;  offset = 1; break; 
+      case 'd10': floor = 10; offset = 0; break; 
+      case 'd12': floor = 12; offset = 1; break; 
+      case 'd20': floor = 20; offset = 1; break; 
+    }
+    die.value = Math.floor(Math.random() * floor) + offset;
+    die.time = Date.now();
+  },
+
+  dice_status: (dice, counter) => {
+    var out = '';
+    var total = new Map();
+    total.set('total', 0);
+    dice.forEach((die) => {
+      if (die.value > -1) {
+        var old_value = 0;
+        var old_count = 0;
+        if (total.has(die.type)) {
+          var old_value = total.get(die.type).value;
+          var old_count = total.get(die.type).count;
+        }
+        var new_total = {
+          value: old_value + die.value,
+          count: old_count + 1
+        };
+        total.set(die.type, new_total);
+        total.set('total', total.get('total') + die.value);
+      }
+    });
+    ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].forEach((die_type) => {
+      if (total.has(die_type)) {
+        var curr = total.get(die_type);
+        out += '<p class="' + die_type + '-label">' + curr.count + die_type + ':' + curr.value + '</p>&nbsp;';
+      }
+    });
+    out += 'Total: ' + total.get('total');
+    if (counter !== 0) {
+      out += ' (' + (total.get('total') + counter) + ')';
+    }
+    return out;
+  },
+
+  find_room: (rooms, id, socket) => {
+    if (!rooms.has(id)) {
+      console.log('ERROR: a user requested an unregistered room');
+      
+      // Send response to user
+      socket.emit('alert', { kick: true, alert: 'Error: Unknown room' });
+      return null;
+    }
+    return rooms.get(id);
+  },
+
+  find_user_socket: (room, socket) => {
+    var user = null;
+    room.users.some((a_user) => {
+      if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+        user = a_user;
+        return true;
+      }
+    });
+    return user;
+  },
+
+  find_user_name: (room, name) => {
+    var target_user = null;
+    var target_user_index = -1;
+    room.users.some((a_user, index) => {
+      if (a_user.name === name) {
+        target_user = a_user;
+        target_user_index = index;
+        return true;
+      }
+    });
+    return [target_user, target_user_index];
+  }
+};
+
 // cli
+// TODO: Move to cli module/file
 var stdin = process.stdin;
 var stdout = process.stdout;
 stdin.resume();
 stdin.setEncoding('utf8');
  
-stdin.on('data', function (cmd) {
+stdin.on('data', (cmd) => {
   // helper functions
   function display_rooms() {
     stdout.write('number of rooms: ' + app.rooms.size + '\n');
@@ -119,8 +310,44 @@ stdin.on('data', function (cmd) {
       return;
     }
     app.rooms.delete(id);
-    app.io.sockets.in(id).emit('alert', 'This room has been closed');
-    app.io.sockets.in('index').emit('update-rooms', app.func.rooms_array(app.rooms));
+    app.io.in(id).emit('alert', 'This room has been closed');
+    app.io.in('index').emit('update-rooms', app.func.rooms_array(app.rooms));
+  }
+
+  function debug_room(args) {
+    if (!global.DEBUG || !app.rooms.has('debug')) {
+      stdout.write('Not in debug mod or unable to locate debug room');
+      return;
+    }
+
+    if (args.length < 2) {
+      stdout.write('Debug argument required');
+      stdout.write('  debug roll: make debug user roll');
+      return;
+    }
+
+    var room = app.rooms.get('debug');
+    var user = app.func.find_user_name(room, 'User1')[0];
+
+    switch (args[1]) {
+      case 'roll':
+        user.dice.forEach((die) => {
+          app.func.roll(die);
+        });
+        console.log('user ' + user.name + ' is rolling');
+        app.func.set_updated(user);
+        app.io.sockets.in('debug').emit('room-data', app.func.room_array(room));
+        var date = new Date();
+        app.io.sockets.in('debug').emit('room-log', 
+        {
+          user: user.name,
+          time: date.getTime(),
+          log: app.func.dice_status(user.dice, user.counter)
+        });
+        break;
+      default:
+        stdout.write('Unknown command: ' + args[0] + ' ' + args[1] + '\n');
+    }
   }
 
   // Split cmd
@@ -133,157 +360,91 @@ stdin.on('data', function (cmd) {
     switch (args[0]) {
       case 'rooms': display_rooms(); break;
       case 'close': close_room(args); break;
+      case 'debug': debug_room(args); break;
       default:
         stdout.write('Unknown command: ' + args[0] + '\n');
     }
   }
 });
 
-// helper functions
-app.func = {};
-
-app.func.rooms_array = (rooms) => {
-  var data = [];
-  rooms.forEach((room, id) => {
-    data.push([ id, 
-    {
-      name: room.name,
-      users: room.users.length,
-      locked: room.locked
-    }]);
-  });
-  return data;
-}
-
-app.func.room_array = (room) => {
-  var data = {
-    name: room.name,
-    users: [],
-    time: Date.now()
+// Debug mode. Enabled by running 'npm test' or 'bin/www debug'
+// TODO: Move to debug module/file
+if (global.DEBUG) {
+  var debug_user1 = {
+    socket: { handshake: { sessionID: 0 } },
+    timeout: null,
+    id: 'ABC1',
+    name: 'User1',
+    role: 'user',
+    dice: [
+      { type: 'd4' },
+      { type: 'd6' },
+      { type: 'd8' },
+      { type: 'd10' },
+      { type: 'd12' },
+      { type: 'd20'}],
+    counter: 1,
+    preset: [{
+      dice: [],
+      counter: 0
+    }, {
+      dice: [],
+      counter: 0
+    }],
+    updated: 0
   };
-  room.users.forEach((user) => {
-    data.users.push({
-      name: user.name,
-      dice: user.dice,
-      counter: user.counter
-    });
+
+  debug_user1.dice.forEach((die) => {
+    app.func.roll(die);
   });
-  return data;
-}
 
-app.func.remove_user = (sid, func, rooms, room_id) => {
-  var user = null;
-  var user_index = -1;
-  var room = null;
-  if (typeof room_id == 'undefined') {
-    // Find room with sid
-    for (var [id, a_room] of app.rooms) {
-      a_room.users.some((a_user, index) => {
-        if (a_user.socket.handshake.sessionID === sid) {
-          user_index = index;
-          user = a_user;
-          room_id = id;
-          room = a_room;
-          return true;
-        }
-      });
-    }
-  } else {
-    if (!rooms.has(room_id)) {
-      console.log('ERROR: a user requested an unregistered room ' + room_id);
-      return;
-    }
-    room = rooms.get(room_id);
-    room.users.some((a_user, index) => {
-      if (a_user.socket.handshake.sessionID === sid) {
-        user_index = index;
-        user = a_user;
-        return true;
-      }
-    });
-  }
+  var debug_user2 = {
+    socket: { handshake: { sessionID: 0 } },
+    timeout: null,
+    id: 'ABC2',
+    name: 'User2',
+    role: 'user',
+    dice: [
+      { type: 'd4' },
+      { type: 'd6' },
+      { type: 'd8' },
+      { type: 'd10' },
+      { type: 'd12' },
+      { type: 'd20'}],
+    counter: 1,
+    preset: [{
+      dice: [],
+      counter: 0
+    }, {
+      dice: [],
+      counter: 0
+    }],
+    updated: 0
+  };
 
-  if (room && user) {
-    console.log('removing user ' + user.name + ' from ' + room_id);
-    user.socket.emit('alert', 'You have been removed from the room');
-    user.socket.leave(room_id);
-    room.users.splice(user_index, 1);
-    user.socket.in(room_id).emit('room-data', func.room_array(room));
-    console.log('users remaining ' + room.users.length);
-    if (room.users.length === 0) {
-      room.timeout = setTimeout(() => {
-        app.func.remove_room(func, rooms, room_id)}, 
-        global.ROOM_TIMEOUT);
-      console.log('room is empty ' + room_id);
-      
-    }
-    user.socket.in('index').emit('update-rooms', func.rooms_array(rooms));
-  }
-}
-
-app.func.remove_room = (func, rooms, room_id) => {
-  if (!rooms.has(room_id)) {
-    console.log('ERROR: trying to remove an unregistered room ' + room_id);
-    return;
-  }
-  var room = rooms.get(room_id);
-  if (room.users.length === 0) {
-    rooms.delete(room_id);
-    console.log('removing room ' + room_id);
-    app.io.sockets.in('index').emit('update-rooms', app.func.rooms_array(app.rooms));
-  }
-}
-
-app.func.create_id = () => {
-  return Math.random().toString(36).substr(2, 9);
-}
-
-app.func.roll = (die) => {
-  var floor = 0;
-  var offset = 0;
-  switch (die.type) {
-    case 'd4':  floor = 4;  offset = 1; break; 
-    case 'd6':  floor = 6;  offset = 1; break; 
-    case 'd8':  floor = 8;  offset = 1; break; 
-    case 'd10': floor = 10; offset = 0; break; 
-    case 'd12': floor = 12; offset = 1; break; 
-    case 'd20': floor = 20; offset = 1; break; 
-  }
-  die.value = Math.floor(Math.random() * floor) + offset;
-  die.time = Date.now();
-}
-
-app.func.dice_status = (dice, counter) => {
-  var out = '';
-  var total = new Map();
-  total.set('total', 0);
-  dice.forEach((die) => {
-    if (die.value > -1) {
-      var old_value = 0;
-      var old_count = 0;
-      if (total.has(die.type)) {
-        var old_value = total.get(die.type).value;
-        var old_count = total.get(die.type).count;
-      }
-      var new_total = {
-        value: old_value + die.value,
-        count: old_count + 1
-      };
-      total.set(die.type, new_total);
-      total.set('total', total.get('total') + die.value);
-    }
+  debug_user2.dice.forEach((die) => {
+    app.func.roll(die);
   });
-  ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].forEach((die_type) => {
-    if (total.has(die_type)) {
-      var curr = total.get(die_type);
-      out += '<p class="' + die_type + '-label">' + curr.count + die_type + ':' + curr.value + '</p>&nbsp;';
+
+  var debug_room = {
+    name: 'Debug',
+    locked: false,
+    password: {
+      admin: '1',
+      user: ''
+    },
+    users: [ debug_user1, debug_user2 ],
+    timeout: null,
+    map: {
+      walls:    [],
+      entities: [],
+      assets:   [],
+      texture: null
     }
-  });
-  out += 'Total: ' + total.get('total');
-  if (counter !== 0) {
-    out += ' (' + (total.get('total') + counter) + ')';
-  }
-  return out;
+  };
+
+  app.rooms.set('debug', debug_room);
+  app.use(logger('dev'));
 }
 
 // sockets
