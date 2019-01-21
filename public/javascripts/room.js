@@ -564,6 +564,10 @@ $(document).ready(function() {
     event.preventDefault();
   });
 
+  $(document).on('contextmenu', '#map canvas', function(event) {
+    event.preventDefault();
+  });
+
   function rem_px(rem) {
     return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
   }

@@ -1,7 +1,7 @@
 var s = function( sketch ) {
 
 var data = {
-  // All data that is transfered over socket
+  // All data that is transferred over socket
   walls:    [],
   entities: [],
   assets:   [],
@@ -100,12 +100,11 @@ var mode = {
     },
 
     wall: function() { // Press
-      update.walls = true;
-
       if (mode.wall === null) {
         mode.wall = new Wall(view.wx, view.wy);
 
       } else {
+        update.walls = true;
         mode.wall.end(view.wx, view.wy);
 
         if (mode.wall.mode === 2) {
@@ -172,7 +171,7 @@ var mode = {
         }
 
       } else {
-        map.assets.push(new Asset(mode.asset, ax, ay, view.asset.val));
+        map.assets.push(new Asset(mode.asset, ax, ay, view.asset.val, 0));
       }
     },
 
@@ -292,6 +291,46 @@ var mode = {
 
       map.texture.image.updatePixels();
     }
+  },
+
+  done: {
+    map: function() { },
+
+    wall: function() { // Press
+      // Stop creating wall
+      mode.wall = null;
+    },
+
+    entity: function() { // Press
+      // Set mode to move
+      mode.entity = entities.NONE; // Move mode
+    },
+
+    asset: function() { // Press
+      // Rotate assets
+      var ax = view.mx / map.asset.spacing;
+      var ay = view.my / map.asset.spacing;
+
+      if (mode.asset === assets.NONE) { // Move mode
+        // Rotate asset if mouse is over
+        for (var i = map.assets.length - 1; i >= 0; --i) {
+          if (map.assets[i].contains(ax, ay)) {
+            update.assets = true;
+            map.assets[i].rotate(45);
+            break;
+          }
+        }
+      } else {
+        mode.asset = assets.NONE;
+      }
+    },
+
+    // TODO: Add move tool for walls, entities and assets
+    move: function() { },
+
+    erase: function() { },
+
+    texture: function() { }
   }
 };
 
@@ -550,20 +589,21 @@ class Entity {
 }
 
 class Asset {
-  // Todo: add asset rotation
-  constructor(first, x, y, zoom) {
+  constructor(first, x, y, zoom, rot) {
     switch (arguments.length) {
       case 1:
         this.type = first.type;
         this.x = first.x;
         this.y = first.y;
         this.zoom = first.zoom;
+        this.rot = first.rot;
         break;
-      case 4:
+      case 5:
         this.type = first;
         this.x = x / zoom;
         this.y = y / zoom;
         this.zoom = zoom;
+        this.rot = rot;
         break;
     }
   }
@@ -573,13 +613,17 @@ class Asset {
       type: this.type,
       x: this.x,
       y: this.y,
-      zoom: this.zoom
+      zoom: this.zoom,
+      rot: this.rot
     };
   }
 
   draw() {
     sketch.imageMode(sketch.CENTER);
     sketch.push();
+      sketch.translate(this.x * this.zoom, this.y * this.zoom);
+      sketch.rotate(sketch.radians(this.rot));
+      sketch.translate(-this.x * this.zoom, -this.y * this.zoom);
       sketch.scale(this.zoom);
       sketch.image(assets.images[this.type], this.x, this.y);
     sketch.pop();
@@ -592,6 +636,12 @@ class Asset {
     if (dx <= assets.images[this.type].width &&
         dy <= assets.images[this.type].height) return true;
     return false;
+  }
+
+  rotate(rot) {
+    this.rot += rot;
+    while (this.rot > 360) this.rot -= 360;
+    while (this.rot < 0) this.rot += 360;
   }
 }
 
@@ -824,6 +874,17 @@ sketch.client_save = function() {
 
 sketch.mousePressed = function() {
   if (!onCanvas) return;
+  switch (sketch.mouseButton) {
+    case sketch.LEFT:
+      mouseLeft();
+      break;
+    case sketch.RIGHT:
+      mouseRight();
+      break;
+  }
+}
+
+function mouseLeft() {
   if (view.wx < 0 || view.wx > map.width || view.wy < 0 || view.wy > map.height) return;
   
   var oldCursor = mode.cursor;
@@ -854,6 +915,36 @@ sketch.mousePressed = function() {
 
   mode.cursor = oldCursor;
 };
+
+function mouseRight() {
+  var oldCursor = mode.cursor;
+  if (sketch.keyIsPressed && sketch.keyCode == sketch.SHIFT) {
+    mode.cursor = cursors.MAP;
+  }
+
+  switch (mode.cursor) {
+    // case cursors.MAPS:
+    //   mode.done.map();
+    //   break;
+    case cursors.WALL:
+      mode.done.wall();
+      break;
+    case cursors.ENTITY:
+      mode.done.entity();
+      break;
+    case cursors.ASSET:
+      mode.done.asset();
+      break;
+    // case cursors.ERASE:
+    //   mode.done.erase();
+    //   break;
+    // case cursors.TEXTURE:
+    //   mode.done.texture();
+    //   break;
+  }
+
+  mode.cursor = oldCursor;
+}
 
 sketch.mouseDragged = function() {
   if (!onCanvas) return;
