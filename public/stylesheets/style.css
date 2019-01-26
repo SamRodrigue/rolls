@@ -82,11 +82,21 @@ a {
 #log-container {
   background-color: transparent;
   border: double 8px grey;
+  height: 100px;
 }
+
+/* #log-container:after {
+  content: ' ';
+  position: absolute;
+  top: 0;
+  height:4px;
+  width: 100%;
+  cursor: n-resize;
+} */
 
 #log {
   overflow-y: auto;
-  height: 80px;
+  height: 100%;
 }
 
 #log span p {

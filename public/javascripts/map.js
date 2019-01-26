@@ -729,6 +729,7 @@ sketch.preload = function() {
 sketch.setup = function() {
   var canvas = sketch.createCanvas(view.width, view.height);
   canvas.parent('#map');
+  $(canvas.canvas).hide();
   canvas.mouseOver(function () { onCanvas = true; });
   canvas.mouseOut(function () { onCanvas = false; });
 

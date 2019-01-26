@@ -32,14 +32,15 @@ block content
         // TODO: Add hide button for admin
         //button.btn.btn-primary.col-3(onClick="hide_map()")
           span Hide
-        button.btn.btn-primary.col-3.offset-sm-1(data-toggle="modal" data-target="#tools-modal")
+        button#tools.btn.btn-primary.col-3.offset-sm-1(data-toggle="modal" data-target="#tools-modal")
           span Tools
-        button.btn.btn-success.col-3.offset-sm-1(data-toggle="modal" data-target="#entities-modal")
+        button#entities.btn.btn-success.col-3.offset-sm-1(data-toggle="modal" data-target="#entities-modal")
           span Entities
-        button.btn.btn-success.col-3(data-toggle="modal" data-target="#assets-modal")
+        button#assets.btn.btn-success.col-3(style="display: none;" data-toggle="modal" data-target="#assets-modal")
           span Assets
       .row.mt-2
         #map.col-12
+          .loader
 
   .footer
 
