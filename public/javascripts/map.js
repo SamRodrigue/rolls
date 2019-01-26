@@ -9,6 +9,33 @@ var data = {
 };
 
 var update = {
+  get: function() {
+    return (this.walls ||
+            this.entities ||
+            this.assets ||
+            this.texture);
+  },
+  set: function(v) {
+    this.walls = v.walls;
+    this.entities = v.entities;
+    this.assets = v.assets;
+    this.texture = v.texture;
+  },
+  reset: function() {
+    this.walls = false;
+    this.entities = false;
+    this.assets = false;
+    this.texture = false;
+  },
+  data: function() {
+    return {
+      walls: this.walls,
+      entities: this.entities,
+      assets: this.assets,
+      texture: this.texture
+    };
+  },
+  last: false,
   walls: false,
   entities: false,
   assets: false,
@@ -70,16 +97,32 @@ var view = {
     set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
   },
   asset: {
-    val: 1,
-    MIN: 1, // 0.5 - disable asset scaling
-    MAX: 1, // 4
-    set: function(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
+    zoom: {
+      val: 1,
+      MIN: 1, // 0.5 - disable asset scaling
+      MAX: 1, // 4
+      set: function(v) { 
+        this.val = sketch.constrain(v, this.MIN, this.MAX);
+      },
+      reset: function() { this.val = 1; }
+    },
+    rot: {
+      val: 0,
+      MIN: 0,
+      MAX: 360,
+      set: function(v) {
+        while (v < this.MIN) v += this.MAX;
+        while (v > this.MAX) v -= this.MAX;
+        this.val = v;
+      },
+      reset: function() { this.val = 0; }
+    }
   }
 };
 
 var mode = {
   loaded: false,
-
+  ctrl: false,
   cursor: 0,
   texture: 0,
   wall: null,
@@ -100,16 +143,23 @@ var mode = {
     },
 
     wall: function() { // Press
-      if (mode.wall === null) {
+      if (mode.wall === null) { // Start new wall
         mode.wall = new Wall(view.wx, view.wy);
 
       } else {
-        update.walls = true;
         mode.wall.end(view.wx, view.wy);
 
-        if (mode.wall.mode === 2) {
+        if (mode.wall.mode === 2) { // End of wall is at new location
+          // Add new wall
+          update.walls = true;
           map.walls.push(mode.wall.copy());
-          mode.wall = new Wall(view.wx, view.wy);
+
+          if (mode.ctrl) { // Start new wall
+            mode.wall = new Wall(view.wx, view.wy);
+
+          } else {
+            mode.wall = null;
+          }
 
         } else {
           mode.wall = null;
@@ -120,16 +170,15 @@ var mode = {
     entity: function() { // Press
       if (mode.entity < entities.NONE || mode.entity >= entities.COUNT) return;
 
-      update.entities = true;
-
       var ex = view.mx / map.entity.spacing;
       var ey = view.my / map.entity.spacing;
 
-      if (mode.entity === entities.NONE) { // Move mode
+      if (mode.entity === entities.NONE) { // Select mode
         for (var i = map.entities.length - 1; i >= 0; --i) {
           if (map.entities[i].contains(ex, ey)) {
             if (user.role === 'admin' || 
                (user.role === 'user' && user.name === map.entities[i].user.name)) {
+              update.entities = true;
               var oldEntity = map.entities.splice(i, 1)[0];
               mode.entity = oldEntity.type;
               mode.moving.val = true;
@@ -139,14 +188,23 @@ var mode = {
           }
         }
 
-      } else {
+      } else { // Add mode
         var newEntity;
-        if (mode.moving.val) {
-          var newEntity = new Entity(mode.entity, ex, ey, mode.moving.user);
+        update.entities = true;
+        if (mode.moving.val) { // Moving mode
+          newEntity = new Entity(mode.entity, ex, ey, mode.moving.user);
           mode.moving.val = false;
-          mode.entity = entities.NONE;
-        } else {
-          var newEntity = new Entity(mode.entity, ex, ey);
+
+          if (!mode.ctrl) {
+            mode.entity = entities.NONE;
+          }
+
+        } else { // Creating mode
+          newEntity = new Entity(mode.entity, ex, ey);
+
+          if (!mode.ctrl) {
+            mode.entity = entities.NONE;
+          }
         }
         map.entities.push(newEntity);
       }
@@ -155,23 +213,28 @@ var mode = {
     asset: function() { // Press
       if (mode.asset < assets.NONE || mode.asset >= assets.COUNT) return;
 
-      update.assets = true;
-
       var ax = view.mx / map.asset.spacing;
       var ay = view.my / map.asset.spacing;
 
-      if (mode.asset === assets.NONE) { // Move mode
+      if (mode.asset === assets.NONE) { // Select mode
         for (var i = map.assets.length - 1; i >= 0; --i) {
           if (map.assets[i].contains(ax, ay)) {
+            update.assets = true;
             var oldAsset = map.assets.splice(i, 1)[0];
             mode.asset = oldAsset.type;
-            view.asset.set(oldAsset.zoom);
+            view.asset.zoom.set(oldAsset.zoom);
+            view.asset.rot.set(oldAsset.rot);
             break;
           }
         }
-
-      } else {
-        map.assets.push(new Asset(mode.asset, ax, ay, view.asset.val, 0));
+      } else { // Add mode
+        update.assets = true;
+        map.assets.push(new Asset(mode.asset, ax, ay, view.asset.zoom.val, view.asset.rot.val));
+        if (!mode.ctrl) {
+          mode.asset = assets.NONE;
+          view.asset.zoom.reset();
+          view.asset.rot.reset();
+        }
       }
     },
 
@@ -307,21 +370,25 @@ var mode = {
     },
 
     asset: function() { // Press
-      // Rotate assets
-      var ax = view.mx / map.asset.spacing;
-      var ay = view.my / map.asset.spacing;
-
-      if (mode.asset === assets.NONE) { // Move mode
-        // Rotate asset if mouse is over
-        for (var i = map.assets.length - 1; i >= 0; --i) {
-          if (map.assets[i].contains(ax, ay)) {
-            update.assets = true;
-            map.assets[i].rotate(45);
-            break;
-          }
-        }
-      } else {
+      if (mode.ctrl) {  
+        // Set asset to move mode
         mode.asset = assets.NONE;
+      } else {
+        if (mode.asset === assets.NONE) { // Move mode
+          // Rotate assets
+          var ax = view.mx / map.asset.spacing;
+          var ay = view.my / map.asset.spacing;
+          // Rotate asset if mouse is over
+          for (var i = map.assets.length - 1; i >= 0; --i) {
+            if (map.assets[i].contains(ax, ay)) {
+              update.assets = true;
+              map.assets[i].rotate(45);
+              break;
+            }
+          }
+        } else {
+          view.asset.rot.set(view.asset.rot.val + 45);
+        }
       }
     },
 
@@ -685,12 +752,21 @@ sketch.setup = function() {
 
   // Request map data
   mode.loaded = true;
-
-  // Sketch config
-  sketch.noSmooth(); // May only be needed for assets
 };
 
 sketch.draw = function () {
+  // TODO: Manage update state as state instead of in draw loop
+  if (update.last !== update.get()) {
+    update.last = update.get();
+    if (update.last) {
+      $('#update').removeClass('btn-secondary');
+      $('#update').addClass('btn-primary');
+    } else {
+      $('#update').removeClass('btn-primary');
+      $('#update').addClass('btn-secondary');
+    }
+  }
+
   view.mx = (sketch.mouseX - sketch.width/2) / view.zoom.val + view.x;
   view.my = (sketch.mouseY - sketch.height/2) / view.zoom.val + view.y;
   view.wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
@@ -752,30 +828,28 @@ sketch.load = function(newData) {
     texture: decompress_texture(newData.texture)
   };
 
-  update = newData.update;
-
-  if (update.walls) {
+  if (newData.update.walls) {
     map.walls = [];
     for (w of data.walls) {
       map.walls.push(new Wall(w));
     }
   }
 
-  if (update.entities) {
+  if (newData.update.entities) {
     map.entities = [];
     for (e of data.entities) {
       map.entities.push(new Entity(e));
     }
   }
 
-  if (update.assets) {
+  if (newData.update.assets) {
     map.assets = [];
     for (a of data.assets) {
       map.assets.push(new Asset(a));
     }
   }
 
-  if (update.texture) {
+  if (newData.update.texture) {
     if (data.texture.width !== map.texture.width || data.texture.height !== map.texture.height) {
       alert('Map will be resized from ' + 
         data.texture.width + 'x' + data.texture.height +
@@ -810,6 +884,9 @@ sketch.load = function(newData) {
 
     map.texture.image.updatePixels();
   }
+
+  // TODO: Ensure that this not overwrite user's changes
+  update.reset();
 };
 
 sketch.save = function() {
@@ -817,8 +894,8 @@ sketch.save = function() {
     walls:    [],
     entities: [],
     assets:   [],
-    texture:  [[]],
-    update: update
+    texture:  null,
+    update: update.data()
   };
 
   if (update.walls) {
@@ -871,6 +948,10 @@ sketch.client_save = function() {
 
   return out;
 };
+
+sketch.reset_update = function() {
+  update.reset();
+}
 
 sketch.mousePressed = function() {
   if (!onCanvas) return;
@@ -981,7 +1062,7 @@ sketch.mouseWheel = function(event) {
       view.zoom.set(view.zoom.val - 0.1 * event.delta);
       break;
     case cursors.ASSET:
-      view.asset.set(view.asset.val - 0.05 * event.delta);
+      view.asset.zoom.set(view.asset.zoom.val - 0.05 * event.delta);
       break;
     case cursors.TEXTURE:
       view.brush.set(view.brush.val - 0.5 * event.delta);
@@ -992,6 +1073,8 @@ sketch.mouseWheel = function(event) {
 };
 
 sketch.keyPressed = function() {
+  if (sketch.key === "Control") mode.ctrl = true;
+  if (!onCanvas) return;
   switch (sketch.key) {
     case 'm':
       sketch.setMode(cursors.MAP);
@@ -1025,7 +1108,7 @@ sketch.keyPressed = function() {
           view.zoom.set(view.zoom.val * 1.1);
           break;
         case cursors.ASSET:
-          view.asset.set(view.asset.val * 1.1);
+          view.asset.zoom.set(view.asset.zoom.val * 1.1);
           break;
         case cursors.TEXTURE:
           view.brush.set(view.brush.val * 1.1);
@@ -1041,7 +1124,7 @@ sketch.keyPressed = function() {
           view.zoom.set(view.zoom.val * 0.9);
           break;
         case cursors.ASSET:
-          view.asset.set(view.asset.val * 0.9);
+          view.asset.zoom.set(view.asset.zoom.val * 0.9);
           break;
         case cursors.TEXTURE:
           view.brush.set(view.brush.val * 0.9);
@@ -1088,6 +1171,10 @@ sketch.keyPressed = function() {
       break;
   }
 };
+
+sketch.keyReleased = function() {
+  if (sketch.key === "Control") mode.ctrl = false;
+}
 
 sketch.setMode = function(m) {
   if (m >= 0 && m < cursors.COUNT) {
@@ -1302,10 +1389,15 @@ function draw_cursor() {
 
     case cursors.ASSET:
       if (mode.asset > 0 && mode.asset < assets.COUNT) {
+        var ax = view.mx / view.asset.zoom.val / map.asset.spacing;
+        var ay = view.my / view.asset.zoom.val / map.asset.spacing;
         sketch.imageMode(sketch.CENTER);
         sketch.push();
-          sketch.scale(map.asset.spacing * view.asset.val);
-          sketch.image(assets.images[mode.asset], view.mx / view.asset.val / map.asset.spacing, view.my / view.asset.val / map.asset.spacing);
+          sketch.translate(view.mx, view.my);
+          sketch.rotate(sketch.radians(view.asset.rot.val));
+          sketch.translate(-view.mx, -view.my);
+          sketch.scale(map.asset.spacing * view.asset.zoom.val);
+          sketch.image(assets.images[mode.asset], ax, ay);
         sketch.pop();
       } 
       

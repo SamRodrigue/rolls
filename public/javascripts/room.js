@@ -151,6 +151,8 @@ function send_map() {
     room_id: room_id,
     map: myp5.save() 
   }); socket.send('');
+
+  myp5.reset_update();
 }
 
 function map_data(data) {
@@ -164,6 +166,8 @@ function send_client_map() {
     room_id: room_id,
     entities: myp5.client_save()
   }); socket.send('');
+
+  myp5.reset_update();
 }
 
 function client_map_data(data) {
@@ -384,9 +388,21 @@ $(document).ready(function() {
     var dice = '';
     var user_dice = '';
     var dice_count = { d4: 0, d6: 0, d8: 0, d10: 0, d12:0, d20:0 };
+    
+    // Get list of existing user areas
+    var existing_users = [];
+    $('#dice > .user-area').each(function() {
+      existing_users.push($(this).data('user-id'));
+    });
     for (var i = 0, len = data.users.length; i < len; i++) {
       var a_user = data.users[i];
       var changed = false;
+
+      // Remove from existing users list; user still exists
+      existing_users = existing_users.filter(function(e_id) {
+        return e_id !== a_user.id;
+      });
+
       // Get user dice area
       var a_user_dice_id = '#' + a_user.id + '-dice';
       if ($(a_user_dice_id).length === 0) { // New user or user dice div is missing
@@ -423,12 +439,18 @@ $(document).ready(function() {
     Object.keys(dice_count).forEach(function(dice_type) {
       $('#' + dice_type + '-count').html(dice_count[dice_type]);
     });
+
+    // Remove existing users that are not in room-data
+    existing_users.forEach(function(e_id) {
+      console.log('removing user with id ' + e_id);
+      $('#' + e_id + '-dice').remove();
+    });
   }
 
   function create_user_dice(a_user, time) {
     var a_color = colorString(a_user.name);
     var a_dice = `
-<div id="` + a_user.id + `-dice" class="user-area col-12 m-1 border border-dark rounded mx-auto" data-updated="` + a_user.updated + `">
+<div id="` + a_user.id + `-dice" class="user-area col-12 m-1 border border-dark rounded mx-auto" data-user-id="` + a_user.id + `" data-updated="` + a_user.updated + `">
   <div class="row user-status-bar bg-light">
     <div class="row user-name col-12 p-0 m-0 border border-success text-center">`;
       if (user.name === a_user.name) {
