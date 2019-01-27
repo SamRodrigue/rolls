@@ -75,9 +75,54 @@ function toggle_dice(val) {
 
 function user_data(data) {
   user = data;
+
   if (user.role === 'admin') {
-    $('#assets').show();
+    // Load asset modal and show button
+    $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
+      $.each(data, function(key, val) {
+        $('#asset-containers').append(`
+  <div class="asset-container col-3 text-center" onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">
+    <img class="row mx-auto" src="` + MEDIA_MAPS + `assets/` + val[2] + `" />
+    <span class="mx-auto">` + val[1] + `</span>
+  </div>`);
+      });
+    });
+
+      // Load textures
+    $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
+      $.each(data, function(key, val) {
+        if (key === 'NONE') val[1] = "Erase";
+        $('#tools-modal .modal-body').append(`
+<div class="">
+  <button onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">Texture: ` + val[1] + `</button>
+  <button onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">Fill: ` + val[1] + `</button>
+</div>`);
+      });
+    });
+
+    $('#assets-button').show();
+    $('#tools-modal-map').show();
   }
+
+  // Load entities
+  $.getJSON(MEDIA_MAPS + 'entities/entities.json', function(data) {
+    $.each(data, function(key, val) {
+      $('#entity-containers').append(`
+<div class="entity-container col-3 text-center" onclick="myp5.setSpecificMode('entity', ` + val[0] + `); $('#entities-modal').modal('toggle');">
+  <img class="row mx-auto" src="` + MEDIA_MAPS + `entities/` + val[2] + `" />
+  <span class="mx-auto">` + val[1] + `</span>
+</div>`);
+    });
+  });
+
+  // Load common tools
+  [['map', 'Map Mode'], ['wall', 'Wall Mode'], ['erase', 'Erase Mode']].forEach(function(data) {
+    $('#tools-modal .modal-body').append(`
+<div class="">
+  <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
+</div>`);
+  });
+
   socket.emit('get-room', { room_id: room_id }); refresh_socket();
 }
 
@@ -584,46 +629,6 @@ $(document).ready(function() {
 
   $(document).on('contextmenu', '#map canvas', function(event) {
     event.preventDefault();
-  });
-
-  // Initialization
-  // Load entities and assets modals
-  $.getJSON(MEDIA_MAPS + 'entities/entities.json', function(data) {
-    $.each(data, function(key, val) {
-      $('#entities-modal .modal-body').append(`
-<div class="">
-  <button onclick="myp5.setSpecificMode('entity', ` + val[0] + `); $('#entities-modal').modal('toggle');">` + val[1] + `</button>
-</div>`);
-    });
-  });
-
-  $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
-    $.each(data, function(key, val) {
-      $('#assets-modal .modal-body').append(`
-<div class="">
-  <button onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">` + val[1] + `</button>
-</div>`);
-    });
-  });
-
-  // Load tools
-  [['map', 'Map Mode'], ['wall', 'Wall Mode'], ['erase', 'Erase Mode']].forEach(function(data) {
-    $('#tools-modal .modal-body').append(`
-<div class="">
-  <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
-</div>`);
-  });
-
-  // Load textures
-  $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
-    $.each(data, function(key, val) {
-      if (key === 'NONE') val[1] = "Erase";
-      $('#tools-modal .modal-body').append(`
-<div class="">
-  <button onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">Texture: ` + val[1] + `</button>
-  <button onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">Fill: ` + val[1] + `</button>
-</div>`);
-    });
   });
 
   // Resize window on load

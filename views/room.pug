@@ -27,16 +27,16 @@ block content
   #map-content.content(style="display: none;")
     .container-fluid.mt-2.col-12.col-md-8.col-xl-9.float-md-left
       .row.user-roll.col-12.mx-auto.input-group
-        button#update.btn.btn-secondary.col-3.col-sm-1(onClick="send_map()")
+        button#update-button.btn.btn-secondary.col-3.col-sm-1(onClick="send_map()")
           span Up
         // TODO: Add hide button for admin
         //button.btn.btn-primary.col-3(onClick="hide_map()")
           span Hide
-        button#tools.btn.btn-primary.col-3.offset-sm-1(data-toggle="modal" data-target="#tools-modal")
+        button#tools-button.btn.btn-primary.col-3.offset-sm-1(data-toggle="modal" data-target="#tools-modal")
           span Tools
-        button#entities.btn.btn-success.col-3.offset-sm-1(data-toggle="modal" data-target="#entities-modal")
+        button#entities-button.btn.btn-success.col-3.offset-sm-1(data-toggle="modal" data-target="#entities-modal")
           span Entities
-        button#assets.btn.btn-success.col-3(style="display: none;" data-toggle="modal" data-target="#assets-modal")
+        button#assets-button.btn.btn-success.col-3(style="display: none;" data-toggle="modal" data-target="#assets-modal")
           span Assets
       .row.mt-2
         #map.col-12
@@ -51,7 +51,7 @@ block content
           h2 Dice
           button.close(data-dismiss='modal') &times;
         .modal-body
-          .row#dice-containers
+          #dice-containers.row
             .dice-container.mx-auto
               .d4.text-center
                 span.die-number d4
@@ -107,7 +107,7 @@ block content
                 button.btn.btn-danger.col-3.ml-1(type="button" onClick="remove_dice('d20')")
                   span -
           hr.row
-          .row#preset-containers
+          #preset-containers.row
             .preset-container.mx-auto
               .preset1.text-center
                 h5 Preset 1
@@ -137,11 +137,12 @@ block content
           h2 Tools
           button.close(data-dismiss="modal") &times;
         .modal-body
-          input#map-data-input(type="file")
-          button.btn.btn-primary(onClick="load_map()")
-            span Load
-          button.btn.btn-success.offset-1(onClick="save_map()")
-            span Save
+          #tools-modal-map.row.m-1(style="display: none;")
+            input#map-data-input.col-6(type="file")
+            button.btn.btn-primary.col-3(onClick="load_map()")
+              span Load
+            button.btn.btn-success.col-3(onClick="save_map()")
+              span Save
         .modal-footer
           button.btn.btn-dark(data-dismiss="modal")
             span Close
@@ -153,6 +154,7 @@ block content
           h2 Entities
           button.close(data-dismiss="modal") &times;
         .modal-body
+          #entity-containers.row
 
         .modal-footer
           button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_entities()")
@@ -167,6 +169,7 @@ block content
           h2 Assets
           button.close(data-dismiss="modal") &times;
         .modal-body
+          #asset-containers.row
 
         .modal-footer
           button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_assets()")

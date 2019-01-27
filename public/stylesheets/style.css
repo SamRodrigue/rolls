@@ -107,6 +107,25 @@ a {
   margin-bottom: 0.1em;
 }
 
+.entity-container {
+  cursor: pointer;
+}
+
+.entity-container img {
+  height: 64px;
+  width: 64px;
+}
+
+
+.asset-container {
+  cursor: pointer;
+}
+
+.asset-container img {
+  height: 64px;
+  width: 64px;
+}
+
 .d4, .d6, .d8, .d10, .d12, .d20 {
   height: 64px;
   width: 64px;

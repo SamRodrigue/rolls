@@ -760,8 +760,8 @@ sketch.draw = function () {
   if (update.last !== update.get()) {
     update.last = update.get();
     if (update.last) {
-      $('#update').removeClass('btn-secondary');
-      $('#update').addClass('btn-primary');
+      $('#update-button').removeClass('btn-secondary');
+      $('#update-button').addClass('btn-primary');
     } else {
       $('#update').removeClass('btn-primary');
       $('#update').addClass('btn-secondary');
@@ -887,6 +887,7 @@ sketch.load = function(newData) {
   }
 
   // TODO: Ensure that this not overwrite user's changes
+  // BUG: update can not be sent to server if another user sends update until another change is made
   update.reset();
 };
 

@@ -148,7 +148,7 @@ router.sockets = (io, socket, rooms, func) => {
     var [target_user, target_user_index] = func.find_user_name(room, data.name);
     if (user && target_user && 
         (user.role === 'admin' || user.name === data.name)) {
-      func.remove_user(target_user.socket.handshake.sessionID, func, rooms, data.room_id);
+      func.remove_user(target_user.socket.handshake.sessionID, rooms, data.room_id, io.sockets);
     }
   });
 

@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 
 /* GET home page. */
-router.get('/', function(req, res, next) {
+router.get('/', (req, res, next) => {
   res.render('index', { title: 'Rolls' });
 });
 
@@ -86,7 +86,7 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   // Join request
-  socket.on('join-room', function(data) {
+  socket.on('join-room', (data) => {
     console.log('a user requested to join room ' + data.room_id);
     // Trim username
     data.user_name = data.user_name.trim();
@@ -101,7 +101,7 @@ router.sockets = (io, socket, rooms, func) => {
       console.log('ERROR: a user requested an unregistered room');
       
       // Send response to user
-      socket.emit('alert', 'Error: Unknow room');
+      socket.emit('alert', 'Error: Unknown room');
       return;
     }
 
@@ -130,10 +130,8 @@ router.sockets = (io, socket, rooms, func) => {
     // Check password
     if (data.password === room.password.admin) {
       user.role = 'admin';
-      //socket.emit('alert', 'DEBUG: ADMIN');
     } else if (data.password === room.password.user) {
       user.role = 'user';
-      //socket.emit('alert', 'DEBUG: USER');
     } else {
       socket.emit('alert', 'Error: Incorrect password');
       return;
@@ -145,6 +143,9 @@ router.sockets = (io, socket, rooms, func) => {
     room.users.some((a_user, index) => {
       if (user.socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
         console.log('a user rejoined room ' + room.name);
+        // Remove old timeout
+        clearTimeout(a_user.timeout);
+
         // Check if user name is unique in room
         room.users.some((another_user) => {
           if (user.name === another_user.name && 
