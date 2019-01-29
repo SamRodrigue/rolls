@@ -48,31 +48,31 @@ var map = {
   grid: {
     spacing: 5
   },
-  wall: {
-    spacing: 2.5,
-    width: 1
-  },
-  entity: {
-    spacing: 0.025
-  },
-  asset: {
-    spacing: 0.033
-  },
-  cursor: {
-    spacing: 1.9
-  },
-
-  walls:    [],
-  entities: [],
-  assets:   [],
-
   texture: {
     width: null, // to be calculated
     height: null, // to be calculated
     val: [[]],
     image: {},
-    spacing: 0.5
-  }
+    scale: 0.5
+  },
+  wall: {
+    spacing: 2.5,
+    width: 1,
+    scale: 0.05
+  },
+  entity: {
+    scale: 0.025
+  },
+  asset: {
+    scale: 0.033
+  },
+  cursor: {
+    scale: 1.9
+  },
+
+  walls:    [],
+  entities: [],
+  assets:   []
 };
 
 var view = {
@@ -125,9 +125,10 @@ var mode = {
   ctrl: false,
   cursor: 0,
   texture: 0,
-  wall: null,
-  asset: 0,
+  wall: 0,
+  walling: null,
   entity: 0,
+  asset: 0,
   moving: {
     val: false,
     user: null
@@ -143,26 +144,27 @@ var mode = {
     },
 
     wall: function() { // Press
-      if (mode.wall === null) { // Start new wall
-        mode.wall = new Wall(view.wx, view.wy);
+      if (mode.wall < walls.NONE || mode.wall >= walls.COUNT) return;
+      if (mode.walling === null) { // Start new wall
+        mode.walling = new Wall(mode.wall, view.wx, view.wy);
 
       } else {
-        mode.wall.end(view.wx, view.wy);
+        mode.walling.end(view.wx, view.wy);
 
-        if (mode.wall.mode === 2) { // End of wall is at new location
+        if (mode.walling.mode === 2) { // End of wall is at new location
           // Add new wall
           update.walls = true;
-          map.walls.push(mode.wall.copy());
+          map.walls.push(mode.walling.copy());
 
           if (mode.ctrl) { // Start new wall
-            mode.wall = new Wall(view.wx, view.wy);
+            mode.walling = new Wall(mode.wall, view.wx, view.wy);
 
           } else {
-            mode.wall = null;
+            mode.walling = null;
           }
 
         } else {
-          mode.wall = null;
+          mode.walling = null;
         }
       }
     },
@@ -170,8 +172,8 @@ var mode = {
     entity: function() { // Press
       if (mode.entity < entities.NONE || mode.entity >= entities.COUNT) return;
 
-      var ex = view.mx / map.entity.spacing;
-      var ey = view.my / map.entity.spacing;
+      var ex = view.mx / map.entity.scale;
+      var ey = view.my / map.entity.scale;
 
       if (mode.entity === entities.NONE) { // Select mode
         for (var i = map.entities.length - 1; i >= 0; --i) {
@@ -213,8 +215,8 @@ var mode = {
     asset: function() { // Press
       if (mode.asset < assets.NONE || mode.asset >= assets.COUNT) return;
 
-      var ax = view.mx / map.asset.spacing;
-      var ay = view.my / map.asset.spacing;
+      var ax = view.mx / map.asset.scale;
+      var ay = view.my / map.asset.scale;
 
       if (mode.asset === assets.NONE) { // Select mode
         for (var i = map.assets.length - 1; i >= 0; --i) {
@@ -257,8 +259,8 @@ var mode = {
 
       if (found) return;
 
-      var ex = view.mx / map.entity.spacing;
-      var ey = view.my / map.entity.spacing;
+      var ex = view.mx / map.entity.scale;
+      var ey = view.my / map.entity.scale;
       for (var i = map.entities.length - 1; i >= 0; --i) {
         if (map.entities[i].contains(ex, ey)) {
           update.entities = true;
@@ -271,8 +273,8 @@ var mode = {
 
       if (found) return;
 
-      var ax = view.mx / map.asset.spacing;
-      var ay = view.my / map.asset.spacing;
+      var ax = view.mx / map.asset.scale;
+      var ay = view.my / map.asset.scale;
       for (var i = map.assets.length - 1; i >= 0; --i) {
         if (map.assets[i].contains(ax, ay)) {
           update.assets = true;
@@ -293,14 +295,14 @@ var mode = {
 
       if (!mode.fill) {
         var dLimit = view.brush.val * view.brush.val / 4;
-        for (var i = -view.brush.val / 2; i < view.brush.val / 2; i += map.texture.spacing) {
-          var x = Math.floor((view.mx + i) / map.texture.spacing);
+        for (var i = -view.brush.val / 2; i < view.brush.val / 2; i += map.texture.scale) {
+          var x = Math.floor((view.mx + i) / map.texture.scale);
 
           if (x < 0 || x >= map.texture.width) continue;
           var di = i * i;
 
-          for (var j = -view.brush.val / 2; j < view.brush.val / 2; j += map.texture.spacing) {
-            var y = Math.floor((view.my + j) / map.texture.spacing);
+          for (var j = -view.brush.val / 2; j < view.brush.val / 2; j += map.texture.scale) {
+            var y = Math.floor((view.my + j) / map.texture.scale);
 
             if (y < 0 || y >= map.texture.height) continue;
             var d = di + j * j;
@@ -321,9 +323,9 @@ var mode = {
           }
         }
       } else {
-        var x = Math.floor(view.mx / map.texture.spacing);
+        var x = Math.floor(view.mx / map.texture.scale);
         if (x < 0 || x >= map.texture.width) return;
-        var y = Math.floor(view.my / map.texture.spacing);
+        var y = Math.floor(view.my / map.texture.scale);
         if (y < 0 || y >= map.texture.height) return;
 
         var gx = map.grid.spacing * map.texture.width / map.width;
@@ -361,7 +363,7 @@ var mode = {
 
     wall: function() { // Press
       // Stop creating wall
-      mode.wall = null;
+      mode.walling = null;
     },
 
     entity: function() { // Press
@@ -376,8 +378,8 @@ var mode = {
       } else {
         if (mode.asset === assets.NONE) { // Move mode
           // Rotate assets
-          var ax = view.mx / map.asset.spacing;
-          var ay = view.my / map.asset.spacing;
+          var ax = view.mx / map.asset.scale;
+          var ay = view.my / map.asset.scale;
           // Rotate asset if mouse is over
           for (var i = map.assets.length - 1; i >= 0; --i) {
             if (map.assets[i].contains(ax, ay)) {
@@ -417,6 +419,12 @@ var textures = {
   height: 24
 };
 
+var walls = {
+  COUNT: 0,
+  names: [],
+  images: []
+};
+
 var entities = {
   COUNT: 0,
   names: [],
@@ -430,21 +438,24 @@ var assets = {
 };
 
 class Wall {
-  constructor(first, second) { // (x0, y0), (wall)
+  constructor(first, second, third) { // (type, x0, y0), (wall)
     this.x = [];
     this.y = [];
     this.points = null;
+    this.image = null;
     switch (arguments.length) {
       case 0:
         this.mode = 0;
         break;
       case 1:
+        this.type = first.type;
         this.x = first.x;
         this.y = first.y;
         this.mode = 2;
         break;
-      case 2:
-        this.start(first, second);
+      case 3:
+        this.type = first;
+        this.start(second, third);
         break;
     }
   }
@@ -464,17 +475,21 @@ class Wall {
 
   copy() {
     var out = new Wall();
+    out.type = this.type;
+    out.mode = this.mode;
     out.x[0] = this.x[0];
     out.x[1] = this.x[1];
     out.y[0] = this.y[0];
     out.y[1] = this.y[1];
-    out.mode = this.mode;
+    out.image = this.image;
+
     return out;
   }
 
   data() {
     if (this.mode !== 2) return null;
     return {
+      type: this.type,
       x: this.x,
       y: this.y
     };
@@ -482,13 +497,121 @@ class Wall {
 
   draw() {
     if (this.mode !== 2) return;
-    sketch.noStroke();
-    sketch.fill(0);
+  
+    if (this.type === walls.NONE) { // Solid wall
+      sketch.noStroke();
+      sketch.fill(0);
 
-    if (this.points === null) { // Could be done in end or copy constructor
+      if (this.points === null) { // Could be done in end or copy constructor
+        var par = {
+          x: this.x[1] - this.x[0],
+          y: this.y[1] - this.y[0]
+        };
+        var mag = Math.sqrt(par.x * par.x + par.y * par.y);
+        par.x /= mag;
+        par.y /= mag;
+        var per = {
+          x: -par.y * map.wall.width / 2,
+          y:  par.x * map.wall.width / 2
+        };
+
+        this.points = [{
+          x: this.x[0] + per.x,
+          y: this.y[0] + per.y
+        }, {
+          x: this.x[0] - per.x,
+          y: this.y[0] - per.y
+        }, {
+          x: this.x[1] - per.x,
+          y: this.y[1] - per.y
+        }, {
+          x: this.x[1] + per.x,
+          y: this.y[1] + per.y
+        }];
+      }
+
+      sketch.quad(
+        this.points[0].x, this.points[0].y,
+        this.points[1].x, this.points[1].y,
+        this.points[2].x, this.points[2].y,
+        this.points[3].x, this.points[3].y
+      );
+
+      sketch.ellipseMode(sketch.CENTER);
+      sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
+      sketch.ellipse(this.x[1], this.y[1], map.wall.width, map.wall.width);
+
+    } else {
       var par = {
         x: this.x[1] - this.x[0],
         y: this.y[1] - this.y[0]
+      };
+
+      if (this.points === null) { // Could be done in end or copy constructor
+        var mag = Math.sqrt(par.x * par.x + par.y * par.y);
+        var ppar = {
+          x: par.x / mag,
+          y: par.y / mag
+        };
+        var per = {
+          x: -ppar.y * map.wall.width / 2,
+          y:  ppar.x * map.wall.width / 2
+        };
+
+        this.points = [{
+          x: this.x[0] + per.x,
+          y: this.y[0] + per.y
+        }, {
+          x: this.x[0] - per.x,
+          y: this.y[0] - per.y
+        }, {
+          x: this.x[1] - per.x,
+          y: this.y[1] - per.y
+        }, {
+          x: this.x[1] + per.x,
+          y: this.y[1] + per.y
+        }];
+      }
+
+      if (this.image === null) {
+        var tex = walls.images[this.type];
+
+        var mag = Math.round(Math.sqrt(par.x * par.x + par.y * par.y) / map.wall.scale + tex.height);
+    
+        this.image = sketch.createImage(mag, tex.height);
+    
+        tex.loadPixels();
+        this.image.loadPixels();
+        for (var i = 0; i < this.image.width; ++i) {
+          var tx = i % tex.width;
+          for (var j = 0; j < this.image.height; ++j) {
+            this.image.set(i, j, tex.get(tx, j));
+          }
+        }
+        this.image.updatePixels();
+      }
+
+      sketch.push();     
+        sketch.scale(map.wall.scale);   
+        sketch.translate(this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
+        sketch.rotate(Math.PI / 2 - Math.atan2(par.x, par.y));
+        sketch.translate(-this.x[0] / map.wall.scale, -this.y[0] / map.wall.scale);
+        sketch.translate(this.image.height / -2, this.image.height / -2);
+        sketch.image(this.image, this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
+      sketch.pop();
+    }
+  }
+
+  drawToMouse(x, y) {
+    if (this.mode !== 1) return;
+
+    if (this.type === walls.NONE) { // Solid wall
+      sketch.noStroke();
+      sketch.fill(0);
+      
+      var par = {
+        x: x - this.x[0],
+        y: y - this.y[0]
       };
       var mag = Math.sqrt(par.x * par.x + par.y * par.y);
       par.x /= mag;
@@ -498,75 +621,65 @@ class Wall {
         y:  par.x * map.wall.width / 2
       };
 
-      this.points = [{
+      var points = [
+      {
         x: this.x[0] + per.x,
         y: this.y[0] + per.y
       }, {
         x: this.x[0] - per.x,
         y: this.y[0] - per.y
       }, {
-        x: this.x[1] - per.x,
-        y: this.y[1] - per.y
+        x: x - per.x,
+        y: y - per.y
       }, {
-        x: this.x[1] + per.x,
-        y: this.y[1] + per.y
+        x: x + per.x,
+        y: y + per.y
       }];
+
+      sketch.quad(
+        points[0].x, points[0].y,
+        points[1].x, points[1].y,
+        points[2].x, points[2].y,
+        points[3].x, points[3].y
+      );
+
+      sketch.ellipseMode(sketch.CENTER);
+      sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
+      sketch.ellipse(x, y, map.wall.width, map.wall.width);
+
+    } else {
+      // Create image
+      var par = {
+        x: x - this.x[0],
+        y: y - this.y[0]
+      };
+      if (par.x !== 0 || par.y !== 0) {
+        var tex = walls.images[this.type];
+
+        var mag = Math.round(Math.sqrt(par.x * par.x + par.y * par.y) / map.wall.scale + tex.height);
+
+        var img = sketch.createImage(mag, tex.height);
+
+        tex.loadPixels();
+        img.loadPixels();
+        for (var i = 0; i < img.width; ++i) {
+          var tx = i % tex.width;
+          for (var j = 0; j < img.height; ++j) {
+            img.set(i, j, tex.get(tx, j));
+          }
+        }
+        img.updatePixels();
+
+        sketch.push();
+          sketch.scale(map.wall.scale);
+          sketch.translate(this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
+          sketch.rotate(Math.PI / 2 - Math.atan2(par.x, par.y));
+          sketch.translate(-this.x[0] / map.wall.scale, -this.y[0] / map.wall.scale);
+          sketch.translate(img.height / -2, img.height / -2);
+          sketch.image(img, this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
+        sketch.pop();
+      }
     }
-
-    sketch.quad(
-      this.points[0].x, this.points[0].y,
-      this.points[1].x, this.points[1].y,
-      this.points[2].x, this.points[2].y,
-      this.points[3].x, this.points[3].y
-    );
-
-    sketch.ellipseMode(sketch.CENTER);
-    sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
-    sketch.ellipse(this.x[1], this.y[1], map.wall.width, map.wall.width);
-  }
-
-  drawToMouse(x, y) {
-    if (this.mode !== 1) return;
-    sketch.noStroke();
-    sketch.fill(0);
-    
-    var par = {
-      x: x - this.x[0],
-      y: y - this.y[0]
-    };
-    var mag = Math.sqrt(par.x * par.x + par.y * par.y);
-    par.x /= mag;
-    par.y /= mag;
-    var per = {
-      x: -par.y * map.wall.width / 2,
-      y:  par.x * map.wall.width / 2
-    };
-
-    var points = [
-    {
-      x: this.x[0] + per.x,
-      y: this.y[0] + per.y
-    }, {
-      x: this.x[0] - per.x,
-      y: this.y[0] - per.y
-    }, {
-      x: x - per.x,
-      y: y - per.y
-    }, {
-      x: x + per.x,
-      y: y + per.y
-    }];
-
-    sketch.quad(
-      points[0].x, points[0].y,
-      points[1].x, points[1].y,
-      points[2].x, points[2].y,
-      points[3].x, points[3].y
-    );
-
-    sketch.ellipseMode(sketch.CENTER);
-    sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
-    sketch.ellipse(x, y, map.wall.width, map.wall.width);
   }
 
   contains(x, y) {
@@ -688,10 +801,10 @@ class Asset {
   draw() {
     sketch.imageMode(sketch.CENTER);
     sketch.push();
-      sketch.translate(this.x * this.zoom, this.y * this.zoom);
-      sketch.rotate(sketch.radians(this.rot));
-      sketch.translate(-this.x * this.zoom, -this.y * this.zoom);
       sketch.scale(this.zoom);
+      sketch.translate(this.x, this.y);
+      sketch.rotate(sketch.radians(this.rot));
+      sketch.translate(-this.x, -this.y);
       sketch.image(assets.images[this.type], this.x, this.y);
     sketch.pop();
   }
@@ -720,6 +833,8 @@ sketch.preload = function() {
   sketch.loadJSON(MEDIA_MAPS + 'cursors/cursors.json', loadCursors);
   // Textures
   sketch.loadJSON(MEDIA_MAPS + 'textures/textures.json', loadTextures);
+  // Walls
+  sketch.loadJSON(MEDIA_MAPS + 'walls/walls.json', loadWalls);
   // Entities
   sketch.loadJSON(MEDIA_MAPS + 'entities/entities.json', loadEntities);
   // Assets
@@ -733,8 +848,8 @@ sketch.setup = function() {
   canvas.mouseOver(function () { onCanvas = true; });
   canvas.mouseOut(function () { onCanvas = false; });
 
-  map.texture.width = map.width / map.texture.spacing;
-  map.texture.height = map.height / map.texture.spacing;
+  map.texture.width = map.width / map.texture.scale;
+  map.texture.height = map.height / map.texture.scale;
   map.texture.image = sketch.createImage(map.texture.width, map.texture.height);
 
   for (var i = 0; i < map.texture.width; ++i) {
@@ -793,7 +908,7 @@ sketch.draw = function () {
   sketch.translate(sketch.width/(2 * view.zoom.val), sketch.height/(2 * view.zoom.val));
 
   sketch.push();
-    sketch.scale(map.texture.spacing);
+    sketch.scale(map.texture.scale);
     draw_texture();
   sketch.pop();
 
@@ -1145,6 +1260,15 @@ sketch.keyPressed = function() {
     case '9':
       var key = sketch.key - '0';
       switch (mode.cursor) {
+        case cursors.TEXTURE:
+          mode.texture = key;
+          if (key > 0 && key < textures.COUNT) {
+            textures.images[key].loadPixels();
+          }
+        break;
+        case cursors.WALL:
+          mode.wall = key;
+        break;
         case cursors.ENTITY:
           // Temp fix for Entity 9 (colors)
           if (key === 9) {
@@ -1163,12 +1287,6 @@ sketch.keyPressed = function() {
         case cursors.ASSET:
           mode.asset = key;
           break;
-        case cursors.TEXTURE:
-          mode.texture = key;
-          if (key > 0 && key < textures.COUNT) {
-            textures.images[key].loadPixels();
-          }
-          break;
       }
       break;
   }
@@ -1180,7 +1298,7 @@ sketch.keyReleased = function() {
 
 sketch.setMode = function(m) {
   if (m >= 0 && m < cursors.COUNT) {
-    mode.wall = null;
+    mode.walling = null;
     mode.cursor = m;
   }
 };
@@ -1188,14 +1306,6 @@ sketch.setMode = function(m) {
 // TODO: merge with keypress to use single function
 sketch.setSpecificMode = function(name, key) {
   switch(name) {
-    case 'entity':
-      sketch.setMode(cursors.ENTITY);
-      mode.entity = key;
-      break;
-    case 'asset':
-      sketch.setMode(cursors.ASSET);
-      mode.asset = key;
-      break;
     case 'texture':
       mode.fill = false;
       sketch.setMode(cursors.TEXTURE);
@@ -1212,11 +1322,20 @@ sketch.setSpecificMode = function(name, key) {
         textures.images[key].loadPixels();
       }
       break;
-    case 'map':
-      sketch.setMode(cursors.MAP);
-      break;
     case 'wall':
       sketch.setMode(cursors.WALL);
+      mode.wall = key;
+      break;
+    case 'entity':
+      sketch.setMode(cursors.ENTITY);
+      mode.entity = key;
+      break;
+    case 'asset':
+      sketch.setMode(cursors.ASSET);
+      mode.asset = key;
+      break;
+    case 'map':
+      sketch.setMode(cursors.MAP);
       break;
     case 'erase':
       sketch.setMode(cursors.ERASE);
@@ -1263,6 +1382,9 @@ function loadTextures(data) {
   textures.width = 24;
   textures.height = 24;
 }
+function loadWalls(data) { 
+  walls = loadMedia(data, 'walls/');
+}
 function loadEntities(data) {
   entities = loadMedia(data, 'entities/');
 }
@@ -1299,14 +1421,14 @@ function draw_walls() {
     wall.draw();
   }
 
-  if (mode.wall !== null && mode.wall.mode === 1) {
-    mode.wall.drawToMouse(view.wx, view.wy);
+  if (mode.walling !== null && mode.walling.mode === 1) {
+    mode.walling.drawToMouse(view.wx, view.wy);
   }
 }
 
 function draw_entities() {
   sketch.push();
-    sketch.scale(map.entity.spacing);
+    sketch.scale(map.entity.scale);
     for (entity of map.entities) {
       entity.draw();
     }
@@ -1318,12 +1440,12 @@ function draw_hover() {
       mode.entity !== entities.NONE) return;
   
   var scale = view.zoom.MAX / view.zoom.val;
-  var ex = view.mx / map.entity.spacing;
-  var ey = view.my / map.entity.spacing;
+  var ex = view.mx / map.entity.scale;
+  var ey = view.my / map.entity.scale;
   for (entity of map.entities) {
     if (entity.contains(ex, ey)) {
       sketch.push();
-        sketch.scale(scale * map.entity.spacing);
+        sketch.scale(scale * map.entity.scale);
         sketch.translate(-entity.x +  entity.x / scale, -entity.y + entity.y / scale);
         entity.draw();
       sketch.pop();
@@ -1333,7 +1455,7 @@ function draw_hover() {
 
 function draw_assets() {
   sketch.push();
-    sketch.scale(map.asset.spacing);
+    sketch.scale(map.asset.scale);
     for (asset of map.assets) {
       asset.draw();
     }
@@ -1369,10 +1491,10 @@ function draw_cursor() {
     case cursors.ENTITY:
       if (mode.entity > 0 && mode.entity < entities.COUNT) {
         sketch.push();
-          sketch.scale(map.entity.spacing);
+          sketch.scale(map.entity.scale);
 
-          var ex = view.mx / map.entity.spacing;
-          var ey = view.my / map.entity.spacing;
+          var ex = view.mx / map.entity.scale;
+          var ey = view.my / map.entity.scale;
 
           sketch.ellipseMode(sketch.CENTER);
           sketch.noStroke();
@@ -1391,14 +1513,14 @@ function draw_cursor() {
 
     case cursors.ASSET:
       if (mode.asset > 0 && mode.asset < assets.COUNT) {
-        var ax = view.mx / view.asset.zoom.val / map.asset.spacing;
-        var ay = view.my / view.asset.zoom.val / map.asset.spacing;
+        var ax = view.mx / view.asset.zoom.val / map.asset.scale;
+        var ay = view.my / view.asset.zoom.val / map.asset.scale;
         sketch.imageMode(sketch.CENTER);
         sketch.push();
           sketch.translate(view.mx, view.my);
           sketch.rotate(sketch.radians(view.asset.rot.val));
           sketch.translate(-view.mx, -view.my);
-          sketch.scale(map.asset.spacing * view.asset.zoom.val);
+          sketch.scale(map.asset.scale * view.asset.zoom.val);
           sketch.image(assets.images[mode.asset], ax, ay);
         sketch.pop();
       } 
@@ -1423,7 +1545,7 @@ function draw_cursor() {
       sketch.ellipseMode(sketch.CENTER);
       sketch.noFill();
       sketch.stroke(0);
-      sketch.strokeWeight(2/view.zoom.val);
+      sketch.strokeWeight(2 / view.zoom.val);
       sketch.ellipse(view.mx, view.my, radius, radius);
       break;
   }
@@ -1434,8 +1556,8 @@ function draw_cursor() {
 function draw_cursor_image() {
   sketch.imageMode(sketch.CORNER);
   sketch.push();
-    sketch.scale(map.cursor.spacing / view.zoom.val);
-    sketch.image(cursors.images[mode.cursor], view.mx * view.zoom.val / map.cursor.spacing, view.my * view.zoom.val / map.cursor.spacing);
+    sketch.scale(map.cursor.scale / view.zoom.val);
+    sketch.image(cursors.images[mode.cursor], view.mx * view.zoom.val / map.cursor.scale, view.my * view.zoom.val / map.cursor.scale);
   sketch.pop();
 }
 

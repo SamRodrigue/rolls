@@ -77,18 +77,7 @@ function user_data(data) {
   user = data;
 
   if (user.role === 'admin') {
-    // Load asset modal and show button
-    $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
-      $.each(data, function(key, val) {
-        $('#asset-containers').append(`
-  <div class="asset-container col-3 text-center" onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">
-    <img class="row mx-auto" src="` + MEDIA_MAPS + `assets/` + val[2] + `" />
-    <span class="mx-auto">` + val[1] + `</span>
-  </div>`);
-      });
-    });
-
-      // Load textures
+    // Load textures
     $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
       $.each(data, function(key, val) {
         if (key === 'NONE') val[1] = "Erase";
@@ -97,6 +86,28 @@ function user_data(data) {
   <button onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">Texture: ` + val[1] + `</button>
   <button onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">Fill: ` + val[1] + `</button>
 </div>`);
+      });
+    });
+
+    // Load walls
+    $.getJSON(MEDIA_MAPS + 'walls/walls.json', function(data) {
+      $.each(data, function(key, val) {
+        $('#wall-containers').append(`
+  <div class="wall-container col-3 text-center" onclick="myp5.setSpecificMode('wall', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+    <img class="row mx-auto" src="` + MEDIA_MAPS + `walls/` + val[2] + `" />
+    <span class="mx-auto">` + val[1] + `</span>
+  </div>`);
+      });
+    });
+
+    // Load assets
+    $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
+      $.each(data, function(key, val) {
+        $('#asset-containers').append(`
+  <div class="asset-container col-3 text-center" onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">
+    <img class="row mx-auto" src="` + MEDIA_MAPS + `assets/` + val[2] + `" />
+    <span class="mx-auto">` + val[1] + `</span>
+  </div>`);
       });
     });
 
@@ -116,9 +127,9 @@ function user_data(data) {
   });
 
   // Load common tools
-  [['map', 'Map Mode'], ['wall', 'Wall Mode'], ['erase', 'Erase Mode']].forEach(function(data) {
-    $('#tools-modal .modal-body').append(`
-<div class="">
+  [['map', 'Map Mode'], ['erase', 'Erase Mode']].forEach(function(data) {
+    $('#tool-containers').append(`
+<div class="tool-container">
   <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
 </div>`);
   });

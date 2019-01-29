@@ -107,6 +107,15 @@ a {
   margin-bottom: 0.1em;
 }
 
+.wall-container {
+  cursor: pointer;
+}
+
+.wall-container img {
+  height: 16px;
+  width: 64px;
+}
+
 .entity-container {
   cursor: pointer;
 }
@@ -115,7 +124,6 @@ a {
   height: 64px;
   width: 64px;
 }
-
 
 .asset-container {
   cursor: pointer;
