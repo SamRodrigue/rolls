@@ -11,6 +11,7 @@ body {
   image-rendering: -o-crisp-edges;
   image-rendering: -webkit-optimize-contrast;
   -ms-interpolation-mode: nearest-neighbor;
+  overflow-y: hidden;
 }
 
 :not(body) {
@@ -66,6 +67,7 @@ a {
   background-color: transparent;
   border: double 8px grey;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 #map {
@@ -83,6 +85,18 @@ a {
   background-color: transparent;
   border: double 8px grey;
   height: 100px;
+}
+
+#log-resize {
+  background-color: grey;
+  height: 4px;
+}
+
+#log-resize .log-resizer {
+  z-index: 1;
+  position: relative;
+  top: -5px;
+  cursor: pointer;
 }
 
 /* #log-container:after {

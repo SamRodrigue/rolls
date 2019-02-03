@@ -917,9 +917,10 @@ sketch.draw = function () {
 };
 
 sketch.resize = function() {
-  view.width = $('#map').outerWidth() - 44; // Remove padding and boarder
+  view.width = $('#map').width(); // Remove padding and boarder
   view.height = $(window).height() - 160; // Todo: make more dynamic
   $('#map').height(view.height);
+  console.log('height ' + view.height + ' width ' + view.width);
   sketch.resizeCanvas(view.width, view.height);
 
   var zx = view.width / map.width;
@@ -1176,13 +1177,13 @@ sketch.mouseWheel = function(event) {
     case cursors.MAP:
     case cursors.WALL:
     case cursors.ERASE:
-      view.zoom.set(view.zoom.val - 0.1 * event.delta);
+      view.zoom.set(view.zoom.val - 0.2 * Math.sign(event.delta));
       break;
     case cursors.ASSET:
-      view.asset.zoom.set(view.asset.zoom.val - 0.05 * event.delta);
+      view.asset.zoom.set(view.asset.zoom.val - 0.1 * Math.sign(event.delta));
       break;
     case cursors.TEXTURE:
-      view.brush.set(view.brush.val - 0.5 * event.delta);
+      view.brush.set(view.brush.val - Math.sign(event.delta));
       break;
   }
   

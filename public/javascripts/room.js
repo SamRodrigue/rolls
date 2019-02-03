@@ -438,7 +438,7 @@ function room_data(data) {
       }
     }
   }
-  $('#dice').css('height', $('#map').outerHeight() - $('#log-container').outerHeight());
+  window_resize();
 
   Object.keys(dice_count).forEach(function(dice_type) {
     $('#' + dice_type + '-count').html(dice_count[dice_type]);
@@ -454,7 +454,7 @@ function room_data(data) {
 function create_user_dice(a_user, time) {
   var a_color = colorString(a_user.name);
   var a_dice = `
-<div id="` + a_user.id + `-dice" class="user-area col-12 m-1 border border-dark rounded mx-auto" data-user-id="` + a_user.id + `" data-updated="` + a_user.updated + `">
+<div id="` + a_user.id + `-dice" class="user-area col-12 mx-1 border border-dark rounded" data-user-id="` + a_user.id + `" data-updated="` + a_user.updated + `">
 <div class="row user-status-bar bg-light">
   <div class="row user-name col-12 p-0 m-0 border border-success text-center">`;
     if (user.name === a_user.name) {
@@ -465,7 +465,7 @@ function create_user_dice(a_user, time) {
       <button class="btn btn-danger col-4 p-0" type="button" onclick="counter(-1)"><span>-</span></button>
     </div>
     <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>
-    <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')"><span>Leave</span></button>`;
+    <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')"><span>Exit</span></button>`;
     } else if (user.role === 'admin') {
       a_dice += `
     <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
@@ -530,20 +530,27 @@ function room_log(data) {
 }
 
 function window_resize() {
-  var ww = $(window).outerWidth();
 
   // Resize map
   myp5.resize();
 
-  $('#dice').css('height', $('#map').outerHeight() - $('#log-container').outerHeight());
+  $('#dice').css('height', $('#map').outerHeight() - $('#log-container').outerHeight() - $('#log-resize').outerHeight());
 
-  if (ww >= 768) {
+  if ($(window).outerWidth() >= 768) {
     $('.toggle').hide();
     toggle_dice(null);
   } else {
     $('.toggle').show();
     toggle_dice(show_dice);
   }
+}
+
+function log_resize(data) {
+  var log_height = $('#log-container').outerHeight() + data * 50;
+  var min_height = 50;
+  var max_height = $('#map').outerHeight() * 0.75;
+  $('#log-container').css('height', Math.min(Math.max(log_height, min_height), max_height));
+  window_resize();
 }
 
 // Currently not used

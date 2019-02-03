@@ -22,6 +22,15 @@ block content
       .row.mt-2
         #dice.col-12.content
           .loader
+        #log-resize.col-12
+          #log-resize-up.log-resizer.float-left(onClick="log_resize(1)")
+            span.oi.float-left.ml-3(data-glyph="caret-top")
+            span.oi.float-left(data-glyph="caret-top")
+            span.oi.float-left(data-glyph="caret-top")
+          #log-resize-down.log-resizer.float-right(onClick="log_resize(-1)")
+            span.oi.float-right.mr-3(data-glyph="caret-bottom")
+            span.oi.float-right(data-glyph="caret-bottom")
+            span.oi.float-right(data-glyph="caret-bottom")
         #log-container.col-12.pt-1.pb-1
           #log.col-12.border.border-secondary.bg-light.content
   #map-content.content(style="display: none;")
