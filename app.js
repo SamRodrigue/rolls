@@ -253,7 +253,7 @@ app.io.on('connect', (socket) => {
       socket.leaveAll();
       console.log('a user joined index');
       socket.join('index');
-      
+
       // Send rooms list
       socket.emit('update-rooms', app.func.rooms_array(app.rooms));  
     } else {
@@ -270,7 +270,7 @@ app.io.on('connect', (socket) => {
           console.log('a user joined ' + data);
           socket.join(data);
           user_joined = true;
-          
+
           // // Disable user timeout
           // clearTimeout(user.timeout);
 

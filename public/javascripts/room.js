@@ -19,7 +19,7 @@ var dice_overlay = `
 </button>
 </div>`;
 var dice_color = {
-  d4: '#3366ff', d6: '#ffff00', d8: '#008000', 
+  d4: '#3366ff', d6: '#ffff00', d8: '#008000',
   d10: '#ff0000', d12: '#ff9900', d20: '#993366'
 };
 
@@ -127,7 +127,7 @@ function user_data(data) {
   });
 
   // Load common tools
-  [['map', 'Map Mode'], ['erase', 'Erase Mode']].forEach(function(data) {
+  [['map', 'Map Mode'], ['move', 'Move Mode'], ['erase', 'Erase Mode']].forEach(function(data) {
     $('#tool-containers').append(`
 <div class="tool-container">
   <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
@@ -214,9 +214,9 @@ function send_map() {
     return;
   }
   console.log('sending map');
-  socket.emit('update-map', { 
+  socket.emit('update-map', {
     room_id: room_id,
-    map: myp5.save() 
+    map: myp5.save()
   }); refresh_socket();
 
   myp5.reset_update();
@@ -347,7 +347,7 @@ function counter(counter, name) {
 function preset(load, set) { // Save = 0, Load = 1
   if (load < 0 || load > 1) return;
   if (set < 0 || set > 1) return;
-  
+
   socket.emit('preset', { room_id: room_id, type: load, preset: set }); refresh_socket();
 }
 
@@ -357,7 +357,7 @@ function hashString(str) {
   while(i) {
     hash = (hash * 33) ^ str.charCodeAt(--i);
   }
-  
+
   return hash >>> 0;
 }
 
@@ -417,11 +417,11 @@ function room_data(data) {
       console.log('updating user dice ' + a_user.name + ' ' + $(a_user_dice_id).data('updated') + ':' + a_user.updated);
       $(a_user_dice_id).remove();
     }
-    
+
     if (changed) {
       console.log('update ' + a_user.name);
       var a_dice = create_user_dice(a_user, data.time);
-      
+
       if (user.name === a_user.name) {
         $('#dice').prepend(a_dice);
         // Update die count
@@ -534,6 +534,8 @@ function window_resize() {
   // Resize map
   myp5.resize();
 
+  log_resize(0);
+
   $('#dice').css('height', $('#map').outerHeight() - $('#log-container').outerHeight() - $('#log-resize').outerHeight());
 
   if ($(window).outerWidth() >= 768) {
@@ -550,7 +552,8 @@ function log_resize(data) {
   var min_height = 50;
   var max_height = $('#map').outerHeight() * 0.75;
   $('#log-container').css('height', Math.min(Math.max(log_height, min_height), max_height));
-  window_resize();
+
+  if (data !== 0) window_resize();
 }
 
 // Currently not used
