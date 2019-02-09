@@ -130,6 +130,25 @@ a {
   width: 64px;
 }
 
+.texture-container {
+  cursor: pointer;
+}
+
+.texture-container img {
+  border-radius: 32px;
+  height: 64px;
+  width: 64px;
+}
+
+.fill-container {
+  cursor: pointer;
+}
+
+.fill-container img {
+  height: 64px;
+  width: 64px;
+}
+
 .entity-container {
   cursor: pointer;
 }

@@ -146,14 +146,20 @@ block content
           h2 Tools
           button.close(data-dismiss="modal") &times;
         .modal-body
-          #tools-modal-map.row.m-1(style="display: none;")
+          #tool-containers.row.mx-auto
+          #tools-modal-map.row.border-top.mt-1(style="display: none;")
+            h5.col-12 Load/Save Map
             input#map-data-input.col-6(type="file")
             button.btn.btn-primary.col-3(onClick="load_map()")
               span Load
             button.btn.btn-success.col-3(onClick="save_map()")
               span Save
-          #tool-containers.row
-          #wall-containers.row
+          #wall-containers.row.border-top.mt-1(style="display: none;")
+            h5.col-12 Walls
+          #texture-containers.row.border-top.mt-1(style="display: none;")
+            h5.col-12 Texture
+          #fill-containers.row.border-top.mt-1(style="display: none;")
+            h5.col-12 Fill
         .modal-footer
           button.btn.btn-dark(data-dismiss="modal")
             span Close
@@ -168,7 +174,7 @@ block content
           #entity-containers.row
 
         .modal-footer
-          button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_entities()")
+          //button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_entities()")
             span Clear
           button.btn.btn-dark(data-dismiss="modal")
             span Close
@@ -183,7 +189,7 @@ block content
           #asset-containers.row
 
         .modal-footer
-          button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_assets()")
+          //button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_assets()")
             span Clear
           button.btn.btn-dark(data-dismiss="modal")
             span Close

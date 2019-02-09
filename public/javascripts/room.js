@@ -80,14 +80,20 @@ function user_data(data) {
     // Load textures
     $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
       $.each(data, function(key, val) {
-        if (key === 'NONE') val[1] = "Erase";
-        $('#tools-modal .modal-body').append(`
-<div class="">
-  <button onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">Texture: ` + val[1] + `</button>
-  <button onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">Fill: ` + val[1] + `</button>
-</div>`);
+        $('#texture-containers').append(`
+          <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+            <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
+            <span class="mx-auto">` + val[1] + `</span>
+          </div>`);
+        $('#fill-containers').append(`
+          <div class="fill-container col-3 text-center" onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+            <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
+            <span class="mx-auto">` + val[1] + `</span>
+          </div>`);
       });
     });
+    $('#texture-containers').show();
+    $('#fill-containers').show();
 
     // Load walls
     $.getJSON(MEDIA_MAPS + 'walls/walls.json', function(data) {
@@ -99,6 +105,7 @@ function user_data(data) {
   </div>`);
       });
     });
+    $('#wall-containers').show();
 
     // Load assets
     $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
@@ -202,7 +209,7 @@ function load_map() {
         assets: true,
         texture: true,
       };
-      myp5.load(newMapData);
+      myp5.load(newMapData, false);
     };
     fr.readAsText(file);
   }

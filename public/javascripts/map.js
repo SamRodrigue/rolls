@@ -62,7 +62,7 @@ var map = {
     height: null, // to be calculated
     val: [[]],
     image: {},
-    scale: 0.5
+    scale: 0.25
   },
   wall: {
     spacing: 2.5,
@@ -89,6 +89,7 @@ var view = {
   height: 480,
   x: 0,
   y: 0,
+  grid: true,
   zoom: {
     val: 10,
     MIN: 0.5,
@@ -232,7 +233,52 @@ var mode = {
     move: function() { // Press
       var found = false;
 
+      // Move Entity
+      var ex = view.mx / map.entity.scale;
+      var ey = view.my / map.entity.scale;
+
+      for (var i = map.entities.length - 1; i >= 0; --i) {
+        if (map.entities[i].contains(ex, ey)) {
+          if (user.role === 'admin' ||
+              (user.role === 'user' && user.name === map.entities[i].user.name)) {
+            update.set('entities', true);
+            var oldEntity = map.entities.splice(i, 1)[0];
+            mode.entity = oldEntity.type;
+            mode.moving.val = true;
+            mode.moving.user = oldEntity.user;
+
+            sketch.setMode(cursors.ENTITY);
+
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (found) return;
+
       if (user.role === 'admin') {
+        // Move Asset
+        var ax = view.mx / map.asset.scale;
+        var ay = view.my / map.asset.scale;
+
+        for (var i = map.assets.length - 1; i >= 0; --i) {
+          if (map.assets[i].contains(ax, ay)) {
+            update.set('assets', true);
+            var oldAsset = map.assets.splice(i, 1)[0];
+            mode.asset = oldAsset.type;
+            view.asset.zoom.set(oldAsset.zoom);
+            view.asset.rot.set(oldAsset.rot);
+
+            sketch.setMode(cursors.ASSET);
+
+            found = true;
+            break;
+          }
+        }
+
+        if (found) return;
+
         // Move Wall
         var wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
         var wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
@@ -260,68 +306,13 @@ var mode = {
             break;
           }
         }
-
-        if (found) return;
-
-        // Move Asset
-        var ax = view.mx / map.asset.scale;
-        var ay = view.my / map.asset.scale;
-
-        for (var i = map.assets.length - 1; i >= 0; --i) {
-          if (map.assets[i].contains(ax, ay)) {
-            update.set('assets', true);
-            var oldAsset = map.assets.splice(i, 1)[0];
-            mode.asset = oldAsset.type;
-            view.asset.zoom.set(oldAsset.zoom);
-            view.asset.rot.set(oldAsset.rot);
-
-            sketch.setMode(cursors.ASSET);
-
-            found = true;
-            break;
-          }
-        }
-
-        if (found) return;
-      }
-
-      // Move Entity
-      var ex = view.mx / map.entity.scale;
-      var ey = view.my / map.entity.scale;
-
-      for (var i = map.entities.length - 1; i >= 0; --i) {
-        if (map.entities[i].contains(ex, ey)) {
-          if (user.role === 'admin' ||
-              (user.role === 'user' && user.name === map.entities[i].user.name)) {
-            update.set('entities', true);
-            var oldEntity = map.entities.splice(i, 1)[0];
-            mode.entity = oldEntity.type;
-            mode.moving.val = true;
-            mode.moving.user = oldEntity.user;
-
-            sketch.setMode(cursors.ENTITY);
-
-            found = true;
-            break;
-          }
-        }
       }
     },
 
     erase: function() { // Press
       var found = false;
-      for (var i = map.walls.length - 1; i >= 0; --i) {
-        if (map.walls[i].contains(view.mx, view.my)) {
-          update.set('walls', true);
 
-          map.walls.splice(i, 1);
-          found = true;
-          break;
-        }
-      }
-
-      if (found) return;
-
+      // Erase Entity
       var ex = view.mx / map.entity.scale;
       var ey = view.my / map.entity.scale;
       for (var i = map.entities.length - 1; i >= 0; --i) {
@@ -334,10 +325,10 @@ var mode = {
         }
       }
 
-      if (found) return;
-
+      // Erase Asset
       var ax = view.mx / map.asset.scale;
       var ay = view.my / map.asset.scale;
+
       for (var i = map.assets.length - 1; i >= 0; --i) {
         if (map.assets[i].contains(ax, ay)) {
           update.set('assets', true);
@@ -346,6 +337,24 @@ var mode = {
           break;
         }
       }
+
+      if (found) return;
+
+      // Erase Wall
+      var wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
+      var wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
+
+      for (var i = map.walls.length - 1; i >= 0; --i) {
+        if (map.walls[i].contains(wx, wy)) {
+          update.set('walls', true);
+
+          map.walls.splice(i, 1);
+          found = true;
+          break;
+        }
+      }
+
+      if (found) return;
     },
 
     texture: function() { // Press/Drag
@@ -377,8 +386,8 @@ var mode = {
                 map.texture.image.set(x, y, [0, 0, 0, 0]);
 
               } else {
-                var tx = x % textures.width;
-                var ty = y % textures.height;
+                var tx = x % textures.images[map.texture.val[x][y]].width;
+                var ty = y % textures.images[map.texture.val[x][y]].height;
                 var tex = textures.images[map.texture.val[x][y]].get(tx, ty);
                 map.texture.image.set(x, y, tex);
               }
@@ -408,8 +417,8 @@ var mode = {
               map.texture.image.set(x, y, [0, 0, 0, 0]);
 
             } else {
-              var tx = x % textures.width;
-              var ty = y % textures.height;
+              var tx = x % textures.images[map.texture.val[x][y]].width;
+              var ty = y % textures.images[map.texture.val[x][y]].height;
               var tex = textures.images[map.texture.val[x][y]].get(tx, ty);
               map.texture.image.set(x, y, tex);
             }
@@ -481,9 +490,7 @@ var cursors = {
 var textures = {
   COUNT:0,
   names: [],
-  images: [],
-  width: 24,
-  height: 24
+  images: []
 };
 
 var walls = {
@@ -983,7 +990,8 @@ sketch.resize = function() {
   view.zoom.set(view.zoom.val);
 }
 
-sketch.load = function(newData) {
+sketch.load = function(newData, updated) {
+  if (typeof updated === 'undefined') updated = true;
   if (typeof newData.texture === 'undefined' || newData.texture === null) {
     newData.texture = {
       width: map.texture.width,
@@ -1000,6 +1008,7 @@ sketch.load = function(newData) {
   };
 
   if (newData.update.walls) {
+    update.set('walls', true);
     map.walls = [];
     for (w of data.walls) {
       map.walls.push(new Wall(w));
@@ -1007,6 +1016,7 @@ sketch.load = function(newData) {
   }
 
   if (newData.update.entities) {
+    update.set('entities', true);
     map.entities = [];
     for (e of data.entities) {
       map.entities.push(new Entity(e));
@@ -1014,6 +1024,7 @@ sketch.load = function(newData) {
   }
 
   if (newData.update.assets) {
+    update.set('assets', true);
     map.assets = [];
     for (a of data.assets) {
       map.assets.push(new Asset(a));
@@ -1021,6 +1032,7 @@ sketch.load = function(newData) {
   }
 
   if (newData.update.texture) {
+    update.set('texture', true);
     if (data.texture.width !== map.texture.width || data.texture.height !== map.texture.height) {
       alert('Map will be resized from ' +
         data.texture.width + 'x' + data.texture.height +
@@ -1045,8 +1057,8 @@ sketch.load = function(newData) {
         if (curr === 0) {
           map.texture.image.set(i, j, [0, 0, 0, 0]);
         } else {
-          var ti = i % textures.width;
-          var tj = j % textures.height;
+          var ti = i % textures.images[curr].width;
+          var tj = j % textures.images[curr].height;
           var tex = textures.images[curr].get(ti, tj);
           map.texture.image.set(i, j, tex);
         }
@@ -1058,7 +1070,7 @@ sketch.load = function(newData) {
 
   // TODO: Ensure that this not overwrite user's changes
   // BUG: update can not be sent to server if another user sends update until another change is made
-  update.reset();
+  if (updated) update.reset();
 };
 
 sketch.save = function() {
@@ -1233,6 +1245,9 @@ sketch.keyPressed = function() {
 
   if (!onCanvas) return;
   switch (sketch.key) {
+    case 'o':
+      view.grid = !view.grid;
+      break;
     case 'm':
       sketch.setMode(cursors.MAP);
       break;
@@ -1434,9 +1449,6 @@ function loadCursors(data) {
 }
 function loadTextures(data) {
   textures = loadMedia(data, 'textures/');
-  // Hard code texture width and height
-  textures.width = 24;
-  textures.height = 24;
 }
 function loadWalls(data) {
   walls = loadMedia(data, 'walls/');
@@ -1449,7 +1461,7 @@ function loadAssets(data) {
 }
 
 function draw_map() {
-  draw_grid();
+  if (view.grid) draw_grid();
   draw_walls();
   draw_assets();
   draw_entities();
