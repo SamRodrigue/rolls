@@ -6,7 +6,7 @@ block scripts
 block content
   .top.text-center
     h1.text-light= title
-    p.text-light Welcome to #{title}
+    p.text-light A virtual tabletop for maps and dice.
     button#create-button.btn.btn-primary
       span Create Room
   
@@ -26,6 +26,10 @@ block content
               .loader
   
   .footer
+    .container
+      .row
+        span.text-light.mx-auto rolls@#{version}&nbsp;
+          a(href='https://github.com/SamRodrigue/rolls') github
 
   #create-modal.modal.fade
     .modal-dialog

@@ -1,9 +1,10 @@
 var express = require('express');
 var router = express.Router();
+var app_version = require('../package.json').version;
 
 /* GET home page. */
 router.get('/', (req, res, next) => {
-  res.render('index', { title: 'Rolls' });
+  res.render('index', { title: 'Rolls', version: app_version });
 });
 
 router.sockets = (io, socket, rooms, func) => {

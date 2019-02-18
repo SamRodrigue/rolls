@@ -139,7 +139,14 @@ var roll = (die) => {
     case 'd12': floor = 12; offset = 1; break; 
     case 'd20': floor = 20; offset = 1; break; 
   }
+
   die.value = Math.floor(Math.random() * floor) + offset;
+
+  // Special case where 0 on d10 is equal to 10
+  if (die.type === 'd10' && die.value === 0) {
+    die.value = 10;
+  }
+
   die.time = Date.now();
 };
 

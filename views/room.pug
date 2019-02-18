@@ -10,7 +10,7 @@ block content
       span#toggle-dice-status Map
 
   .top.text-center
-    h3.text-light Room: #{room.name}
+    h3.text-light #{room.name}
 
   #dice-content.content
     .container-fluid.mt-2.col-12.col-md-4.col-xl-3.float-md-right
@@ -36,7 +36,7 @@ block content
   #map-content.content(style="display: none;")
     .container-fluid.mt-2.col-12.col-md-8.col-xl-9.float-md-left
       .row.user-roll.col-12.mx-auto.input-group
-        button#update-button.btn.btn-secondary.col-3.col-sm-1(onClick="send_map()")
+        button#update-button.btn.btn-secondary.col-3.col-sm-1(onClick="send_map()", style="display: none;")
           span Up
         // TODO: Add hide button for admin
         //button.btn.btn-primary.col-3(onClick="hide_map()")

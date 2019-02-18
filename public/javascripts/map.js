@@ -15,11 +15,23 @@ var update = {
             this.assets ||
             this.texture);
   },
-  set: function(t, m) {
-    this[t] = m;
+  set: function(trgt, trgr) {
+    if (typeof trgr === 'undefined') trgr = true;
+    if (trgt === 'all') {
+      this.walls = true;
+      this.entities = true;
+      this.assets = true;
+      this.texture = true;
+    } else {
+      this[trgt] = true;
+    }
 
-    $('#update-button').removeClass('btn-secondary');
-    $('#update-button').addClass('btn-primary');
+    if (user.role === 'admin') {
+      $('#update-button').removeClass('btn-secondary');
+      $('#update-button').addClass('btn-primary');
+    } else { // Send update
+      if (trgr) send_client_map();
+    }
   },
   reset: function() {
     this.walls = false;
@@ -27,8 +39,10 @@ var update = {
     this.assets = false;
     this.texture = false;
 
-    $('#update-button').removeClass('btn-primary');
-    $('#update-button').addClass('btn-secondary');
+    if (user.roll === 'admin') {
+      $('#update-button').removeClass('btn-primary');
+      $('#update-button').addClass('btn-secondary');
+    }
   },
   data: function() {
     return {
@@ -168,7 +182,6 @@ var mode = {
 
         if (mode.walling.mode === 2) { // End of wall is at new location
           // Add new wall
-          update.set('walls', true);
           map.walls.push(mode.walling.copy());
 
           if (mode.ctrl) { // Start new wall
@@ -181,6 +194,8 @@ var mode = {
               sketch.setMode(cursors.MOVE);
             }
           }
+
+          update.set('walls');
 
         } else {
           mode.walling = null;
@@ -199,7 +214,6 @@ var mode = {
       var ey = view.my / map.entity.scale;
 
       var newEntity;
-      update.set('entities', true);
       if (mode.moving.val) { // Moving mode
         newEntity = new Entity(mode.entity, ex, ey, mode.moving.user);
         mode.moving.val = false;
@@ -213,6 +227,8 @@ var mode = {
       if (!mode.ctrl) {
         sketch.setMode(cursors.MOVE);
       }
+
+      update.set('entities');
     },
 
     asset: function() { // Press
@@ -221,13 +237,14 @@ var mode = {
       var ax = view.mx / map.asset.scale;
       var ay = view.my / map.asset.scale;
 
-      update.set('assets', true);
       map.assets.push(new Asset(mode.asset, ax, ay, view.asset.zoom.val, view.asset.rot.val));
       if (!mode.ctrl) {
         view.asset.zoom.reset();
         view.asset.rot.reset();
         sketch.setMode(cursors.MOVE);
       }
+
+      update.set('assets');
     },
 
     move: function() { // Press
@@ -241,7 +258,6 @@ var mode = {
         if (map.entities[i].contains(ex, ey)) {
           if (user.role === 'admin' ||
               (user.role === 'user' && user.name === map.entities[i].user.name)) {
-            update.set('entities', true);
             var oldEntity = map.entities.splice(i, 1)[0];
             mode.entity = oldEntity.type;
             mode.moving.val = true;
@@ -250,6 +266,8 @@ var mode = {
             sketch.setMode(cursors.ENTITY);
 
             found = true;
+            update.set('entities');
+
             break;
           }
         }
@@ -264,7 +282,6 @@ var mode = {
 
         for (var i = map.assets.length - 1; i >= 0; --i) {
           if (map.assets[i].contains(ax, ay)) {
-            update.set('assets', true);
             var oldAsset = map.assets.splice(i, 1)[0];
             mode.asset = oldAsset.type;
             view.asset.zoom.set(oldAsset.zoom);
@@ -273,6 +290,8 @@ var mode = {
             sketch.setMode(cursors.ASSET);
 
             found = true;
+            update.set('assets');
+
             break;
           }
         }
@@ -285,8 +304,6 @@ var mode = {
 
         for (var i = map.walls.length - 1; i >= 0; --i) {
           if (map.walls[i].contains(wx, wy)) {
-            update.set('walls', true);
-
             // Determin what end is closer
             var selected = map.walls.splice(i, 1)[0];
             mode.wall = selected.type;
@@ -303,6 +320,8 @@ var mode = {
             sketch.setMode(cursors.WALL, false);
 
             found = true;
+            update.set('walls');
+
             break;
           }
         }
@@ -317,10 +336,11 @@ var mode = {
       var ey = view.my / map.entity.scale;
       for (var i = map.entities.length - 1; i >= 0; --i) {
         if (map.entities[i].contains(ex, ey)) {
-          update.set('entities', true);
-
           map.entities.splice(i, 1);
+
           found = true;
+          update.set('entities');
+
           break;
         }
       }
@@ -331,9 +351,11 @@ var mode = {
 
       for (var i = map.assets.length - 1; i >= 0; --i) {
         if (map.assets[i].contains(ax, ay)) {
-          update.set('assets', true);
-
           map.assets.splice(i, 1);
+
+          found = true;
+          update.set('assets');
+
           break;
         }
       }
@@ -346,10 +368,11 @@ var mode = {
 
       for (var i = map.walls.length - 1; i >= 0; --i) {
         if (map.walls[i].contains(wx, wy)) {
-          update.set('walls', true);
-
           map.walls.splice(i, 1);
+
           found = true;
+          update.set('walls');
+
           break;
         }
       }
@@ -359,8 +382,6 @@ var mode = {
 
     texture: function() { // Press/Drag
       if (mode.texture < 0 || mode.texture >= textures.COUNT) return;
-
-      update.set('texture', true);
 
       // Update map texture
       map.texture.image.loadPixels();
@@ -427,6 +448,7 @@ var mode = {
       }
 
       map.texture.image.updatePixels();
+      update.set('texture');
     }
   },
 
@@ -461,10 +483,11 @@ var mode = {
         // Rotate asset if mouse is over
         for (var i = map.assets.length - 1; i >= 0; --i) {
           if (map.assets[i].contains(ax, ay)) {
-            update.set('assets', true);
             map.assets[i].rotate(45);
 
             //found = true;
+            update.set('assets');
+            
             break;
           }
         }
@@ -1008,7 +1031,7 @@ sketch.load = function(newData, updated) {
   };
 
   if (newData.update.walls) {
-    update.set('walls', true);
+    update.set('walls', false);
     map.walls = [];
     for (w of data.walls) {
       map.walls.push(new Wall(w));
@@ -1016,7 +1039,7 @@ sketch.load = function(newData, updated) {
   }
 
   if (newData.update.entities) {
-    update.set('entities', true);
+    update.set('entities', false);
     map.entities = [];
     for (e of data.entities) {
       map.entities.push(new Entity(e));
@@ -1024,7 +1047,7 @@ sketch.load = function(newData, updated) {
   }
 
   if (newData.update.assets) {
-    update.set('assets', true);
+    update.set('assets', false);
     map.assets = [];
     for (a of data.assets) {
       map.assets.push(new Asset(a));
@@ -1032,7 +1055,7 @@ sketch.load = function(newData, updated) {
   }
 
   if (newData.update.texture) {
-    update.set('texture', true);
+    update.set('texture', false);
     if (data.texture.width !== map.texture.width || data.texture.height !== map.texture.height) {
       alert('Map will be resized from ' +
         data.texture.width + 'x' + data.texture.height +
@@ -1073,7 +1096,10 @@ sketch.load = function(newData, updated) {
   if (updated) update.reset();
 };
 
-sketch.save = function() {
+sketch.save = function(all) {
+  if (typeof all === 'undefined') all = false;
+  if (all) update.set('all');
+
   data = {
     walls:    [],
     entities: [],

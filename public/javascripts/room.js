@@ -118,6 +118,7 @@ function user_data(data) {
       });
     });
 
+    $('#update-button').show();
     $('#assets-button').show();
     $('#tools-modal-map').show();
   }
@@ -169,7 +170,7 @@ function remove_user(data) {
 
 // Map
 function save_map() {
-  var data = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(myp5.save()));
+  var data = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(myp5.save(true)));
   var a = document.createElement('a');
   a.href = 'data:' + data;
   a.download = 'mapData.json';
@@ -399,6 +400,7 @@ function room_data(data) {
   var dice = '';
   var user_dice = '';
   var dice_count = { d4: 0, d6: 0, d8: 0, d10: 0, d12:0, d20:0 };
+  var dice_count_changed = false;
 
   // Get list of existing user areas
   var existing_users = [];
@@ -430,6 +432,7 @@ function room_data(data) {
       var a_dice = create_user_dice(a_user, data.time);
 
       if (user.name === a_user.name) {
+        dice_count_changed = true;
         $('#dice').prepend(a_dice);
         // Update die count
         for (var k = 0, len_k = a_user.dice.length; k < len_k; k++) {
@@ -447,9 +450,12 @@ function room_data(data) {
   }
   window_resize();
 
-  Object.keys(dice_count).forEach(function(dice_type) {
-    $('#' + dice_type + '-count').html(dice_count[dice_type]);
-  });
+  if (dice_count_changed) {
+    // Update dice count
+    Object.keys(dice_count).forEach(function(dice_type) {
+      $('#' + dice_type + '-count').html(dice_count[dice_type]);
+    });
+  }
 
   // Remove existing users that are not in room-data
   existing_users.forEach(function(e_id) {
@@ -508,9 +514,11 @@ function create_user_dice(a_user, time) {
     if (a_user.dice.length > 0) {
       for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
         var die = a_user.dice[j];
+        var die_value = die.value;
+        if (die.type === 'd10' && die.value === 10) die_value = 0;
         a_dice += `
     <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center mx-auto" style="height: 64px; ` + die_animation(die.type, (time - die.time), die_glow_time) + `" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `">
-      <span class="die-number">` + ((die.value > -1) ? die.value : '?') + `</span>
+      <span class="die-number">` + ((die_value > -1) ? die_value : '?') + `</span>
     </div>`;
       }
     } else {
