@@ -1,0 +1,7 @@
+{
+  "NONE":     [ 0, "Solid",    null           ],
+  "BRICK":    [ 1, "Brick",    "brick.png"    ],
+  "CONCRETE": [ 2, "Concrete", "concrete.png" ],
+  "PALISADE": [ 3, "Palisade", "palisade.png" ],
+  "WOOD":     [ 4, "Wood",     "wood.png"     ]
+}

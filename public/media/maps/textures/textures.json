@@ -1,0 +1,10 @@
+{
+  "NONE":  [ 0, "Erase",  null       ],
+  "GRASS": [ 1, "Grass", "grass.png" ],
+  "LAVA":  [ 2, "Lava",  "lava.png"  ],
+  "ROCK":  [ 3, "Rock",  "rock.png"  ],
+  "SAND":  [ 4, "Sand",  "sand.png"  ],
+  "STONE": [ 5, "Stone", "stone.png" ],
+  "WATER": [ 6, "Water", "water.png" ],
+  "WOOD":  [ 7, "Wood",  "wood.png"  ]
+}

@@ -1,0 +1,19 @@
+{
+  "AARAKOCRA":       [ 0,  "Aarakocra",       "aarakocra.png"       ],
+  "AASIMAR":         [ 1,  "Aasimar",         "aasimar.png"         ],
+  "DRAGON":          [ 2,  "Dragon",          "dragon.png"          ],
+  "DRAGONBORN":      [ 3,  "Dragonborn",      "dragonborn.png"      ],
+  "ELEMENTAL_FIRE":  [ 4,  "Elemental Fire",  "elemental-fire.png"  ],
+  "ELEMENTAL_WATER": [ 5,  "Elemental Water", "elemental-water.png" ],
+  "ELF":             [ 6,  "Elf",             "elf.png"             ],
+  "ELF_1":           [ 7,  "Elf 1",           "elf_1.png"           ],
+  "FIRBOLG":         [ 8,  "Firbolg",         "firbolg.png"         ],
+  "HALF_ELF":        [ 9,  "Half-Elf",        "half-elf.png"        ],
+  "KENKU":           [ 10, "Kenku",           "kenku.png"           ],
+  "PANTHER":         [ 11, "Panther",         "panther.png"         ],
+  "VAMPIRE":         [ 12, "Vampire",         "vampire.png"         ],
+  "ZOMBIE":          [ 13, "Zombie",          "zombie.png"          ],
+  "BLUE":            [ 14, "Blue",            "blue.png"            ],
+  "GREEN":           [ 15, "Green",           "green.png"           ],
+  "RED":             [ 16, "Red",             "red.png"             ]
+}
