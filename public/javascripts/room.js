@@ -217,17 +217,15 @@ function load_map() {
 }
 
 function send_map() {
-  if (user.role !== 'admin') {
-    send_client_map();
-    return;
-  }
+  if (user.role !== 'admin') return;
+
   console.log('sending map');
   socket.emit('update-map', {
     room_id: room_id,
     map: myp5.save()
   }); refresh_socket();
 
-  myp5.reset_update();
+  myp5.reset_update('all');
 }
 
 function map_data(data) {
@@ -235,19 +233,19 @@ function map_data(data) {
   myp5.load(data);
 }
 
-function send_client_map() {
-  console.log('sending client entities');
-  socket.emit('update-client-map', {
+function send_entities() {
+  console.log('sending entities');
+  socket.emit('update-entities-map', {
     room_id: room_id,
-    entities: myp5.client_save()
+    entities: myp5.entities_save()
   }); refresh_socket();
 
-  myp5.reset_update();
+  myp5.reset_update('entities');
 }
 
-function client_map_data(data) {
-  console.log('receiving client entities');
-  myp5.client_load(data);
+function entities_map_data(data) {
+  console.log('receiving entities');
+  myp5.entities_load(data);
 }
 
 // Dice
@@ -587,13 +585,13 @@ $(document).ready(function() {
     // Get map data
     get_map();
   });
-  socket.on('alert',           show_alert);
-  socket.on('user-data',       user_data);
-  socket.on('room-data',       room_data);
-  socket.on('map-data',        map_data);
-  socket.on('client-map-data', client_map_data);
-  socket.on('room-log',        room_log);
-  socket.on('disconnect',      function(data) {
+  socket.on('alert',             show_alert);
+  socket.on('user-data',         user_data);
+  socket.on('room-data',         room_data);
+  socket.on('map-data',          map_data);
+  socket.on('entities-map-data', entities_map_data);
+  socket.on('room-log',          room_log);
+  socket.on('disconnect',        function(data) {
       console.log('disconnected');
   });
 

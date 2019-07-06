@@ -98,7 +98,7 @@ router.sockets = (io, socket, rooms, func) => {
     }
   });
 
-  socket.on('update-client-map', (data) => {
+  socket.on('update-entities-map', (data) => {
     var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = func.find_user_socket(room, socket);
@@ -137,7 +137,7 @@ router.sockets = (io, socket, rooms, func) => {
         }
       };
 
-      socket.broadcast.to(data.room_id).emit('client-map-data', out);
+      socket.broadcast.to(data.room_id).emit('entities-map-data', out);
     }
   });
 

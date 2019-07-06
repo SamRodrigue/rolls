@@ -26,18 +26,23 @@ var update = {
       this[trgt] = true;
     }
 
-    if (user.role === 'admin') {
+    if (trgr && trgt === 'entities') send_entities();
+    else if (user.role === 'admin') {
       $('#update-button').removeClass('btn-secondary');
       $('#update-button').addClass('btn-primary');
-    } else { // Send update
-      if (trgr) send_client_map();
     }
   },
-  reset: function() {
-    this.walls = false;
-    this.entities = false;
-    this.assets = false;
-    this.texture = false;
+  reset: function(trgt) {
+    if (typeof trgt === 'undefined') trgt = all;
+
+    if (trgt === 'all') {
+      this.walls = false;
+      this.entities = false;
+      this.assets = false;
+      this.texture = false;
+    } else {
+      this[trgt] = false;
+    }
 
     if (user.roll === 'admin') {
       $('#update-button').removeClass('btn-primary');
@@ -1093,7 +1098,7 @@ sketch.load = function(newData, updated) {
 
   // TODO: Ensure that this not overwrite user's changes
   // BUG: update can not be sent to server if another user sends update until another change is made
-  if (updated) update.reset();
+  if (updated) update.reset('all');
 };
 
 sketch.save = function(all) {
@@ -1134,7 +1139,7 @@ sketch.save = function(all) {
 };
 
 // TODO: replace with per entity get/set
-sketch.client_load = function(newData) {
+sketch.entities_load = function(newData) {
   for (var i = map.entities.length - 1; i >= 0; --i) {
     if (newData.user.role === 'admin' ||
        (newData.user.role === 'user' && newData.user.name === map.entities[i].user.name)) {
@@ -1147,7 +1152,7 @@ sketch.client_load = function(newData) {
   }
 };
 
-sketch.client_save = function() {
+sketch.entities_save = function() {
   var out = [];
   for (e of map.entities) {
     if (user.role === 'admin' ||
@@ -1159,8 +1164,8 @@ sketch.client_save = function() {
   return out;
 };
 
-sketch.reset_update = function() {
-  update.reset();
+sketch.reset_update = function(target) {
+  update.reset(target);
 }
 
 sketch.mousePressed = function() {
