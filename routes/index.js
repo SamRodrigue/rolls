@@ -29,6 +29,12 @@ router.sockets = (io, socket, rooms, func) => {
       return;
     }
 
+    // Check that admin and user passwords are different
+    if (data.user_password && data.user_password === data.admin_password) {
+      socket.emit('alert', 'Error: Admin and user passwords cannot match');
+      return;
+    }
+
     // Check if room exists
     for (var [id, room] in rooms) {
       if (room.name == data.room_name) {
