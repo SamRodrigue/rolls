@@ -36,16 +36,15 @@ block content
   #map-content.content(style="display: none;")
     .container-fluid.mt-2.col-12.col-md-8.col-xl-9.float-md-left
       .row.user-roll.col-12.mx-auto.input-group
-        button#update-button.btn.btn-secondary.col-3.col-sm-1(onClick="send_map()", style="display: none;")
+        button#update-button.btn.btn-secondary.col-2(onClick="send_map()", style="display: none;")
           span Up
-        // TODO: Add hide button for admin
-        //button.btn.btn-primary.col-3(onClick="hide_map()")
-          span Hide
-        button#tools-button.btn.btn-primary.col-3.offset-sm-1(data-toggle="modal" data-target="#tools-modal")
+        button#tools-button.btn.btn-primary.col-2.offset-1(data-toggle="modal" data-target="#tools-modal")
           span Tools
-        button#entities-button.btn.btn-success.col-3.offset-sm-1(data-toggle="modal" data-target="#entities-modal")
+        button#layers-button.btn.btn-primary.col-2(style="display:none;" data-toggle="modal" data-target="#layers-modal")
+          span Layers
+        button#entities-button.btn.btn-success.col-2.offset-1(data-toggle="modal" data-target="#entities-modal")
           span Entities
-        button#assets-button.btn.btn-success.col-3(style="display: none;" data-toggle="modal" data-target="#assets-modal")
+        button#assets-button.btn.btn-success.col-2(style="display: none;" data-toggle="modal" data-target="#assets-modal")
           span Assets
       .row.mt-2
         #map.col-12
@@ -163,7 +162,44 @@ block content
         .modal-footer
           button.btn.btn-dark(data-dismiss="modal")
             span Close
-        
+
+  #layers-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h2 Map Layers
+          button.close(data-dismiss="modal") &times;
+        .modal-body
+          #layer-containers.row.mx-auto
+          #layers-modal-tools.row.border-top.mt-1
+            h5.col-12 Layers Tools
+            button.btn.btn-primary.col-3(data-toggle="modal" data-target="#new-layer-modal")
+              span New Layer
+            button.btn.btn-warning.col-3(onClick="alert('DELETE')")
+              span Delete Layer
+        .modal-footer
+          button.btn.btn-dark(data-dismiss="modal")
+            span Close
+
+  #new-layer-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h2 New Layer
+          button.close(data-dismiss="modal") &times;
+        .modal-body
+          #new-layer-layer.row.boarder-top.mt-1
+            h5.col-12 Load New Layer
+            input#layer-data-input.col-6(type="file")
+            button.btn.btn-success.col-3(onClick="alert('LOAD')")
+              span Load
+          #new-layer-layer.row.boarder-top.mt-1
+            h5.col-12 Configure New Layer
+            input#map-data-input.col-6(type="text")
+        .modal-footer
+          button.btn.btn-dark(data-dismiss="modal")
+            span Close
+
   #entities-modal.modal.fade
     .modal-dialog
       .modal-content

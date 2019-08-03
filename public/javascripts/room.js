@@ -119,6 +119,7 @@ function user_data(data) {
     });
 
     $('#update-button').show();
+    $('#layers-button').show();
     $('#assets-button').show();
     $('#tools-modal-map').show();
   }
