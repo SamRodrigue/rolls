@@ -57,9 +57,11 @@ router.sockets = (io, socket, rooms, func) => {
       dice: [],
       counter: 0,
       preset: [{
+        used: false,
         dice: [],
         counter: 0
       }, {
+        used: false,
         dice: [],
         counter: 0
       }],
@@ -125,9 +127,11 @@ router.sockets = (io, socket, rooms, func) => {
       dice: [],
       counter: 0,
       preset: [{
+        used: false,
         dice: [],
         counter: 0
       }, {
+        used: false,
         dice: [],
         counter: 0
       }],

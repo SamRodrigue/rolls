@@ -118,19 +118,25 @@ block content
           hr.row
           #preset-containers.row
             .preset-container.mx-auto
-              .preset1.text-center
+              #preset1.text-center
                 h5 Preset 1
-                button.btn.btn-success.mr-1(type="button" onClick="preset(0, 0)")
-                  span Save
-                button.btn.btn-primary.ml-1(type="button" onClick="preset(1, 0)")
-                  span Load
+                #preset1-container.mx-auto.mb-1.row
+                  h6.col-12 [Empty]
+                #preset1-buttons
+                  button.btn.btn-success.mr-1(type="button" onClick="preset(0, 0)")
+                    span Save
+                  button.btn.btn-primary.ml-1(type="button" onClick="preset(1, 0)")
+                    span Load
             .preset-container.mx-auto
-              .preset2.text-center
+              #preset2.text-center
                 h5 Preset 2
-                button.btn.btn-success.mr-1(type="button" onClick="preset(0, 1)")
-                  span Save
-                button.btn.btn-primary.ml-1(type="button" onClick="preset(1, 1)")
-                  span Load
+                #preset2-container.mx-auto.mb-1.row
+                  h6.col-12 [Empty]
+                #preset2-buttons
+                  button.btn.btn-success.mr-1.align-bottom(type="button" onClick="preset(0, 1)")
+                    span Save
+                  button.btn.btn-primary.ml-1.align-bottom(type="button" onClick="preset(1, 1)")
+                    span Load
         .modal-footer
           button#clear-roll.btn.btn-warning.mr-auto(onClick="clear_dice()")
             span Clear

@@ -35,7 +35,7 @@ router.sockets = (io, socket, rooms, func) => {
     user.socket = socket;
 
     // Send room data
-    socket.emit('user-data', { name: user.name, role: user.role, id: user.id });
+    socket.emit('user-data', { name: user.name, role: user.role, id: user.id, preset: user.preset });
     socket.broadcast.to(data).emit('room-data', func.room_array(room));
   });
 
@@ -295,6 +295,7 @@ router.sockets = (io, socket, rooms, func) => {
 
     switch (data.type) {
       case PRESET.SAVE: // Save
+        user.preset[data.preset].used = true;
         user.preset[data.preset].dice = [];
         user.dice.forEach((die) => {
           user.preset[data.preset].dice.push({
@@ -304,6 +305,7 @@ router.sockets = (io, socket, rooms, func) => {
           });
         });
         user.preset[data.preset].counter = user.counter;
+        socket.emit('user-data', { name: user.name, role: user.role, id: user.id, preset: user.preset });
         break;
       case PRESET.LOAD: // Load
         user.dice = [];

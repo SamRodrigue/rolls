@@ -177,12 +177,19 @@ a {
   background-color: transparent;
   border: 0;
 }
+
 .d4 {  background-image: url('/media/rolls/dice/d4.png'); }
 .d6 {  background-image: url('/media/rolls/dice/d6.png'); }
 .d8 {  background-image: url('/media/rolls/dice/d8.png'); }
 .d10 { background-image: url('/media/rolls/dice/d10.png'); }
 .d12 { background-image: url('/media/rolls/dice/d12.png'); }
 .d20 { background-image: url('/media/rolls/dice/d20.png'); }
+
+.d4.small-die, .d6.small-die, .d8.small-die, .d10.small-die, .d12.small-die, .d20.small-die {
+  height: 20px;
+  width: 20px;
+  margin: 2px;
+}
 
 @keyframes d4-glow {  
   0% { 

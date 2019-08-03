@@ -2,7 +2,20 @@
 const MEDIA_MAPS = '/media/maps/';
 var socket;
 var room_id = window.location.href.substr(window.location.href.lastIndexOf('/') + 1);
-var user = { name: '', role: 'user', id: ''};
+var user = {
+  name: '',
+  role: 'user',
+  id: '',
+  preset: [{
+    used: false,
+    dice: [],
+    counter: 0
+  }, {
+    used: false,
+    dice: [],
+    counter: 0
+  }]
+};
 var log_container_height = 90;
 var show_dice = true;
 var dice_type = 'd4';
@@ -141,6 +154,32 @@ function user_data(data) {
   <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
 </div>`);
   });
+
+  // Load presets
+  for (var i = 0; i < 2; ++i) {
+    var preset = user.preset[i];
+    if (preset.used) {
+      var preset_content = '';
+
+      if (preset.counter !== 0) {
+        preset_content += `<h6 class="col-12"><span class="bg-`;
+        preset_content += (preset.counter > 0) ? 'success' : 'danger';
+        preset_content += `" style="border-radius: 5%;">Counter: ` + preset.counter + `</span></h6>`;
+      }
+
+      preset_content += `
+<div class="preset-dice d-flex flex-wrap justify-content-center mx-auto">`;
+
+      user.preset[i].dice.forEach((die) => {
+        preset_content += `
+<div class="` + die.type + ` small-die"></div>`;
+      });
+
+      preset_content += `</div>`;
+
+      $('#preset' + (i + 1) + '-container').html(preset_content);
+    }
+  }
 
   socket.emit('get-room', { room_id: room_id }); refresh_socket();
 }
