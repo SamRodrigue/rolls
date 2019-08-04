@@ -520,8 +520,8 @@ function room_data(data) {
       // Update color wheel
       var user_color = get_user_color(user);
       var color_value = (user_color[0] << 16) + (user_color[1] << 8) + user_color[2];
-      var color_string = '#' + color_value.toString(16);
-      $('input#color-wheel').val(color_string);
+      var color_string = color_value.toString(16).padStart(6, '0');
+      $('input#color-wheel').val('#' + color_string);
     }
   }
   window_resize();
