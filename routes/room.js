@@ -285,6 +285,7 @@ router.sockets = (io, socket, rooms, func) => {
     var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = func.find_user_socket(room, socket);
+    if (!user) return;
 
     if (data.type === PRESET.SAVE) console.log('user ' + user.name + ' is saving a preset');
     else if (data.type === PRESET.LOAD) console.log('user ' + user.name + ' is loading a preset');
@@ -321,6 +322,24 @@ router.sockets = (io, socket, rooms, func) => {
         io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
         break;
     }
+  });
+
+  socket.on('change-color', (data) => {
+    if (data.color.length !== 3) {
+      console.log('ERROR: a user is attempting to change to an invalid color');
+      return;
+    }
+
+    var room = func.find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = func.find_user_socket(room, socket);
+    if (!user) return;
+
+    console.log('user ' + user.name + ' is changing color');
+
+    user.color = data.color;
+    func.set_updated(user);
+    io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
   });
 };
 

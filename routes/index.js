@@ -54,6 +54,7 @@ router.sockets = (io, socket, rooms, func) => {
       id: func.create_id(),
       name: data.user_name,
       role: 'admin',
+      color: [0, 0, 0],
       dice: [],
       counter: 0,
       preset: [{
@@ -67,6 +68,8 @@ router.sockets = (io, socket, rooms, func) => {
       }],
       updated: func.get_updated()
     };
+
+    user.color = func.color_from_string(user.name);
     
     var room = {
       name: data.room_name,
@@ -124,6 +127,7 @@ router.sockets = (io, socket, rooms, func) => {
       id: func.create_id('user', room.users),
       name: data.user_name,
       role: '',
+      color: [0, 0, 0],
       dice: [],
       counter: 0,
       preset: [{
@@ -137,6 +141,8 @@ router.sockets = (io, socket, rooms, func) => {
       }],
       updated: func.get_updated()
     };
+
+    user.color = func.color_from_string(user.name);
 
     // Check password
     if (data.password === room.password.admin) {

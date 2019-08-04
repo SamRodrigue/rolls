@@ -1,5 +1,6 @@
 var rooms_array = (rooms) => {
   var data = [];
+
   rooms.forEach((room, id) => {
     data.push([ id, 
     {
@@ -8,6 +9,7 @@ var rooms_array = (rooms) => {
       locked: room.locked
     }]);
   });
+
   return data;
 };
 
@@ -17,15 +19,18 @@ var room_array = (room) => {
     users: [],
     time: Date.now()
   };
+
   room.users.forEach((user) => {
     data.users.push({
       id: user.id,
       name: user.name,
+      color: user.color,
       dice: user.dice,
       counter: user.counter,
       updated: user.updated
     });
   });
+
   return data;
 };
 
@@ -120,8 +125,7 @@ var create_id = (type, arr) => {
 };
 
 var get_updated = () => {
-  var hash = Date.now().toString(36);
-  return hash;
+  return Date.now().toString(36);
 };
 
 var set_updated = (user) => {
@@ -180,6 +184,7 @@ var dice_status = (dice, counter) => {
   if (counter !== 0) {
     out += ' (' + (total.get('total') + counter) + ')';
   }
+
   return out;
 };
 
@@ -191,6 +196,7 @@ var find_room = (rooms, id, socket) => {
     socket.emit('alert', { kick: true, alert: 'Error: Unknown room' });
     return null;
   }
+
   return rooms.get(id);
 };
 
@@ -202,6 +208,7 @@ var find_user_socket = (room, socket) => {
       return true;
     }
   });
+
   return user;
 };
 
@@ -215,8 +222,48 @@ var find_user_name = (room, name) => {
       return true;
     }
   });
+
   return [target_user, target_user_index];
 };
+
+// User Colors
+var color_from_string = (str) => {
+  var hash = 5381;
+  var i = str.length;
+
+  while(i) {
+    hash = (hash * 33) ^ str.charCodeAt(--i);
+  }
+  hash = hash >>> 0;
+
+  var out = [
+    (((hash & 0xFF000000) >> 24) % 8) * 32,
+    (((hash & 0x00FF0000) >> 16) % 8) * 32,
+    (((hash & 0x0000FF00) >> 8) % 8) * 32
+  ];
+
+  return out;
+}
+
+var color_to_array = (color_string) => {
+  if (!color_string) {
+    return;
+  }
+
+  var out = [0, 0, 0];
+
+  var regex = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/;
+  if (regex.test(color_string)) {
+    var out_string = color_string.match(regex);
+    out = [
+      parseInt(out_string[1]),
+      parseInt(out_string[2]),
+      parseInt(out_string[3])
+    ];
+  }
+
+  return out;
+}
 
 module.exports = {
   rooms_array: rooms_array,
@@ -230,5 +277,7 @@ module.exports = {
   dice_status: dice_status,
   find_room: find_room,
   find_user_socket: find_user_socket,
-  find_user_name: find_user_name
+  find_user_name: find_user_name,
+  color_from_string: color_from_string,
+  color_to_array: color_to_array
 };

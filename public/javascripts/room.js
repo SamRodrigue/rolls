@@ -16,6 +16,7 @@ var user = {
     counter: 0
   }]
 };
+var users_color = {};
 var log_container_height = 90;
 var show_dice = true;
 var dice_type = 'd4';
@@ -32,8 +33,8 @@ var dice_overlay = `
 </button>
 </div>`;
 var dice_color = {
-  d4: '#3366ff', d6: '#ffff00', d8: '#008000',
-  d10: '#ff0000', d12: '#ff9900', d20: '#993366'
+  d4: '#3366FF', d6: '#FFFF00', d8: '#008000',
+  d10: '#FF0000', d12: '#FF9900', d20: '#993366'
 };
 
 function show_alert(data) {
@@ -223,21 +224,18 @@ function load_map() {
   var input, file, fr;
 
   if (typeof window.FileReader !== 'function') {
-    alert("The file API isn't supported on this browser yet.");
+    console.log("The file API is not supported on the browser");
     return;
   }
 
   input = document.getElementById('map-data-input');
   if (!input) {
-    alert("Um, couldn't find the map data element.");
-  }
-  else if (!input.files) {
-    alert("This browser doesn't seem to support the `files` property of file inputs.");
-  }
-  else if (!input.files[0]) {
-    alert("Please select a file before clicking 'Load'");
-  }
-  else {
+    console.log("Culdn't find the map data element.");
+  } else if (!input.files) {
+    console.log("files property not supported");
+  } else if (!input.files[0]) {
+    show_alert({ kick: false, alert: "Please select a file before clicking 'Load'" });
+  } else {
     file = input.files[0];
     fr = new FileReader();
     fr.onload = function(e) {
@@ -396,18 +394,40 @@ function preset(load, set) { // Save = 0, Load = 1
   socket.emit('preset', { room_id: room_id, type: load, preset: set }); refresh_socket();
 }
 
-function hashString(str) {
-  var hash = 5381,
-      i    = str.length;
+function set_user_color(color_string) {
+  // Confirm input is a color
+  var s = new Option().style;
+  s.color = color_string;
+  if (s.color !== '') {
+    users_color[user.id] = color_to_array(s.color);
+
+    console.log('changing user color ' + users_color[user.id]);
+    socket.emit('change-color', { room_id: room_id, color: users_color[user.id] }); refresh_socket();
+  }
+}
+
+function get_user_color(a_user) {
+  if (users_color.hasOwnProperty(a_user.id)) {
+    if (typeof users_color[a_user.id] !== 'undefined') {
+      return users_color[a_user.id];
+    }
+
+    // Delete undefined color
+    delete users_color[a_user.id];
+  }
+
+  // Colors should be provided by the server
+  return color_from_string(a_user.name);
+}
+
+function color_from_string(str) {
+  var hash = 5381;
+  var i = str.length;
+
   while(i) {
     hash = (hash * 33) ^ str.charCodeAt(--i);
   }
-
-  return hash >>> 0;
-}
-
-function colorString(str) {
-  var hash = hashString(str);
+  hash = hash >>> 0;
 
   var out = [
     (((hash & 0xFF000000) >> 24) % 8) * 32,
@@ -418,16 +438,25 @@ function colorString(str) {
   return out;
 }
 
-/* function colorStringHex(str) {
-  var rgb = colorString(str);
-  var hex = rgb[0] << 16
-          | rgb[1] << 8
-          | rgb[2];
-  var out = '#' + hex.toString(16).padStart(6, '0');
-  console.log(out);
+function color_to_array(color_string) {
+  if (!color_string) {
+    return;
+  }
+
+  var out = [0, 0, 0];
+
+  var regex = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/;
+  if (regex.test(color_string)) {
+    var out_string = color_string.match(regex);
+    out = [
+      parseInt(out_string[1]),
+      parseInt(out_string[2]),
+      parseInt(out_string[3])
+    ];
+  }
 
   return out;
-} */
+}
 
 // Window dependant
 function room_data(data) {
@@ -466,6 +495,10 @@ function room_data(data) {
 
     if (changed) {
       console.log('update ' + a_user.name);
+
+      // Update user color
+      users_color[a_user.id] = a_user.color;
+
       var a_dice = create_user_dice(a_user, data.time);
 
       if (user.name === a_user.name) {
@@ -483,6 +516,12 @@ function room_data(data) {
           $('#dice').prepend(a_dice);
         }
       }
+
+      // Update color wheel
+      var user_color = get_user_color(user);
+      var color_value = (user_color[0] << 16) + (user_color[1] << 8) + user_color[2];
+      var color_string = '#' + color_value.toString(16);
+      $('input#color-wheel').val(color_string);
     }
   }
   window_resize();
@@ -502,7 +541,7 @@ function room_data(data) {
 }
 
 function create_user_dice(a_user, time) {
-  var a_color = colorString(a_user.name);
+  var a_color = get_user_color(a_user);
   var a_dice = `
 <div id="` + a_user.id + `-dice" class="user-area col-12 mx-1 border border-dark rounded" data-user-id="` + a_user.id + `" data-updated="` + a_user.updated + `">
 <div class="row user-status-bar bg-light">
@@ -702,6 +741,10 @@ $(document).ready(function() {
 
   $(document).on('contextmenu', '#map canvas', function(event) {
     event.preventDefault();
+  });
+
+  $(document).on('change', 'input#color-wheel', function(event) {
+    set_user_color(this.value);
   });
 
   // Resize window on load

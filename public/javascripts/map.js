@@ -823,14 +823,14 @@ class Entity {
         this.x = x;
         this.y = y;
         this.user = user;
-        this.color = colorString(user.name);
+        this.color = get_user_color(user);
         break;
       case 4:
         this.type = first;
         this.x = x;
         this.y = y;
         this.user = usr;
-        this.color = colorString(usr.name);
+        this.color = get_user_color(user);
         break;
     }
   }
@@ -850,6 +850,9 @@ class Entity {
       x = this.x;
       y = this.y;
     }
+
+    // Update user color
+    this.color = get_user_color(this.user);
 
     sketch.ellipseMode(sketch.CENTER);
     sketch.noStroke();
@@ -928,6 +931,8 @@ class Asset {
 }
 
 var onCanvas = false;
+var totalLoading = 0;
+var loading = 0;
 
 sketch.preload = function() {
   // Load media
@@ -1458,6 +1463,8 @@ function loadMedia(data, folder) {
     images: new Array(dataKeys.length)
   };
 
+  totalLoading += dataKeys.length;
+
   for (key of dataKeys) {
     target[key] = data[key][0];
     target.names[target[key]] = data[key][1];
@@ -1465,13 +1472,24 @@ function loadMedia(data, folder) {
       target.images[target[key]] = null;
     } else {
       console.log('loading '+ data[key][2]);
-      target.images[target[key]] = sketch.loadImage(MEDIA_MAPS + folder + data[key][2]);
+      target.images[target[key]] = sketch.loadImage(MEDIA_MAPS + folder + data[key][2], mediaLoading);
     }
   }
 
   console.log('Loaded ' + folder);
 
   return target;
+}
+
+function mediaLoading() {
+  loading++;
+
+  if (loading > totalLoading) loading = totalLoading;
+
+  var perc = loading / totalLoading * 100;
+  var perc_str = perc.toString() + '%'
+  $('#loader-bar').css('width', perc_str);
+  $('#loader-status').html('Loading (' + loading + '/' + totalLoading + ')');
 }
 
 function loadCursors(data) {
