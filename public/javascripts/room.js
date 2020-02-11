@@ -19,6 +19,7 @@ var user = {
 var users_color = {};
 var log_container_height = 90;
 var show_dice = true;
+var initialized = false;
 var dice_type = 'd4';
 var selected_dice = null;
 var die_glow_time = 1000;
@@ -87,74 +88,83 @@ function toggle_dice(val) {
   }
 }
 
-function user_data(data) {
+function user_data(data) { 
   user = data;
 
-  if (user.role === 'admin') {
-    // Load textures
-    $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
-      $.each(data, function(key, val) {
-        $('#texture-containers').append(`
-          <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-            <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
-            <span class="mx-auto">` + val[1] + `</span>
-          </div>`);
-        $('#fill-containers').append(`
-          <div class="fill-container col-3 text-center" onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-            <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
-            <span class="mx-auto">` + val[1] + `</span>
-          </div>`);
+    if (!initialized) {
+    if (user.role === 'admin') {
+      // Load textures
+      $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
+        $.each(data, function(key, val) {
+          $('#texture-containers').append(`
+            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
+              <span class="mx-auto">` + val[1] + `</span>
+            </div>`);
+          $('#fill-containers').append(`
+            <div class="fill-container col-3 text-center" onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
+              <span class="mx-auto">` + val[1] + `</span>
+            </div>`);
+        });
       });
-    });
-    $('#texture-containers').show();
-    $('#fill-containers').show();
+      $('#texture-containers').show();
+      $('#fill-containers').show();
 
-    // Load walls
-    $.getJSON(MEDIA_MAPS + 'walls/walls.json', function(data) {
+      // Load walls
+      $.getJSON(MEDIA_MAPS + 'walls/walls.json', function(data) {
+        $.each(data, function(key, val) {
+          $('#wall-containers').append(`
+    <div class="wall-container col-3 text-center" onclick="myp5.setSpecificMode('wall', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+      <img class="row mx-auto" src="` + MEDIA_MAPS + `walls/` + val[2] + `" />
+      <span class="mx-auto">` + val[1] + `</span>
+    </div>`);
+        });
+      });
+      $('#wall-containers').show();
+
+      // Load assets
+      $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
+        $.each(data, function(key, val) {
+          $('#asset-containers').append(`
+    <div class="asset-container col-3 text-center" onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">
+      <img class="row mx-auto" src="` + MEDIA_MAPS + `assets/` + val[2] + `" />
+      <span class="mx-auto">` + val[1] + `</span>
+    </div>`);
+        });
+      });
+
+      $('#update-button').show();
+      $('#assets-button').show();
+      $('#tools-modal-map').show();
+    }
+
+    // Load entities
+    $.getJSON(MEDIA_MAPS + 'entities/entities.json', function(data) {
       $.each(data, function(key, val) {
-        $('#wall-containers').append(`
-  <div class="wall-container col-3 text-center" onclick="myp5.setSpecificMode('wall', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-    <img class="row mx-auto" src="` + MEDIA_MAPS + `walls/` + val[2] + `" />
+        $('#entity-containers').append(`
+  <div class="entity-container col-3 text-center" onclick="myp5.setSpecificMode('entity', ` + val[0] + `); $('#entities-modal').modal('toggle');">
+    <img class="row mx-auto" src="` + MEDIA_MAPS + `entities/` + val[2] + `" />
     <span class="mx-auto">` + val[1] + `</span>
   </div>`);
       });
     });
-    $('#wall-containers').show();
 
-    // Load assets
-    $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
-      $.each(data, function(key, val) {
-        $('#asset-containers').append(`
-  <div class="asset-container col-3 text-center" onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">
-    <img class="row mx-auto" src="` + MEDIA_MAPS + `assets/` + val[2] + `" />
-    <span class="mx-auto">` + val[1] + `</span>
+    // Load common tools
+    [['map', 'Map Mode'],
+    ['move', 'Move Mode'],
+    ['draw', 'Draw Mode'],
+    ['erase', 'Erase Mode']
+    ].forEach(function(data) {
+      $('#tool-containers').append(`
+  <div class="tool-container">
+    <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
   </div>`);
-      });
     });
 
-    $('#update-button').show();
-    $('#assets-button').show();
-    $('#tools-modal-map').show();
+    socket.emit('get-room', { room_id: room_id }); refresh_socket();
+    initialized = true;
   }
-
-  // Load entities
-  $.getJSON(MEDIA_MAPS + 'entities/entities.json', function(data) {
-    $.each(data, function(key, val) {
-      $('#entity-containers').append(`
-<div class="entity-container col-3 text-center" onclick="myp5.setSpecificMode('entity', ` + val[0] + `); $('#entities-modal').modal('toggle');">
-  <img class="row mx-auto" src="` + MEDIA_MAPS + `entities/` + val[2] + `" />
-  <span class="mx-auto">` + val[1] + `</span>
-</div>`);
-    });
-  });
-
-  // Load common tools
-  [['map', 'Map Mode'], ['move', 'Move Mode'], ['erase', 'Erase Mode']].forEach(function(data) {
-    $('#tool-containers').append(`
-<div class="tool-container">
-  <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
-</div>`);
-  });
 
   // Load presets
   for (var i = 0; i < 2; ++i) {
@@ -181,8 +191,6 @@ function user_data(data) {
       $('#preset' + (i + 1) + '-container').html(preset_content);
     }
   }
-
-  socket.emit('get-room', { room_id: room_id }); refresh_socket();
 }
 
 function get_map() {
@@ -270,6 +278,7 @@ function map_data(data) {
   myp5.load(data);
 }
 
+// Entities
 function send_entities() {
   console.log('sending entities');
   socket.emit('update-entities-map', {
@@ -280,9 +289,29 @@ function send_entities() {
   myp5.reset_update('entities');
 }
 
-function entities_map_data(data) {
+function receive_entities(data) {
   console.log('receiving entities');
   myp5.entities_load(data);
+}
+
+// Lines
+function send_lines() {
+  console.log('sending lines');
+  var out = myp5.lines_save();
+
+  if (out.lines.length > 0) {
+    socket.emit('update-lines-map', {
+      room_id: room_id,
+      id: out.id,
+      lines: out.lines
+    }); refresh_socket();
+  }
+
+  myp5.reset_update('lines');
+}
+
+function receive_lines(data) {
+  myp5.lines_load(data);
 }
 
 // Dice
@@ -404,12 +433,26 @@ function set_user_color(color_string) {
     console.log('changing user color ' + users_color[user.id]);
     socket.emit('change-color', { room_id: room_id, color: users_color[user.id] }); refresh_socket();
   }
+
+  // Update color wheel
+  var user_color = get_user_color(user);
+  var color_value = (user_color[0] << 16) + (user_color[1] << 8) + user_color[2];
+  var color_string = color_value.toString(16).padStart(6, '0');
+  $('input#color-wheel').val('#' + color_string);
 }
 
 function get_user_color(a_user) {
-  if (users_color.hasOwnProperty(a_user.id)) {
-    if (typeof users_color[a_user.id] !== 'undefined') {
-      return users_color[a_user.id];
+  var a_user_id = 'nobody';
+
+  if (typeof a_user === 'object') {
+    a_user_id = a_user.id;
+  } else if (typeof a_user === 'string') {
+    a_user_id = a_user;
+  }
+
+  if (users_color.hasOwnProperty(a_user_id)) {
+    if (typeof users_color[a_user_id] !== 'undefined') {
+      return users_color[a_user_id];
     }
 
     // Delete undefined color
@@ -417,7 +460,7 @@ function get_user_color(a_user) {
   }
 
   // Colors should be provided by the server
-  return color_from_string(a_user.name);
+  return color_from_string(a_user_id);
 }
 
 function color_from_string(str) {
@@ -516,14 +559,9 @@ function room_data(data) {
           $('#dice').prepend(a_dice);
         }
       }
-
-      // Update color wheel
-      var user_color = get_user_color(user);
-      var color_value = (user_color[0] << 16) + (user_color[1] << 8) + user_color[2];
-      var color_string = color_value.toString(16).padStart(6, '0');
-      $('input#color-wheel').val('#' + color_string);
     }
   }
+
   window_resize();
 
   if (dice_count_changed) {
@@ -667,7 +705,8 @@ $(document).ready(function() {
   socket.on('user-data',         user_data);
   socket.on('room-data',         room_data);
   socket.on('map-data',          map_data);
-  socket.on('entities-map-data', entities_map_data);
+  socket.on('entities-map-data', receive_entities);
+  socket.on('lines-map-data',    receive_lines);
   socket.on('room-log',          room_log);
   socket.on('disconnect',        function(data) {
       console.log('disconnected');

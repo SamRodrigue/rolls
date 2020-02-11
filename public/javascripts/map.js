@@ -10,23 +10,26 @@ var data = {
 
 var update = {
   get: function() {
-    return (this.walls ||
+    return (this.walls    ||
             this.entities ||
-            this.assets ||
+            this.assets   ||
+            this.lines    ||
             this.texture);
   },
   set: function(trgt, trgr) {
     if (typeof trgr === 'undefined') trgr = true;
     if (trgt === 'all') {
-      this.walls = true;
+      this.walls    = true;
       this.entities = true;
-      this.assets = true;
-      this.texture = true;
+      this.assets   = true;
+      this.lines    = true;
+      this.texture  = true;
     } else {
       this[trgt] = true;
     }
 
     if (trgr && trgt === 'entities') send_entities();
+    else if (trgt && trgt === 'lines') send_lines();
     else if (user.role === 'admin') {
       $('#update-button').removeClass('btn-secondary');
       $('#update-button').addClass('btn-primary');
@@ -36,10 +39,11 @@ var update = {
     if (typeof trgt === 'undefined') trgt = all;
 
     if (trgt === 'all') {
-      this.walls = false;
+      this.walls    = false;
       this.entities = false;
-      this.assets = false;
-      this.texture = false;
+      this.assets   = false;
+      this.lines    = false;
+      this.texture  = false;
     } else {
       this[trgt] = false;
     }
@@ -51,23 +55,26 @@ var update = {
   },
   data: function() {
     return {
-      walls: this.walls,
+      walls:    this.walls,
       entities: this.entities,
-      assets: this.assets,
-      texture: this.texture
+      assets:   this.assets,
+      lines:    this.lines,
+      texture:  this.texture
     };
   },
   copy: function(v) {
-    this.walls = v.walls;
+    this.walls    = v.walls;
     this.entities = v.entities;
-    this.assets = v.assets;
-    this.texture = v.texture;
+    this.assets   = v.assets;
+    this.lines    = v.lines;
+    this.texture  = v.texture;
   },
-  last: false,
-  walls: false,
+  last:     false,
+  walls:    false,
   entities: false,
-  assets: false,
-  texture: false
+  assets:   false,
+  lines:    false,
+  texture:  false
 };
 
 var map = {
@@ -100,7 +107,8 @@ var map = {
 
   walls:    [],
   entities: [],
-  assets:   []
+  assets:   [],
+  lines:    {}
 };
 
 var view = {
@@ -150,8 +158,15 @@ var view = {
 var mode = {
   loaded: false,
   ctrl: false,
-  cursor: 0,
-  oldCursor: 0,
+  cursor: {
+    val: 0,
+    old: 0
+  },
+  dragging: {
+    val: false,
+    old: null,
+    count: 0
+  },
   texture: 0,
   wall: 0,
   walling: null,
@@ -333,6 +348,61 @@ var mode = {
       }
     },
 
+    draw: function(drawing) { // Drag
+      if (drawing) {
+        // Skip dragging
+        mode.dragging.count--;
+        if (mode.dragging.count <= 0) {
+          mode.dragging.count = 4; // Use to optimize line detail vs number of lines sent to server
+
+          if (!mode.dragging.val) {
+            // First point
+            mode.dragging.val = true;
+            mode.dragging.old = { x: view.mx, y: view.my }
+          } else {
+            // Add point
+            var date = new Date();
+
+            // Send new line to server
+            if (!map.lines.hasOwnProperty(user.id)) {
+              map.lines[user.id] = [];
+            }
+
+            map.lines[user.id].push({
+              prev: mode.dragging.old,
+              curr: { x: view.mx, y: view.my },
+              time: date.getTime()
+            });
+
+            update.set('lines');
+
+            mode.dragging.old = { x: view.mx, y: view.my };
+          }
+        }
+      } else {
+        if (mode.dragging.val) {
+          // Last point
+          var date = new Date();
+
+          // Send new line to server
+          if (!map.lines.hasOwnProperty(user.id)) {
+            map.lines[user.id] = [];
+          }
+
+          map.lines[user.id].push({
+            prev: mode.dragging.old,
+            curr: { x: view.mx, y: view.my },
+            time: date.getTime()
+          });
+
+          update.set('lines');
+
+          mode.dragging.val = false;
+          mode.dragging.old = null;
+        }
+      }
+    },
+
     erase: function() { // Press
       var found = false;
 
@@ -508,6 +578,7 @@ var mode = {
 };
 
 const MEDIA_MAPS = '/media/maps/';
+const MAX_LINES = 32;
 
 var cursors = {
   COUNT: 0,
@@ -986,7 +1057,7 @@ sketch.draw = function () {
   //sketch.background(235);
   sketch.clear();
   sketch.fill(0);
-  switch (mode.cursor) {
+  switch (mode.cursor.val) {
     case cursors.TEXTURE:
       sketch.text("Texture: " + textures.names[mode.texture], 2, 10);
       break;
@@ -1008,6 +1079,7 @@ sketch.draw = function () {
   sketch.pop();
 
   draw_map();
+  draw_line();
   draw_cursor();
 };
 
@@ -1034,10 +1106,10 @@ sketch.load = function(newData, updated) {
   }
 
   data = {
-    walls: newData.walls,
+    walls:    newData.walls,
     entities: newData.entities,
-    assets: newData.assets,
-    texture: decompress_texture(newData.texture)
+    assets:   newData.assets,
+    texture:  decompress_texture(newData.texture)
   };
 
   if (newData.update.walls) {
@@ -1063,6 +1135,7 @@ sketch.load = function(newData, updated) {
       map.assets.push(new Asset(a));
     }
   }
+
 
   if (newData.update.texture) {
     update.set('texture', false);
@@ -1107,8 +1180,8 @@ sketch.load = function(newData, updated) {
 };
 
 sketch.save = function(all) {
-  if (typeof all === 'undefined') all = false;
-  if (all) update.set('all');
+  if (typeof all !== 'undefined' && all)
+    update.set('all');
 
   data = {
     walls:    [],
@@ -1169,6 +1242,31 @@ sketch.entities_save = function() {
   return out;
 };
 
+sketch.lines_load = function(newData) {
+  if (map.lines.hasOwnProperty(newData.id)) {
+    var len = map.lines[newData.id].length;
+    var last = map.lines[newData.id][len - 1].time;
+
+    for (l of newData.lines) {
+      if (l.time > last) {
+        map.lines[newData.id].push(l);
+      }
+    }
+
+    len = map.lines[newData.id].length;
+    if (len > MAX_LINES) {
+      map.lines[newData.id].splice(0, len - MAX_LINES);
+    }
+  } else {
+    map.lines[newData.id] = newData.lines;
+  }
+}
+
+sketch.lines_save = function() {
+  //console.log('sending: id:' + user.id + ' lines:' + JSON.stringify(map.lines[user.id]))
+  return { id: user.id, lines: map.lines[user.id] };
+}
+
 sketch.reset_update = function(target) {
   update.reset(target);
 }
@@ -1189,7 +1287,7 @@ function mouseLeft() {
   if (view.mx < 0 || view.mx > map.width ||
       view.my < 0 || view.my > map.height) return;
 
-  switch (mode.cursor) {
+  switch (mode.cursor.val) {
     case cursors.MAPS:
       mode.do.map();
       break;
@@ -1215,7 +1313,7 @@ function mouseLeft() {
 };
 
 function mouseRight() {
-  switch (mode.cursor) {
+  switch (mode.cursor.val) {
     // case cursors.MAPS:
     //   mode.done.map();
     //   break;
@@ -1243,20 +1341,33 @@ function mouseRight() {
 sketch.mouseDragged = function() {
   if (!onCanvas) return;
 
-  switch (mode.cursor) {
+  switch (mode.cursor.val) {
     case cursors.MAP:
       mode.do.map();
       break;
     case cursors.TEXTURE:
       mode.do.texture();
       break;
+    case cursors.DRAW:
+      mode.do.draw(true);
+      break;
   }
 };
+
+sketch.mouseReleased = function() {
+  if (!onCanvas) return;
+
+  switch (mode.cursor.val) {
+    case cursors.DRAW:
+      mode.do.draw(false);
+      break;
+  }
+}
 
 sketch.mouseWheel = function(event) {
   if (!onCanvas) return;
 
-  switch (mode.cursor) {
+  switch (mode.cursor.val) {
     case cursors.MAP:
     case cursors.WALL:
     case cursors.ERASE:
@@ -1275,8 +1386,8 @@ sketch.keyPressed = function() {
   if (sketch.key === 'Control') mode.ctrl = true;
 
   if (sketch.key === 'Shift') {
-    mode.oldCursor = mode.cursor;
-    mode.cursor = cursors.MAP;
+    mode.cursor.old = mode.cursor.val;
+    mode.cursor.val = cursors.MAP;
   }
 
   if (!onCanvas) return;
@@ -1299,6 +1410,9 @@ sketch.keyPressed = function() {
     case 'g':
       sketch.setMode(cursors.MOVE);
       break;
+    case 'r':
+      sketch.setMode(cursors.DRAW);
+      break;
     case 'd':
       sketch.setMode(cursors.ERASE);
       break;
@@ -1312,7 +1426,7 @@ sketch.keyPressed = function() {
       break;
     case '=':
     case '+':
-      switch (mode.cursor) {
+      switch (mode.cursor.val) {
         case cursors.MAP:
         case cursors.WALL:
         case cursors.MOVE:
@@ -1329,7 +1443,7 @@ sketch.keyPressed = function() {
       break;
     case '-':
     case '_':
-      switch (mode.cursor) {
+      switch (mode.cursor.val) {
         case cursors.MAP:
         case cursors.WALL:
         case cursors.MOVE:
@@ -1355,7 +1469,7 @@ sketch.keyPressed = function() {
     case '8':
     case '9':
       var key = sketch.key - '0';
-      switch (mode.cursor) {
+      switch (mode.cursor.val) {
         case cursors.TEXTURE:
           mode.texture = key;
           if (key > 0 && key < textures.COUNT) {
@@ -1392,8 +1506,8 @@ sketch.keyReleased = function() {
   if (sketch.key === "Control") mode.ctrl = false;
 
   if (sketch.key === 'Shift' &&
-      mode.cursor !== mode.oldCursor) {
-    mode.cursor = mode.oldCursor;
+      mode.cursor.val !== mode.cursor.old) {
+    mode.cursor.val = mode.cursor.old;
   }
 }
 
@@ -1402,8 +1516,8 @@ sketch.setMode = function(m, reset) {
   if (m >= 0 && m < cursors.COUNT) {
     if (reset) mode.walling = null;
 
-    mode.oldCursor = m;
-    mode.cursor = m;
+    mode.cursor.old = m;
+    mode.cursor.val = m;
   }
 };
 
@@ -1443,6 +1557,9 @@ sketch.setSpecificMode = function(name, key) {
       break;
     case 'move':
       sketch.setMode(cursors.MOVE);
+      break;
+    case 'draw':
+      sketch.setMode(cursors.DRAW);
       break;
     case 'erase':
       sketch.setMode(cursors.ERASE);
@@ -1517,13 +1634,53 @@ function draw_map() {
   draw_hover();
 }
 
+function draw_line() {
+  if (Object.keys(map.lines).length === 0) return;
+
+  // TODO Should only start removing when drag stops up to a certain length
+  //      Different drags should not connect.
+  var timeout = 10000; // 10 seconds
+  var date = new Date();
+  var time = date.getTime();
+
+  // Per user lines
+  Object.keys(map.lines).forEach(function(a_user_id) {
+    if (map.lines[a_user_id].length === 0) {
+      delete map.lines[a_user_id];
+      return;
+    }
+
+    // Remove expired markers
+    map.lines[a_user_id].some(function(marker, i, iarr) {
+      var dt = time - marker.time;
+      if (time - marker.time > timeout) {
+        iarr.splice(i, 1);
+      }
+    });
+  
+    if (map.lines[a_user_id].length === 0) {
+      delete map.lines[a_user_id];
+      return;
+    }
+  
+    // Draw remaining markers
+    var color = get_user_color(a_user_id);
+    sketch.strokeWeight(10 / view.zoom.val);
+    sketch.stroke(color[0], color[1], color[2]);
+    
+    map.lines[a_user_id].forEach(function(marker) {
+      sketch.line(marker.prev.x, marker.prev.y, marker.curr.x, marker.curr.y);
+    });
+  });
+}
+
 function draw_texture() {
   sketch.imageMode(sketch.CORNER);
   sketch.image(map.texture.image, 0, 0);
 }
 
 function draw_grid() {
-  sketch.strokeWeight(1/view.zoom.val);
+  sketch.strokeWeight(1 / view.zoom.val);
   sketch.stroke(0, 0, 0);
   for (var i = 0; i <= map.width; i += map.grid.spacing) {
     sketch.line(i, 0, i, map.height);
@@ -1556,8 +1713,8 @@ function draw_entities() {
 }
 
 function draw_hover() {
-  if (mode.cursor === cursors.MOVE ||
-      mode.cursor === cursors.ERASE) {
+  if (mode.cursor.val === cursors.MOVE ||
+      mode.cursor.val === cursors.ERASE) {
     var scale = view.zoom.MAX / view.zoom.val;
     var ex = view.mx / map.entity.scale;
     var ey = view.my / map.entity.scale;
@@ -1586,8 +1743,10 @@ function draw_cursor() {
   if (!onCanvas) return;
 
   sketch.rectMode(sketch.CENTER);
+  sketch.strokeWeight(1 / view.zoom.val);
+  sketch.stroke(0, 0, 0);
 
-  switch (mode.cursor) {
+  switch (mode.cursor.val) {
     case cursors.MAP:
       draw_cursor_image();
       sketch.fill(0);
@@ -1654,6 +1813,13 @@ function draw_cursor() {
       sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
       break;
 
+    case cursors.DRAW:
+      draw_cursor_image();
+      color = get_user_color(user);
+      sketch.fill(color[0], color[1], color[2]);
+      sketch.ellipse(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+      break;
+
     case cursors.ERASE:
       draw_cursor_image();
       sketch.fill(255, 0, 0);
@@ -1679,7 +1845,7 @@ function draw_cursor_image() {
   sketch.imageMode(sketch.CORNER);
   sketch.push();
     sketch.scale(map.cursor.scale / view.zoom.val);
-    sketch.image(cursors.images[mode.cursor], view.mx * view.zoom.val / map.cursor.scale, view.my * view.zoom.val / map.cursor.scale);
+    sketch.image(cursors.images[mode.cursor.val], view.mx * view.zoom.val / map.cursor.scale, view.my * view.zoom.val / map.cursor.scale);
   sketch.pop();
 }
 

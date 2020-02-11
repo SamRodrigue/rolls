@@ -141,6 +141,16 @@ router.sockets = (io, socket, rooms, func) => {
     }
   });
 
+  socket.on('update-lines-map', (data) => {
+    var room = func.find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = func.find_user_socket(room, socket);
+    
+    if (user.id === data.id && data.lines.length !== 0) {
+      socket.broadcast.to(data.room_id).emit('lines-map-data', { id: data.id, lines: data.lines });
+    }
+  });
+
   socket.on('remove-user', (data) => {
     var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
