@@ -191,113 +191,25 @@ a {
   margin: 2px;
 }
 
-@keyframes d4-glow {  
-  0% { 
-    box-shadow: 0 0 4px 4px #3366ff80, 
-                0 0 8px 32px #3366ff80 inset;
-    transform: translate(0px, 0px);
-  }
-  13% { transform: translate(8px, 0px); }
-  25% { transform: translate(-8px, 0px); }
-  38% { transform: translate(8px, 0px); }
-  50% { transform: translate(-8px, 0px); }
-  63% { transform: translate(8px, 0px); }
-  75% { transform: translate(-8px, 0px); }
-  100% { 
-    box-shadow: 0 0 4px 4px #3366ff00, 
-                0 0 8px 32px #3366ff00 inset;
-    transform: translate(0px, 0px);
-  }
+@keyframes shake {
+  0%   { transform: translate(0px, 0px); }
+  13%  { transform: translate(8px, 0px); }
+  25%  { transform: translate(-7px, 0px); }
+  38%  { transform: translate(6px, 0px); }
+  50%  { transform: translate(-4px, 0px); }
+  63%  { transform: translate(2px, 0px); }
+  75%  { transform: translate(-2px, 0px); }
+  88%  { transform: translate(1px, 0px); }
+  100% { transform: translate(0px, 0px); }
 }
-@keyframes d6-glow {  
-  0% { 
-    box-shadow: 0 0 4px 4px #ffff0080, 
-                0 0 8px 32px #ffff0080 inset;
-    transform: translate(0px, 0px);
-  }
-  13% { transform: translate(8px, 0px); }
-  25% { transform: translate(-8px, 0px); }
-  38% { transform: translate(8px, 0px); }
-  50% { transform: translate(-8px, 0px); }
-  63% { transform: translate(8px, 0px); }
-  75% { transform: translate(-8px, 0px); }
-  100% { 
-    box-shadow: 0 0 4px 4px #ffff0000, 
-                0 0 8px 32px #ffff0000 inset;
-    transform: translate(0px, 0px);
-  }
+
+@keyframes glow {
+  from { filter: drop-shadow(0 0 8px #ffffffff); }
+  to   { filter: drop-shadow(0 0 8px #ffffff00); }
 }
-@keyframes d8-glow {  
-  0% { 
-    box-shadow: 0 0 4px 4px #00800080, 
-                0 0 8px 32px #00800080 inset;
-    transform: translate(0px, 0px);
-  }
-  13% { transform: translate(8px, 0px); }
-  25% { transform: translate(-8px, 0px); }
-  38% { transform: translate(8px, 0px); }
-  50% { transform: translate(-8px, 0px); }
-  63% { transform: translate(8px, 0px); }
-  75% { transform: translate(-8px, 0px); }
-  100% { 
-    box-shadow: 0 0 4px 4px #00800000, 
-                0 0 8px 32px #00800000 inset;
-    transform: translate(0px, 0px);
-  }
-}
-@keyframes d10-glow {  
-  0% { 
-    box-shadow: 0 0 4px 4px #ff000080, 
-                0 0 8px 32px #ff000080 inset;
-    transform: translate(0px, 0px);
-  }
-  13% { transform: translate(8px, 0px); }
-  25% { transform: translate(-8px, 0px); }
-  38% { transform: translate(8px, 0px); }
-  50% { transform: translate(-8px, 0px); }
-  63% { transform: translate(8px, 0px); }
-  75% { transform: translate(-8px, 0px); }
-  100% { 
-    box-shadow: 0 0 4px 4px #ff000000, 
-                0 0 8px 32px #ff000000 inset;
-    transform: translate(0px, 0px);
-  }
-}
-@keyframes d12-glow {  
-  0% { 
-    box-shadow: 0 0 4px 4px #ff990080, 
-                0 0 8px 32px #ff990080 inset;
-    transform: translate(0px, 0px);
-  }
-  13% { transform: translate(8px, 0px); }
-  25% { transform: translate(-8px, 0px); }
-  38% { transform: translate(8px, 0px); }
-  50% { transform: translate(-8px, 0px); }
-  63% { transform: translate(8px, 0px); }
-  75% { transform: translate(-8px, 0px); }
-  100% { 
-    box-shadow: 0 0 4px 4px #ff990000, 
-                0 0 8px 32px #ff990000 inset;
-    transform: translate(0px, 0px);
-  }
-}
-@keyframes d20-glow {  
-  0% { 
-    box-shadow: 0 0 4px 4px #99336680, 
-                0 0 8px 32px #99336680 inset;
-    transform: translate(0px, 0px);
-  }
-  13% { transform: translate(8px, 0px); }
-  25% { transform: translate(-8px, 0px); }
-  38% { transform: translate(8px, 0px); }
-  50% { transform: translate(-8px, 0px); }
-  63% { transform: translate(8px, 0px); }
-  75% { transform: translate(-8px, 0px); }
-  100% { 
-    box-shadow: 0 0 4px 4px #99336600, 
-                0 0 8px 32px #99336600 inset;
-    transform: translate(0px, 0px);
-  }
+
+.a-dice-container {
+  position: relative;
 }
 
 .dice-container {
@@ -306,42 +218,6 @@ a {
 
 .preset-container {
   width: 164px;
-}
-
-/*
-.user-dice:after {
-  background: rgba(248, 249, 250, 0.5);
-}
-*/
-
-.dice-roll {
-  -webkit-animation-name: rotate;
-  -moz-animation-name: rotate;
-  animation-name: rotate;
-  -webkit-animation-duration:0.5s;
-  -moz-animation-duration:0.5s;
-  animation-duration:0.5s;
-  -webkit-animation-iteration-count:infinite;
-  -moz-animation-iteration-count:infinite;
-  animation-iteration-count:infinite;
-  -webkit-animation-timing-function:linear;
-  -moz-animation-timing-function:linear;
-  animation-timing-function:linear;
-}
-
-@-webkit-keyframes rotate {
-  from {-webkit-transform:rotate(0deg);}
-  to {  -webkit-transform:rotate(360deg);}
-}
-
-@-moz-keyframes rotate {
-  from {-moz-transform:rotate(0deg);}
-  to {  -moz-transform:rotate(360deg);}
-}
-
-@keyframes rotate {
-  from {-webkit-transform:rotate(0deg);}
-  to {  -webkit-transform:rotate(360deg);}
 }
 
 .d4-label {
@@ -376,38 +252,8 @@ a {
 .die-number {
   line-height: 64px;
   vertical-align: middle;
-  -webkit-touch-callout: none; /* iOS Safari */
-  -webkit-user-select: none; /* Safari */
-  -khtml-user-select: none; /* Konqueror HTML */
-  -moz-user-select: none; /* Firefox */
-  -ms-user-select: none; /* Internet Explorer/Edge */
   user-select: none;
   font-size: 2em;
-  color: #FFFFFF;
-  text-shadow: 1px 1px 0 #000,
-  -1px 1px 0 #000,
-  1px -1px 0 #000,
-  -1px -1px 0 #000,
-  0px 1px 0 #000,
-  0px -1px 0 #000,
-  -1px 0px 0 #000,
-  1px 0px 0 #000,
-  2px 2px 0 #000,
-  -2px 2px 0 #000,
-  2px -2px 0 #000,
-  -2px -2px 0 #000,
-  0px 2px 0 #000,
-  0px -2px 0 #000,
-  -2px 0px 0 #000,
-  2px 0px 0 #000,
-  1px 2px 0 #000,
-  -1px 2px 0 #000,
-  1px -2px 0 #000,
-  -1px -2px 0 #000,
-  2px 1px 0 #000,
-  -2px 1px 0 #000,
-  2px -1px 0 #000,
-  -2px -1px 0 #000;
 }
 
 .die-count {
@@ -415,6 +261,15 @@ a {
   width: 52px;
   height: 38px;
   font-size: 2em;
+}
+
+.dice-status {
+  line-height: 32px;
+  vertical-align: middle;
+  font-size: 1em;
+}
+
+.die-number, .die-count, .dice-status {
   color: #FFFFFF;
   text-shadow: 1px 1px 0 #000,
   -1px 1px 0 #000,
@@ -446,34 +301,20 @@ a {
   cursor: pointer;
 }
 
+.dice-selected {
+  filter: drop-shadow(0 0 8px #ffffffff);
+}
+
 #dice-overlay {
-  position: relative;
-  top: -64px;
-  left: -17px;
+  position: absolute;
+  top: 0;
+  left: -16px;
   width: 128px;
 }
 
 #dice-overlay-glow {
   width: 64px;
   height: 64px;
-  border-color: #00FF00;
-  -webkit-box-shadow: 0px 0px 25px 0px #00FF00;
-  -moz-box-shadow: 0px 0px 25px 0px #00FF00;
-  box-shadow: 0px 0px 25px 0px #00FF00;
-  z-index: 20;
-}
-
-.d4 #dice-overlay-glow {
-  border-top-left-radius: 50%;
-  border-top-right-radius: 50%;
-}
-
-.d6 #dice-overlay-glow {
-  border-radius: 10%;
-}
-
-.d8 #dice-overlay-glow, .d10 #dice-overlay-glow, .d12 #dice-overlay-glow, .d20 #dice-overlay-glow {
-  border-radius: 50%;
 }
 
 #dice-overlay-remove {
@@ -484,7 +325,7 @@ a {
   padding: 0;
   width: 32px;
   height: 32px;
-  z-index: 21;
+  z-index: 10;
 }
 
 #dice-overlay-roll {
@@ -495,7 +336,7 @@ a {
   padding: 0;
   width: 32px;
   height: 32px;
-  z-index: 21;
+  z-index: 10;
 }
 
 .token-color {

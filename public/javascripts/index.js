@@ -37,14 +37,14 @@ $(document).ready(function() {
   var socket = io();
   
   socket.on('connect', function() {
-    console.log('connected');
+    if (DEBUG) console.log('connected');
     socket.emit('join', 'index'); socket.send('');
   });
   socket.on('alert', function(data) { show_alert(data) });
   socket.on('update-rooms', function(data) { update_rooms(data) });
   socket.on('join-room', function(data) { join_room(data) });
   socket.on('disconnect', function() { 
-    console.log('disconnected');
+    if (DEBUG) console.log('disconnected');
   });
 
   function show_alert(data) {
@@ -53,7 +53,7 @@ $(document).ready(function() {
   }
 
   function update_rooms(data) {
-    console.log('updating rooms');
+    if (DEBUG) console.log('updating rooms');
     var room_table = '';
     if (data.length == 0) {
       room_table = `
@@ -76,7 +76,7 @@ $(document).ready(function() {
   }
 
   function join_room(data) {
-    console.log('joining ' + data);
+    if (DEBUG) console.log('joining ' + data);
     window.location.href = '/room/' + data;
   }
 
@@ -136,7 +136,7 @@ $(document).ready(function() {
       password: $(join.inputs.password).val()
     };
     socket.emit('join-room', data); socket.send('');
-    console.log('Connecting ' + JSON.stringify(data));
+    if (DEBUG) console.log('Connecting ' + JSON.stringify(data));
     return false;
   });
 });

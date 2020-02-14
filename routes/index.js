@@ -4,7 +4,7 @@ var app_version = require('../package.json').version;
 
 /* GET home page. */
 router.get('/', (req, res, next) => {
-  res.render('index', { title: 'Rolls', version: app_version });
+  res.render('index', { title: 'Rolls', version: app_version, show_debug: global.DEBUG ? 'true' : 'false' });
 });
 
 router.sockets = (io, socket, rooms, func) => {
@@ -56,6 +56,7 @@ router.sockets = (io, socket, rooms, func) => {
       role: 'admin',
       color: [0, 0, 0],
       dice: [],
+      share: true,
       counter: 0,
       preset: [{
         used: false,
@@ -69,7 +70,8 @@ router.sockets = (io, socket, rooms, func) => {
       updated: func.get_updated()
     };
 
-    user.color = func.color_from_string(user.name);
+    // Update default color to one based on user id
+    user.color = func.color_from_string(user.id);
     
     var room = {
       name: data.room_name,
@@ -129,6 +131,7 @@ router.sockets = (io, socket, rooms, func) => {
       role: '',
       color: [0, 0, 0],
       dice: [],
+      share: true,
       counter: 0,
       preset: [{
         used: false,
@@ -142,7 +145,7 @@ router.sockets = (io, socket, rooms, func) => {
       updated: func.get_updated()
     };
 
-    user.color = func.color_from_string(user.name);
+    user.color = func.color_from_string(user.id);
 
     // Check password
     if (data.password === room.password.admin) {

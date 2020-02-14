@@ -13,22 +13,35 @@ var rooms_array = (rooms) => {
   return data;
 };
 
-var room_array = (room) => {
+var room_array = (room, user) => {
   var data = {
     name: room.name,
     users: [],
     time: Date.now()
   };
 
-  room.users.forEach((user) => {
-    data.users.push({
-      id: user.id,
-      name: user.name,
-      color: user.color,
-      dice: user.dice,
-      counter: user.counter,
-      updated: user.updated
-    });
+  // Data is not specific to a user
+  var user_id = null;
+  if (typeof user !== 'undefined') {
+    user_id = user.id;
+  }
+
+  room.users.forEach((a_user) => {
+    var out = {
+      id: a_user.id,
+      name: a_user.name,
+      color: a_user.color,
+      dice: [],
+      share: a_user.share,
+      counter: a_user.counter,
+      updated: a_user.updated
+    };
+
+    if (a_user.share || a_user.id === user_id) {
+      out.dice = a_user.dice;
+    }
+
+    data.users.push(out);
   });
 
   return data;
@@ -104,6 +117,7 @@ var create_id = (type, arr) => {
   var get_id = () => { return Math.random().toString(36).substr(2, 9); };
   var id = get_id();
   // check if id colides with existing array of id
+  // No checking required if type not specified.
   switch (type) {
     case 'room':
       while (arr.has(id)) {
@@ -116,6 +130,19 @@ var create_id = (type, arr) => {
         return user.id === id;
       }).length) {
         console.log('ABN: User ID collision');
+        id = get_id();
+      }
+      break;
+    case 'dice':
+      while (arr.filter((user) => {
+        for (var die of user.dice) {
+          if (die.id === id) {
+            return true;
+          }
+        }
+        return false;
+      }).length) {
+        console.log('ABN: Dice ID collision');
         id = get_id();
       }
       break;
@@ -134,24 +161,36 @@ var set_updated = (user) => {
 
 var roll = (die) => {
   var floor = 0;
-  var offset = 0;
+  var offset = 1;
+
   switch (die.type) {
-    case 'd4':  floor = 4;  offset = 1; break; 
-    case 'd6':  floor = 6;  offset = 1; break; 
-    case 'd8':  floor = 8;  offset = 1; break; 
-    case 'd10': floor = 10; offset = 0; break; 
-    case 'd12': floor = 12; offset = 1; break; 
-    case 'd20': floor = 20; offset = 1; break; 
+    case 'd4':  floor = 4;  break;
+    case 'd6':  floor = 6;  break;
+    case 'd8':  floor = 8;  break;
+    case 'd10': floor = 10; break; // 10 is displayed as 0 in client
+    case 'd12': floor = 12; break;
+    case 'd20': floor = 20; break;
   }
 
   die.value = Math.floor(Math.random() * floor) + offset;
-
-  // Special case where 0 on d10 is equal to 10
-  if (die.type === 'd10' && die.value === 0) {
-    die.value = 10;
-  }
-
   die.time = Date.now();
+  die.anime = [];
+
+  var last_die = die.value;
+  for (var i = 20; i > 0; i--) {
+    var val;
+    var count = 10;
+    do {
+      val = Math.floor(Math.random() * floor) + offset;
+    } while (val === last_die && --count > 0);
+
+    if (--count <= 0) {
+      console.log('ABN: Unable to get unique value for roll animation');
+    }
+
+    die.anime[i - 1] = val;
+    last_die = val;
+  }
 };
 
 var dice_status = (dice, counter) => {

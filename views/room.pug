@@ -1,6 +1,8 @@
 extends layout
 
 block scripts
+  script.
+    const DEBUG = ('#{show_debug}' == 'true');
   script(src='/javascripts/room.js')
   script(src='/javascripts/map.js')
 
@@ -15,10 +17,12 @@ block content
   #dice-content.content
     .container-fluid.mt-2.col-12.col-md-4.col-xl-3.float-md-right
       .row.user-roll.col-12.mx-auto.input-group
-        button#roll.btn.btn-primary.col-8(onClick="roll_dice()")
+        button#roll.btn.btn-primary.col-6(onClick="roll_dice()")
           span Roll
         button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#dice-modal")
           span Dice
+        button#share-dice.btn.btn-warning.col-2(onClick="toggle_share_dice(!share_dice)")
+          span#share-dice-status.oi(data-glyph="lock-unlocked")
       .row.mt-2
         #dice.col-12.content
           .loader
@@ -36,16 +40,18 @@ block content
   #map-content.content(style="display: none;")
     .container-fluid.mt-2.col-12.col-md-8.col-xl-9.float-md-left
       .row.user-roll.col-12.mx-auto.input-group
+        button#help-button.btn.btn-info.col-1(data-toggle="modal" data-target="#help-modal")
+          span.oi(data-glyph="question-mark")
         button#update-button.btn.btn-secondary.col-3.col-sm-1(onClick="send_map()", style="display: none;")
           span Up
-        // TODO: Add hide button for admin
+        // TODO: Add hide map button for admin
         //button.btn.btn-primary.col-3(onClick="hide_map()")
           span Hide
-        button#tools-button.btn.btn-primary.col-3.offset-sm-1(data-toggle="modal" data-target="#tools-modal")
+        button#tools-button.btn.btn-primary.col-4.offset-sm-1(data-toggle="modal" data-target="#tools-modal")
           span Tools
-        button#entities-button.btn.btn-success.col-3.offset-sm-1(data-toggle="modal" data-target="#entities-modal")
+        button#entities-button.btn.btn-success.col-2.offset-sm-1(data-toggle="modal" data-target="#entities-modal")
           span Entities
-        button#assets-button.btn.btn-success.col-3(style="display: none;" data-toggle="modal" data-target="#assets-modal")
+        button#assets-button.btn.btn-success.col-2(style="display: none;" data-toggle="modal" data-target="#assets-modal")
           span Assets
       .row.mt-2
         #map.col-12
@@ -146,6 +152,19 @@ block content
             span Clear
           button.btn.btn-primary(data-dismiss="modal" onClick="roll_dice()")
             span Roll
+          button.btn.btn-dark(data-dismiss="modal")
+            span Close
+
+  #help-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h2 Help
+          button.close(data-dismiss="modal") &times;
+        .modal-body
+          #help-container.row
+
+        .modal-footer
           button.btn.btn-dark(data-dismiss="modal")
             span Close
 

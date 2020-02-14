@@ -1,6 +1,8 @@
 extends layout
 
 block scripts
+  script.
+    const DEBUG = ('#{show_debug}' === 'true');
   script(src='/javascripts/index.js')
 
 block content

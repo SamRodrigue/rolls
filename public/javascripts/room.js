@@ -19,10 +19,18 @@ var user = {
 var users_color = {};
 var log_container_height = 90;
 var show_dice = true;
+var share_dice = true;
 var initialized = false;
 var dice_type = 'd4';
 var selected_dice = null;
-var die_glow_time = 1000;
+var die_animation_time = { 
+  min: 1000,
+  max: 3000,
+  get: function(id) {
+    var i = parseInt(id, 36) % (this.max - this.min);
+    return  i + this.min;
+  }
+};
 var dice_overlay = `
 <div class="row" id="dice-overlay">
 <button class="btn btn-danger" id="dice-overlay-remove" type="button" onclick="remove_dice()">
@@ -63,6 +71,264 @@ function show_alert(data) {
 // TODO: Determine why additional .send is required after .emit
 function refresh_socket() { socket.send(''); }
 
+function user_data(data) { 
+  user = data;
+
+  if (!initialized) {
+    var help_text = `
+m: map mode</br>
+g: move/grab mode</br>
+d: draw mode</br>
+x: erase mode</br>
+o: toggle grid overlay</br>
++: zoom in</br>
+-: zoom out</br>`;
+
+    if (user.role === 'admin') {
+      help_text += ` 
+- Admin Only -</br>
+w: wall mode</br>
+e: entity mode</br>
+a: asset mode</br>
+b: brush texture mode</br>
+f: fill texture mode</br>
+0-9: select one of first 10 wall/entity/asset/texture depending on mode`;
+      // Load textures
+      $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
+        $.each(data, function(key, val) {
+          $('#texture-containers').append(`
+            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
+              <span class="mx-auto">` + val[1] + `</span>
+            </div>`);
+          $('#fill-containers').append(`
+            <div class="fill-container col-3 text-center" onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
+              <span class="mx-auto">` + val[1] + `</span>
+            </div>`);
+        });
+      });
+
+      $('#texture-containers').show();
+      $('#fill-containers').show();
+
+      // Load walls
+      $.getJSON(MEDIA_MAPS + 'walls/walls.json', function(data) {
+        $.each(data, function(key, val) {
+          $('#wall-containers').append(`
+    <div class="wall-container col-3 text-center" onclick="myp5.setSpecificMode('wall', ` + val[0] + `); $('#tools-modal').modal('toggle');">
+      <img class="row mx-auto" src="` + MEDIA_MAPS + `walls/` + val[2] + `" />
+      <span class="mx-auto">` + val[1] + `</span>
+    </div>`);
+        });
+      });
+
+      $('#wall-containers').show();
+
+      // Load assets
+      $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
+        $.each(data, function(key, val) {
+          $('#asset-containers').append(`
+    <div class="asset-container col-3 text-center" onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">
+      <img class="row mx-auto" src="` + MEDIA_MAPS + `assets/` + val[2] + `" />
+      <span class="mx-auto">` + val[1] + `</span>
+    </div>`);
+        });
+      });
+
+      $('#update-button').show();
+      $('#assets-button').show();
+      $('#tools-modal-map').show();
+    }
+
+    // Set help text
+    $('#help-container').append('<div class="mx-auto"><p>' + help_text + '</p></div>');
+
+    // Load entities
+    $.getJSON(MEDIA_MAPS + 'entities/entities.json', function(data) {
+      $.each(data, function(key, val) {
+        $('#entity-containers').append(`
+  <div class="entity-container col-3 text-center" onclick="myp5.setSpecificMode('entity', ` + val[0] + `); $('#entities-modal').modal('toggle');">
+    <img class="row mx-auto" src="` + MEDIA_MAPS + `entities/` + val[2] + `" />
+    <span class="mx-auto">` + val[1] + `</span>
+  </div>`);
+      });
+    });
+
+    // Load common tools
+    [['map', 'Map Mode'],
+    ['move', 'Move Mode'],
+    ['draw', 'Draw Mode'],
+    ['erase', 'Erase Mode']
+    ].forEach(function(data) {
+      $('#tool-containers').append(`
+  <div class="tool-container">
+    <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
+  </div>`);
+    });
+
+    // Set user color
+    users_color[user.id] = user.color;
+
+    // Update color wheel in tool menu
+    var user_color = get_user_color(user);
+    var color_value = (user_color[0] << 16) + (user_color[1] << 8) + user_color[2];
+    var color_string = color_value.toString(16).padStart(6, '0');
+    $('input#color-wheel').val('#' + color_string);
+
+    socket.emit('get-room', { room_id: room_id }); refresh_socket();
+    initialized = true;
+  }
+
+  // Load presets
+  for (var i = 0; i < 2; ++i) {
+    var preset = user.preset[i];
+    if (preset.used) {
+      var preset_content = '';
+
+      if (preset.counter !== 0) {
+        preset_content += `<h6 class="col-12"><span class="bg-`;
+        preset_content += (preset.counter > 0) ? 'success' : 'danger';
+        preset_content += `" style="border-radius: 5%;">Counter: ` + preset.counter + `</span></h6>`;
+      }
+
+      preset_content += `
+<div class="preset-dice d-flex flex-wrap justify-content-center mx-auto">`;
+
+      preset.dice.forEach((die) => {
+        preset_content += `
+<div class="` + die.type + ` small-die"></div>`;
+      });
+
+      preset_content += `</div>`;
+
+      $('#preset' + (i + 1) + '-container').html(preset_content);
+    }
+  }
+}
+
+function get_map() {
+  if (DEBUG) console.log('checking for map');
+  // Check if map is fully loaded
+  if (typeof myp5 !== 'undefined' &&
+      myp5.isLoaded()) {
+    if (DEBUG) console.log('updating map');
+    socket.emit('get-map', { room_id: room_id }); refresh_socket();
+    $('#map .loader').remove();
+    $('#map canvas').show();
+    window_resize();
+  } else {
+    // Wait a second to check if loaded
+    setTimeout(get_map, 1000);
+  }
+}
+
+function remove_user(data) {
+  if (user.role === 'admin' || user.name === data) {
+    if (DEBUG) console.log('removing user ' + data);
+    socket.emit('remove-user', { room_id: room_id, name: data }); refresh_socket();
+  }
+}
+
+// Map
+function save_map() {
+  var data = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(myp5.save(true)));
+  var a = document.createElement('a');
+  a.href = 'data:' + data;
+  a.download = 'mapData.json';
+  a.download = 'mapData.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function load_map() {
+  var input, file, fr;
+
+  if (typeof window.FileReader !== 'function') {
+    if (DEBUG) console.log("The file API is not supported on the browser");
+    return;
+  }
+
+  input = document.getElementById('map-data-input');
+  if (!input) {
+    if (DEBUG) console.log("Culdn't find the map data element.");
+  } else if (!input.files) {
+    if (DEBUG) console.log("files property not supported");
+  } else if (!input.files[0]) {
+    show_alert({ kick: false, alert: "Please select a file before clicking 'Load'" });
+  } else {
+    file = input.files[0];
+    fr = new FileReader();
+    fr.onload = function(e) {
+      var lines = e.target.result;
+      var newMapData = JSON.parse(lines);
+      newMapData.update = {
+        walls: true,
+        entities: true,
+        assets: true,
+        texture: true,
+      };
+      myp5.load(newMapData, false);
+    };
+    fr.readAsText(file);
+  }
+}
+
+function send_map() {
+  if (user.role !== 'admin') return;
+
+  if (DEBUG) console.log('sending map');
+  socket.emit('update-map', {
+    room_id: room_id,
+    map: myp5.save()
+  }); refresh_socket();
+
+  myp5.reset_update('all');
+}
+
+function map_data(data) {
+  if (DEBUG) console.log('receiving map');
+  myp5.load(data);
+}
+
+// Entities
+function send_entities() {
+  if (DEBUG) console.log('sending entities');
+  socket.emit('update-entities-map', {
+    room_id: room_id,
+    entities: myp5.entities_save()
+  }); refresh_socket();
+
+  myp5.reset_update('entities');
+}
+
+function receive_entities(data) {
+  if (DEBUG) console.log('receiving entities');
+  myp5.entities_load(data);
+}
+
+// Lines
+function send_lines() {
+  if (DEBUG) console.log('sending lines');
+  var out = myp5.lines_save();
+
+  if (out.lines.length > 0) {
+    socket.emit('update-lines-map', {
+      room_id: room_id,
+      id: out.id,
+      lines: out.lines
+    }); refresh_socket();
+  }
+
+  myp5.reset_update('lines');
+}
+
+function receive_lines(data) {
+  myp5.lines_load(data);
+}
+
+// Dice
 function toggle_dice(val) {
   var dice = $('#dice-content');
   var map = $('#map-content');
@@ -88,240 +354,30 @@ function toggle_dice(val) {
   }
 }
 
-function user_data(data) { 
-  user = data;
+function toggle_share_dice(val) {
+  if (val !== null) {
+    var share_status = $('#share-dice-status');
+    var user_dice = $('#' + user.id + '-dice');
+    share_dice = val;
+    user.share = share_dice; // TODO: Directly modify user.share from val; remove share_dice
 
-    if (!initialized) {
-    if (user.role === 'admin') {
-      // Load textures
-      $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
-        $.each(data, function(key, val) {
-          $('#texture-containers').append(`
-            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
-              <span class="mx-auto">` + val[1] + `</span>
-            </div>`);
-          $('#fill-containers').append(`
-            <div class="fill-container col-3 text-center" onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
-              <span class="mx-auto">` + val[1] + `</span>
-            </div>`);
-        });
-      });
-      $('#texture-containers').show();
-      $('#fill-containers').show();
-
-      // Load walls
-      $.getJSON(MEDIA_MAPS + 'walls/walls.json', function(data) {
-        $.each(data, function(key, val) {
-          $('#wall-containers').append(`
-    <div class="wall-container col-3 text-center" onclick="myp5.setSpecificMode('wall', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-      <img class="row mx-auto" src="` + MEDIA_MAPS + `walls/` + val[2] + `" />
-      <span class="mx-auto">` + val[1] + `</span>
-    </div>`);
-        });
-      });
-      $('#wall-containers').show();
-
-      // Load assets
-      $.getJSON(MEDIA_MAPS + 'assets/assets.json', function(data) {
-        $.each(data, function(key, val) {
-          $('#asset-containers').append(`
-    <div class="asset-container col-3 text-center" onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">
-      <img class="row mx-auto" src="` + MEDIA_MAPS + `assets/` + val[2] + `" />
-      <span class="mx-auto">` + val[1] + `</span>
-    </div>`);
-        });
-      });
-
-      $('#update-button').show();
-      $('#assets-button').show();
-      $('#tools-modal-map').show();
+    if (share_dice) { // Shown
+      share_status.attr('data-glyph', 'lock-unlocked');
+    } else { // Hidden
+      share_status.attr('data-glyph', 'lock-locked');
     }
 
-    // Load entities
-    $.getJSON(MEDIA_MAPS + 'entities/entities.json', function(data) {
-      $.each(data, function(key, val) {
-        $('#entity-containers').append(`
-  <div class="entity-container col-3 text-center" onclick="myp5.setSpecificMode('entity', ` + val[0] + `); $('#entities-modal').modal('toggle');">
-    <img class="row mx-auto" src="` + MEDIA_MAPS + `entities/` + val[2] + `" />
-    <span class="mx-auto">` + val[1] + `</span>
-  </div>`);
-      });
-    });
-
-    // Load common tools
-    [['map', 'Map Mode'],
-    ['move', 'Move Mode'],
-    ['draw', 'Draw Mode'],
-    ['erase', 'Erase Mode']
-    ].forEach(function(data) {
-      $('#tool-containers').append(`
-  <div class="tool-container">
-    <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
-  </div>`);
-    });
-
-    socket.emit('get-room', { room_id: room_id }); refresh_socket();
-    initialized = true;
-  }
-
-  // Load presets
-  for (var i = 0; i < 2; ++i) {
-    var preset = user.preset[i];
-    if (preset.used) {
-      var preset_content = '';
-
-      if (preset.counter !== 0) {
-        preset_content += `<h6 class="col-12"><span class="bg-`;
-        preset_content += (preset.counter > 0) ? 'success' : 'danger';
-        preset_content += `" style="border-radius: 5%;">Counter: ` + preset.counter + `</span></h6>`;
-      }
-
-      preset_content += `
-<div class="preset-dice d-flex flex-wrap justify-content-center mx-auto">`;
-
-      user.preset[i].dice.forEach((die) => {
-        preset_content += `
-<div class="` + die.type + ` small-die"></div>`;
-      });
-
-      preset_content += `</div>`;
-
-      $('#preset' + (i + 1) + '-container').html(preset_content);
-    }
+    socket.emit('share-dice', { room_id: room_id, share: share_dice }); refresh_socket();
   }
 }
 
-function get_map() {
-  console.log('checking for map');
-  // Check if map is fully loaded
-  if (typeof myp5 !== 'undefined' &&
-      myp5.isLoaded()) {
-    console.log('updating map');
-    socket.emit('get-map', { room_id: room_id }); refresh_socket();
-    $('#map .loader').remove();
-    $('#map canvas').show();
-    window_resize();
-  } else {
-    // Wait a second to check if loaded
-    setTimeout(get_map, 1000);
-  }
-}
-
-function remove_user(data) {
-  if (user.role === 'admin' || user.name === data) {
-    console.log('removing user ' + data);
-    socket.emit('remove-user', { room_id: room_id, name: data }); refresh_socket();
-  }
-}
-
-// Map
-function save_map() {
-  var data = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(myp5.save(true)));
-  var a = document.createElement('a');
-  a.href = 'data:' + data;
-  a.download = 'mapData.json';
-  a.download = 'mapData.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-function load_map() {
-  var input, file, fr;
-
-  if (typeof window.FileReader !== 'function') {
-    console.log("The file API is not supported on the browser");
-    return;
-  }
-
-  input = document.getElementById('map-data-input');
-  if (!input) {
-    console.log("Culdn't find the map data element.");
-  } else if (!input.files) {
-    console.log("files property not supported");
-  } else if (!input.files[0]) {
-    show_alert({ kick: false, alert: "Please select a file before clicking 'Load'" });
-  } else {
-    file = input.files[0];
-    fr = new FileReader();
-    fr.onload = function(e) {
-      var lines = e.target.result;
-      var newMapData = JSON.parse(lines);
-      newMapData.update = {
-        walls: true,
-        entities: true,
-        assets: true,
-        texture: true,
-      };
-      myp5.load(newMapData, false);
-    };
-    fr.readAsText(file);
-  }
-}
-
-function send_map() {
-  if (user.role !== 'admin') return;
-
-  console.log('sending map');
-  socket.emit('update-map', {
-    room_id: room_id,
-    map: myp5.save()
-  }); refresh_socket();
-
-  myp5.reset_update('all');
-}
-
-function map_data(data) {
-  console.log('receiving map');
-  myp5.load(data);
-}
-
-// Entities
-function send_entities() {
-  console.log('sending entities');
-  socket.emit('update-entities-map', {
-    room_id: room_id,
-    entities: myp5.entities_save()
-  }); refresh_socket();
-
-  myp5.reset_update('entities');
-}
-
-function receive_entities(data) {
-  console.log('receiving entities');
-  myp5.entities_load(data);
-}
-
-// Lines
-function send_lines() {
-  console.log('sending lines');
-  var out = myp5.lines_save();
-
-  if (out.lines.length > 0) {
-    socket.emit('update-lines-map', {
-      room_id: room_id,
-      id: out.id,
-      lines: out.lines
-    }); refresh_socket();
-  }
-
-  myp5.reset_update('lines');
-}
-
-function receive_lines(data) {
-  myp5.lines_load(data);
-}
-
-// Dice
 function set_dice_type(type) {
   dice_type = type;
   $('#dice-type').text(type);
 }
 
 function add_dice(data) {
-  console.log('adding ' + data);
+  if (DEBUG) console.log('adding ' + data);
   socket.emit('add-dice', { room_id: room_id, type: data }); refresh_socket();
 }
 
@@ -338,17 +394,17 @@ function remove_dice(data) {
       type: data
     }
   }
-  console.log('removing ' + data);
+  if (DEBUG) console.log('removing ' + data);
   socket.emit('remove-dice', out); refresh_socket();
 }
 
 function clear_dice() {
-  console.log('clearing');
+  if (DEBUG) console.log('clearing');
   socket.emit('clear-dice', { room_id: room_id }); refresh_socket();
 }
 
 function roll_dice(data) {
-  var out;
+  var out = null;
   if (typeof data == 'undefined') {
     out = {
       room_id: room_id
@@ -359,8 +415,11 @@ function roll_dice(data) {
       index: selected_dice.index
     }
   }
-  console.log('rolling');
-  socket.emit('roll-dice', out); refresh_socket();
+
+  if (out !== null) {
+    if (DEBUG) console.log('rolling');
+    socket.emit('roll-dice', out); refresh_socket();
+  }
 }
 
 function status_dice(dice, type, counter) {
@@ -401,11 +460,64 @@ function status_dice(dice, type, counter) {
   return '';
 }
 
-function die_animation(type, delta, full) {
+function dice_animation(animate, time) {
+  animate.forEach(function(a_dice) {
+    var a_dice_div = $('#' + a_dice.id + '-die');
+    var delta = time - a_dice.time;
+    var animation_time = die_animation_time.get(a_dice.id);
+
+    // TODO: is this needed
+    if (delta > animation_time) return;
+
+    // CSS dice rolling animation
+    a_dice_div.attr('style', die_animation(delta, animation_time, a_dice.value));
+
+    if (a_dice.value === -1) return;
+
+    var date = new Date();
+    var start = date.getTime();
+
+    var setint = setInterval(function () {
+      var date = new Date();
+      var prog = date.getTime() - start + delta;
+
+      if (prog > animation_time) {
+        var a_dice_value = a_dice.value;
+        if (a_dice.type === 'd10' && a_dice_value === 10) a_dice_value = 0; // Display 10 on d10 as 0
+        
+        a_dice_div.find('span.die-number').text(a_dice_value);
+        clearInterval(setint);
+      } else {
+        var i = Math.min(
+          a_dice.anime.length,
+          Math.floor(
+            a_dice.anime.length * 
+            Math.sqrt(prog / animation_time)
+          )
+        );
+
+        var a_dice_value = a_dice.anime[i];
+        if (a_dice.type === 'd10' && a_dice_value === 10) a_dice_value = 0; // Display 10 on d10 as 0
+
+        a_dice_div.find('span.die-number').text(a_dice_value);
+      }
+    }, 10);
+  });
+}
+
+function die_animation(delta, full, value) {
   if (delta > full) {
     return '';
   }
-  var out = 'animation-name: ' + type + '-glow; animation-timing-function: linear; animation-duration: ' + full/1000 + 's; animation-delay: -' + delta/1000 + 's;';
+  var df = full/1000; // seconds
+  var dd = delta/1000; // seconds
+
+  var out;
+  if (value === -1) {
+    out = 'animation-name: glow; animation-timing-function: ease-out; animation-duration: ' + df + 's; animation-delay: -' + dd + 's;';
+  } else {
+    out = 'animation-name: shake, glow; animation-timing-function: cubic-bezier(0,1,0,1), ease-out; animation-duration: ' + df + 's, ' + df + 's; animation-delay: -' + dd + 's, -' + dd + 's;';
+  }
   return out;
 }
 
@@ -430,11 +542,11 @@ function set_user_color(color_string) {
   if (s.color !== '') {
     users_color[user.id] = color_to_array(s.color);
 
-    console.log('changing user color ' + users_color[user.id]);
+    if (DEBUG) console.log('changing user color ' + users_color[user.id]);
     socket.emit('change-color', { room_id: room_id, color: users_color[user.id] }); refresh_socket();
   }
 
-  // Update color wheel
+  // Update color wheel in tool menu
   var user_color = get_user_color(user);
   var color_value = (user_color[0] << 16) + (user_color[1] << 8) + user_color[2];
   var color_string = color_value.toString(16).padStart(6, '0');
@@ -503,7 +615,7 @@ function color_to_array(color_string) {
 
 // Window dependant
 function room_data(data) {
-  console.log('updating room');
+  if (DEBUG) console.log('updating room');
   $('#dice .loader').remove();
 
   var dice = '';
@@ -529,22 +641,23 @@ function room_data(data) {
     var a_user_dice_id = '#' + a_user.id + '-dice';
     if ($(a_user_dice_id).length === 0) { // New user or user dice div is missing
       changed = true;
-      console.log('adding missing user dice ' + a_user.name);
+      if (DEBUG) console.log('adding missing user dice ' + a_user.name);
     } else if ($(a_user_dice_id).data('updated') !== a_user.updated) { // Existing user dice needs to be updated
       changed = true;
-      console.log('updating user dice ' + a_user.name + ' ' + $(a_user_dice_id).data('updated') + ':' + a_user.updated);
+      if (DEBUG) console.log('updating user dice ' + a_user.name + ' ' + $(a_user_dice_id).data('updated') + ':' + a_user.updated);
       $(a_user_dice_id).remove();
     }
 
     if (changed) {
-      console.log('update ' + a_user.name);
+      if (DEBUG) console.log('update ' + a_user.name);
 
       // Update user color
       users_color[a_user.id] = a_user.color;
 
-      var a_dice = create_user_dice(a_user, data.time);
+      var a_dice_out = create_user_dice(a_user, data.time);
+      var a_dice = a_dice_out.html;
 
-      if (user.name === a_user.name) {
+      if (a_user.id === user.id) {
         dice_count_changed = true;
         $('#dice').prepend(a_dice);
         // Update die count
@@ -557,6 +670,30 @@ function room_data(data) {
           $(a_dice).insertAfter('#' + user.id + '-dice');
         } else {
           $('#dice').prepend(a_dice);
+        }
+      }
+
+      dice_animation(a_dice_out.animate, data.time);
+
+      // Update status bar
+      if (a_user.id === user.id) {
+        var status_out = '<div class="row">';
+        status_out += status_dice(a_user.dice, 'd4');
+        status_out += status_dice(a_user.dice, 'd6');
+        status_out += status_dice(a_user.dice, 'd8');
+        status_out += status_dice(a_user.dice, 'd10');
+        status_out += status_dice(a_user.dice, 'd12');
+        status_out += status_dice(a_user.dice, 'd20');
+        status_out += status_dice(a_user.dice, 'total', a_user.counter);
+        status_out += '</div>'
+    
+        if (a_dice_out.animate.length > 0) {
+          // Delay status bar update
+          setTimeout(function() {
+            $('#' + a_user.id + '-dice').find('.user-dice-status').html(status_out);
+          }, die_animation_time.max);
+        } else {
+          $('#' + a_user.id + '-dice').find('.user-dice-status').html(status_out);
         }
       }
     }
@@ -573,19 +710,20 @@ function room_data(data) {
 
   // Remove existing users that are not in room-data
   existing_users.forEach(function(e_id) {
-    console.log('removing user with id ' + e_id);
+    if (DEBUG) console.log('removing user with id ' + e_id);
     $('#' + e_id + '-dice').remove();
   });
 }
 
 function create_user_dice(a_user, time) {
   var a_color = get_user_color(a_user);
+  var animate = [];
   var a_dice = `
 <div id="` + a_user.id + `-dice" class="user-area col-12 mx-1 border border-dark rounded" data-user-id="` + a_user.id + `" data-updated="` + a_user.updated + `">
 <div class="row user-status-bar bg-light">
   <div class="row user-name col-12 p-0 m-0 border border-success text-center">`;
-    if (user.name === a_user.name) {
-      a_dice += `
+  if (user.id === a_user.id) {
+    a_dice += `
     <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
       <button class="btn btn-success col-4 p-0" type="button" onclick="counter(1)"><span>+</span></button>
       <span id="user-counter" class="col-4 p-0 text-center"><h5 class="m-0" value="` + a_user.counter + `">` + a_user.counter + `</h5></span>
@@ -593,8 +731,8 @@ function create_user_dice(a_user, time) {
     </div>
     <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>
     <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')"><span>Exit</span></button>`;
-    } else if (user.role === 'admin') {
-      a_dice += `
+  } else if (user.role === 'admin') {
+    a_dice += `
     <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
       <button class="btn btn-success col-4 p-0" type="button" onclick="counter(1, '` + a_user.name + `')"><span>+</span></button>
       <span class="col-4 p-0 text-center"><h5 class="m-0">` + a_user.counter + `</h5></span>
@@ -602,57 +740,84 @@ function create_user_dice(a_user, time) {
     </div>
     <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>
     <button class="btn btn-default col-3 col-md-2 p-0 m-0" onClick="remove_user('` + a_user.name + `')"><span>Kick</span></button>`;
-    } else {
-      a_dice += `
+  } else {
+    a_dice += `
     <div class="col-3 col-md-2 p-0 m-0 dice-buttons text-center row">
       <span class="col-12 p-0 text-center"><h5 class="m-0">` + a_user.counter + `</h5></span>
     </div>
     <div class="col-6 col-md-8"><h5 class="m-0">` + a_user.name + `</h5></div>`;
-    }
+  }
+
+  a_dice += `
+  </div>`;
+
+  // Status bar
+  if (a_user.id === user.id) {
     a_dice += `
-  </div>
-  <div class="user-dice-status col-12 border border-success">
-    <div class="row">`;
-    a_dice += status_dice(a_user.dice, 'd4');
-    a_dice += status_dice(a_user.dice, 'd6');
-    a_dice += status_dice(a_user.dice, 'd8');
-    a_dice += status_dice(a_user.dice, 'd10');
-    a_dice += status_dice(a_user.dice, 'd12');
-    a_dice += status_dice(a_user.dice, 'd20');
-    a_dice += status_dice(a_user.dice, 'total', a_user.counter);
+  <div class="user-dice-status col-12 border border-success"></div>`;
+  }
+
+  a_dice += `
+</div>`;
+
+  var a_user_color = 'rgba(' + a_color[0] + ',' + a_color[1] + ',' + a_color[2] + ',0.8)';
+  if (a_user.share) {
     a_dice += `
-    </div>
-  </div>
-</div>
-<div class="row user-dice" style="background-color: rgba(` + a_color[0] + `,` + a_color[1] + `,` + a_color[2] + `,0.8);">`;
-    if (a_user.dice.length > 0) {
-      for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
-        var die = a_user.dice[j];
-        var die_value = die.value;
-        if (die.type === 'd10' && die.value === 10) die_value = 0;
-        a_dice += `
-    <div class="` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center mx-auto" style="height: 64px; ` + die_animation(die.type, (time - die.time), die_glow_time) + `" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `">
-      <span class="die-number">` + ((die_value > -1) ? die_value : '?') + `</span>
-    </div>`;
+<div class="row user-dice" style="background-color: ` + a_user_color + `;">`;
+  } else {
+    var a_user_op_color = 'rgba(' + (255 - a_color[0]) + ',' + (255 - a_color[1]) + ',' + (255 - a_color[2]) + ',0.8)';
+
+    a_dice += `
+<div class="row user-dice" style="background: repeating-linear-gradient(45deg, ` + a_user_color + `, ` + a_user_color + ` 10px, ` + a_user_op_color + ` 10px, ` + a_user_op_color + ` 20px);">`;
+  }
+
+  if (a_user.dice.length > 0) {
+    for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
+      var die = a_user.dice[j];
+      var die_value = die.value;
+
+      if (die.type === 'd10' && die.value === 10) die_value = 0; // Display 10 on d10 as 0
+
+      if ((time - die.time) < die_animation_time.get(die.id)) {
+        animate.push(die);
       }
+
+      // TODO: remove die index and start using die id
+      a_dice += `
+  <div class="a-dice-container mx-auto">
+    <div id="` + die.id + `-die" class="a-dice ` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `">
+      <span class="die-number">` + ((die_value > -1) ? die_value : '?') + `</span>
+    </div>
+  </div>`;
+    }
+  } else {
+    if (!a_user.share) {
+      a_dice += `
+  <div class="dice-status col-12 text-center">Hidden</div>`;
     } else {
       a_dice += `
-    <div class="col-12 text-center">No Dice</div>`;
+  <div class="dice-status col-12 text-center">No Dice</div>`;
     }
-    a_dice += `
+  }
+  a_dice += `
 </div>
 </div>`;
 
-  return a_dice;
+  return { html: a_dice, animate: animate };
 }
 
 function room_log(data) {
-  console.log('adding log');
+  if (DEBUG) console.log('adding log');
   var log = $('#log').html();
   var time = new Date(data.time);
-  //console.log(data.time);
   var time_stamp = '[' + time.getHours() + ':' + ((time.getMinutes() < 10) ? '0' : '') + time.getMinutes() + ']';
-  log = '<span class="row">' + time_stamp + '&nbsp;<b>' + data.user + '</b>&nbsp;' + data.log + '</span>' + log;
+
+  if (data.share) {
+    log = '<span class="row">' + time_stamp + '&nbsp;<b>' + data.user + '</b>&nbsp;' + data.log + '</span>' + log;
+  } else {
+    log = '<span class="row">' + time_stamp + '&nbsp;<b>' + data.user + '</b>&nbsp;' + data.log + '&nbsp;<b>(H)</b></span>' + log; 
+  }
+
   $('#log').html(log);
   // Scroll to bottom of log
   $('#log').scrollTop(0);
@@ -695,7 +860,7 @@ $(document).ready(function() {
   socket = io();
 
   socket.on('connect', function() {
-    console.log('connected to room');
+    if (DEBUG) console.log('connected to room');
     socket.emit('join', room_id); refresh_socket();
     socket.emit('enter-room', room_id); refresh_socket();
     // Get map data
@@ -709,7 +874,7 @@ $(document).ready(function() {
   socket.on('lines-map-data',    receive_lines);
   socket.on('room-log',          room_log);
   socket.on('disconnect',        function(data) {
-      console.log('disconnected');
+    if (DEBUG) console.log('disconnected');
   });
 
   // Events
@@ -718,6 +883,7 @@ $(document).ready(function() {
   // Reset selected dice
   $(document).on('click', function() {
     selected_dice = null;
+    $('.dice-click').removeClass('dice-selected');
     $('#dice-overlay').remove();
   });
 
@@ -726,8 +892,10 @@ $(document).ready(function() {
     selected_dice = { anchor: this, index: $(this).attr('index')};
 
     //var pos = $(this).position();
+    $('.dice-click').removeClass('dice-selected');
     $('#dice-overlay').remove();
-    $(this).append(dice_overlay);
+    $(dice_overlay).insertAfter(this);
+    $(this).addClass('dice-selected');
     event.stopPropagation();
   });
 
@@ -784,6 +952,13 @@ $(document).ready(function() {
 
   $(document).on('change', 'input#color-wheel', function(event) {
     set_user_color(this.value);
+  });
+
+  $(document).on('animationend', '.a-dice', function(event) {
+    $(this).css('animation-name', '');
+    $(this).css('animation-timing-function', '');
+    $(this).css('animation-duration', '');
+    $(this).css('animation-delay', '');
   });
 
   // Resize window on load

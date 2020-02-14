@@ -399,6 +399,15 @@ var mode = {
 
           mode.dragging.val = false;
           mode.dragging.old = null;
+          mode.dragging.count = 0;
+        }
+      }
+
+      // Remove lines if number of lines exceeds the limit
+      if (map.lines.hasOwnProperty(user.id)) {
+        var len = map.lines[user.id].length;
+        if (len > MAX_LINES) {
+          map.lines[user.id].splice(0, len - MAX_LINES);
         }
       }
     },
@@ -1392,113 +1401,110 @@ sketch.keyPressed = function() {
 
   if (!onCanvas) return;
   switch (sketch.key) {
-    case 'o':
-      view.grid = !view.grid;
-      break;
-    case 'm':
+    case 'm': // Map Mode
       sketch.setMode(cursors.MAP);
       break;
-    case 'w':
-      sketch.setMode(cursors.WALL);
-      break;
-    case 'e':
-      sketch.setMode(cursors.ENTITY);
-      break;
-    case 'a':
-      sketch.setMode(cursors.ASSET);
-      break;
-    case 'g':
+    case 'g': // Move Mode
       sketch.setMode(cursors.MOVE);
       break;
-    case 'r':
+    case 'd': // Draw Mode
       sketch.setMode(cursors.DRAW);
       break;
-    case 'd':
+    case 'x': // Erase Mode
       sketch.setMode(cursors.ERASE);
       break;
-    case 't':
-      mode.fill = false;
-      sketch.setMode(cursors.TEXTURE);
-      break;
-    case 'f':
-      mode.fill = true;
-      sketch.setMode(cursors.TEXTURE);
+    case 'o': // Grid Overlay
+      view.grid = !view.grid;
       break;
     case '=':
     case '+':
       switch (mode.cursor.val) {
-        case cursors.MAP:
-        case cursors.WALL:
-        case cursors.MOVE:
-        case cursors.ERASE:
-          view.zoom.set(view.zoom.val * 1.1);
-          break;
         case cursors.ASSET:
           view.asset.zoom.set(view.asset.zoom.val * 1.1);
           break;
         case cursors.TEXTURE:
           view.brush.set(view.brush.val * 1.1);
           break;
+        default:
+          view.zoom.set(view.zoom.val * 1.1);
       }
       break;
     case '-':
     case '_':
       switch (mode.cursor.val) {
-        case cursors.MAP:
-        case cursors.WALL:
-        case cursors.MOVE:
-        case cursors.ERASE:
-          view.zoom.set(view.zoom.val * 0.9);
-          break;
         case cursors.ASSET:
           view.asset.zoom.set(view.asset.zoom.val * 0.9);
           break;
         case cursors.TEXTURE:
           view.brush.set(view.brush.val * 0.9);
           break;
+        default:
+          view.zoom.set(view.zoom.val * 0.9);
       }
       break;
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-      var key = sketch.key - '0';
-      switch (mode.cursor.val) {
-        case cursors.TEXTURE:
-          mode.texture = key;
-          if (key > 0 && key < textures.COUNT) {
-            textures.images[key].loadPixels();
-          }
+  }
+
+  if (user.role === 'admin') {
+    switch (sketch.key) {
+      case 'w':
+        sketch.setMode(cursors.WALL);
         break;
-        case cursors.WALL:
-          mode.wall = key;
+      case 'e':
+        sketch.setMode(cursors.ENTITY);
         break;
-        case cursors.ENTITY:
-          // Temp fix for Entity 9 (colors)
-          if (key === 9) {
-            if (mode.entity > 8 && mode.entity < 12) {
-              mode.entity++;
-              if (mode.entity > 11) {
-                mode.entity = 9;
+      case 'a':
+        sketch.setMode(cursors.ASSET);
+        break;
+      case 'b': // Texture Mode (brush)
+        mode.fill = false;
+        sketch.setMode(cursors.TEXTURE);
+        break;
+      case 'f': // Texture Mode (fill)
+        mode.fill = true;
+        sketch.setMode(cursors.TEXTURE);
+        break;
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        var key = sketch.key - '0';
+        switch (mode.cursor.val) {
+          case cursors.TEXTURE:
+            mode.texture = key;
+            if (key > 0 && key < textures.COUNT) {
+              textures.images[key].loadPixels();
+            }
+          break;
+          case cursors.WALL:
+            mode.wall = key;
+          break;
+          case cursors.ENTITY:
+            // Temp fix for Entity 9 (colors)
+            if (key === 9) {
+              if (mode.entity > 8 && mode.entity < 12) {
+                mode.entity++;
+                if (mode.entity > 11) {
+                  mode.entity = 9;
+                }
+              } else {
+                mode.entity = key;
               }
             } else {
               mode.entity = key;
             }
-          } else {
-            mode.entity = key;
-          }
-          break;
-        case cursors.ASSET:
-          mode.asset = key;
-          break;
-      }
-      break;
+            break;
+          case cursors.ASSET:
+            mode.asset = key;
+            break;
+        }
+        break;
+    }
   }
 };
 
@@ -1588,12 +1594,12 @@ function loadMedia(data, folder) {
     if (data[key][2] === null) {
       target.images[target[key]] = null;
     } else {
-      console.log('loading '+ data[key][2]);
+      if (DEBUG) console.log('loading '+ data[key][2]);
       target.images[target[key]] = sketch.loadImage(MEDIA_MAPS + folder + data[key][2], mediaLoading);
     }
   }
 
-  console.log('Loaded ' + folder);
+  if (DEBUG) console.log('Loaded ' + folder);
 
   return target;
 }
@@ -1665,7 +1671,7 @@ function draw_line() {
   
     // Draw remaining markers
     var color = get_user_color(a_user_id);
-    sketch.strokeWeight(10 / view.zoom.val);
+    sketch.strokeWeight(8 / view.zoom.val);
     sketch.stroke(color[0], color[1], color[2]);
     
     map.lines[a_user_id].forEach(function(marker) {
@@ -1715,15 +1721,48 @@ function draw_entities() {
 function draw_hover() {
   if (mode.cursor.val === cursors.MOVE ||
       mode.cursor.val === cursors.ERASE) {
-    var scale = view.zoom.MAX / view.zoom.val;
     var ex = view.mx / map.entity.scale;
     var ey = view.my / map.entity.scale;
     for (entity of map.entities) {
       if (entity.contains(ex, ey)) {
+        var t_size = 16;
+        var e_width = Math.min(256, sketch.width / 3);
+        var e_height = e_width + 2.75 * t_size;
+        var scale = e_width / 6 * map.entity.scale;
+
         sketch.push();
-          sketch.scale(scale * map.entity.scale);
-          sketch.translate(-entity.x +  entity.x / scale, -entity.y + entity.y / scale);
-          entity.draw();
+          sketch.translate(-sketch.width/(2 * view.zoom.val), -sketch.height/(2 * view.zoom.val));
+          sketch.scale(1/view.zoom.val);
+          sketch.translate(view.x * view.zoom.val, view.y * view.zoom.val);
+
+          sketch.rectMode(sketch.CORNER);
+          sketch.strokeWeight(6);
+          sketch.stroke(entity.color[0], entity.color[1], entity.color[2], 255);
+          sketch.fill(255);
+
+          if (sketch.mouseX < sketch.width / 2) {
+            sketch.translate(sketch.width - e_width - 10, 10);
+          } else {
+            sketch.translate(10, 10);
+          }
+
+          sketch.rect(0, 0, e_width, e_height);
+
+          sketch.push();
+            sketch.translate(e_width / 2, e_width / 2);
+            sketch.scale(scale);
+
+            entity.draw(0, 0);
+          sketch.pop();
+
+          sketch.fill(0);
+          sketch.noStroke();
+          sketch.textAlign(sketch.CENTER);
+          sketch.textSize(t_size);
+
+          sketch.translate(e_width / 2, 0);
+          sketch.text(entities.names[entity.type], 0, e_width + 0.75 * t_size);
+          sketch.text(entity.user.name, 0, e_width + 2 * t_size);
         sketch.pop();
       }
     }

@@ -20,7 +20,10 @@ var room  = require('./routes/room.js');
 // Express
 var app = express();
 app.server = http.createServer(app);
-app.io = socketio();
+app.io = socketio(http, {
+  pingInterval: 25000,
+  pingTimeout: 60000
+});
 app.io.attach(app.server);
 app.use(session);
 app.io.use(sharedsession(session, { autoSave: true }));
@@ -166,12 +169,13 @@ if (global.DEBUG) {
     name: 'User1',
     role: 'user',
     dice: [
-      { type: 'd4' },
+      { type: 'd4'},
       { type: 'd6' },
       { type: 'd8' },
       { type: 'd10' },
       { type: 'd12' },
       { type: 'd20'}],
+    share: true,
     counter: 1,
     preset: [{
       dice: [],
@@ -182,10 +186,6 @@ if (global.DEBUG) {
     }],
     updated: 0
   };
-
-  debug_user1.dice.forEach((die) => {
-    app.func.roll(die);
-  });
 
   var debug_user2 = {
     socket: { handshake: { sessionID: 0 } },
@@ -200,6 +200,7 @@ if (global.DEBUG) {
       { type: 'd10' },
       { type: 'd12' },
       { type: 'd20'}],
+    share: true,
     counter: 1,
     preset: [{
       dice: [],
@@ -210,10 +211,6 @@ if (global.DEBUG) {
     }],
     updated: 0
   };
-
-  debug_user2.dice.forEach((die) => {
-    app.func.roll(die);
-  });
 
   var debug_room = {
     name: 'Debug',
@@ -231,6 +228,16 @@ if (global.DEBUG) {
       texture: null
     }
   };
+
+  debug_user1.dice.forEach((die) => {
+    die.id = app.func.create_id('dice', debug_room.users); 
+    app.func.roll(die);
+  });
+
+  debug_user2.dice.forEach((die) => {
+    die.id = app.func.create_id('dice', debug_room.users);
+    app.func.roll(die);
+  });
 
   app.rooms.set('debug', debug_room);
   app.use(logger('dev'));

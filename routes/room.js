@@ -14,7 +14,7 @@ router.get('/:id', function(req, res, next) {
     return;
   }
 
-  res.render('room', { title: 'Room: ' + rooms.get(id).name, room: rooms.get(id) });
+  res.render('room', { title: 'Room: ' + rooms.get(id).name, room: rooms.get(id), show_debug: global.DEBUG ? 'true' : 'false' });
 });
 
 router.sockets = (io, socket, rooms, func) => {
@@ -35,7 +35,7 @@ router.sockets = (io, socket, rooms, func) => {
     user.socket = socket;
 
     // Send room data
-    socket.emit('user-data', { name: user.name, role: user.role, id: user.id, preset: user.preset });
+    socket.emit('user-data', { name: user.name, role: user.role, id: user.id, color: user.color, preset: user.preset });
     socket.broadcast.to(data).emit('room-data', func.room_array(room));
   });
 
@@ -62,14 +62,6 @@ router.sockets = (io, socket, rooms, func) => {
       socket.emit('map-data', room.map);
     }
   });
-
-  // var data = {
-  //   // All data that is transfered over socket
-  //   walls:    [],
-  //   entities: [],
-  //   assets:   [],
-  //   texture: null
-  // };
   
   socket.on('update-map', (data) => {
     var room = func.find_room(rooms, data.room_id, socket);
@@ -163,24 +155,37 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('add-dice', (data) => {
-    var dice = { type: '', value: -1, time: Date.now() };
-    if (['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].includes(data.type)) {
-      dice.type = data.type;
-    } else {
-      console.log('ERROR: a user tried to add an unknown die ' + data.type);
-      return;
-    }
     var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = func.find_user_socket(room, socket);
     if (user) {
+      var dice = {
+        id: '',
+        type: '',
+        value: -1,
+        time: Date.now(),
+        anime: []
+      };
+  
+      // Check dice type
+      if (['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].includes(data.type)) {
+        dice.type = data.type;
+      } else {
+        console.log('ERROR: user ' + user.name + ' tried to add an unknown die ' + data.type);
+        return;
+      }
+
+      // Get dice id
+      dice.id = func.create_id('dice', room.users);
       console.log('user ' + user.name + ' added a ' + data.type);
+
       if (user.dice.length >= global.MAX_DICE) {
-        socket.emit('alert', { kick: false, alert: 'Error: You unable to add more dice (max:' + global.MAX_DICE + ')'});
+        socket.emit('alert', { kick: false, alert: 'Error: You are unable to add more dice (max:' + global.MAX_DICE + ')'});
       } else {
         user.dice.push(dice);
         func.set_updated(user);
-        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+        socket.emit('room-data', func.room_array(room, user));
+        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
       }
     }
   });
@@ -208,7 +213,8 @@ router.sockets = (io, socket, rooms, func) => {
 
       if (changed) {
         func.set_updated(user);
-        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+        socket.emit('room-data', func.room_array(room, user));
+        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
       }
     }
   });
@@ -233,14 +239,25 @@ router.sockets = (io, socket, rooms, func) => {
       if (changed) {
         console.log('user ' + user.name + ' is rolling');
         func.set_updated(user);
-        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+        socket.emit('room-data', func.room_array(room, user));
+        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+        
         var date = new Date();
-        io.sockets.in(data.room_id).emit('room-log',
-        { 
+        var out = { 
           user: user.name,
           time: date.getTime(),
+          share: user.share,
           log: func.dice_status(user.dice, user.counter)
-        });
+        }
+        
+        // Delay log by animation time
+        setTimeout(() => {
+          if (user.share) {
+            io.sockets.in(data.room_id).emit('room-log', out);
+          } else {
+            socket.emit('room-log', out);
+          }
+        }, 3000);
       }
     }
   });
@@ -255,9 +272,25 @@ router.sockets = (io, socket, rooms, func) => {
       user.dice = [];
 
       func.set_updated(user);
-      io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+      socket.emit('room-data', func.room_array(room, user));
+      socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
     }
   });
+
+  socket.on('share-dice', (data) => {
+    var room = func.find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = func.find_user_socket(room, socket);
+    if (user) {
+      console.log('user ' + user.name + ' is ' + (data.share ? 'sharing' : 'hiding') + ' dice');
+      // Share/Hide dice
+      user.share = Boolean(data.share);
+
+      func.set_updated(user);
+      socket.emit('room-data', func.room_array(room, user)); // TODO: is needed?
+      socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+    }
+  })
 
   socket.on('counter', (data) => {
     var room = func.find_room(rooms, data.room_id, socket);
@@ -281,7 +314,8 @@ router.sockets = (io, socket, rooms, func) => {
       }
       if (target_user.counter !== old_counter) { // Only update on change
         func.set_updated(target_user);
-        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+        socket.emit('room-data', func.room_array(room, user));
+        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
       }
     }
   });
@@ -329,7 +363,8 @@ router.sockets = (io, socket, rooms, func) => {
         });
         user.counter = user.preset[data.preset].counter;
         func.set_updated(user);
-        io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+        socket.emit('room-data', func.room_array(room, user));
+        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
         break;
     }
   });
@@ -349,7 +384,8 @@ router.sockets = (io, socket, rooms, func) => {
 
     user.color = data.color;
     func.set_updated(user);
-    io.sockets.in(data.room_id).emit('room-data', func.room_array(room));
+    socket.emit('room-data', func.room_array(room, user));
+    socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
   });
 };
 
