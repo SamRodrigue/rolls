@@ -83,10 +83,12 @@ router.sockets = (io, socket, rooms, func) => {
       users: [],
       timeout: null,
       map: {
+        share:    true,
         walls:    [],
         entities: [],
         assets:   [],
-        texture: null
+        texture:  null,
+        fog:      null
       }
     };
     room.users.push(user);
@@ -206,6 +208,9 @@ router.sockets = (io, socket, rooms, func) => {
       } 
       // Move to room
       socket.emit('join-room', data.room_id);
+
+      // Update all other index clients
+      socket.broadcast.to('index').emit('update-rooms', func.rooms_array(rooms));
     }
   });
 }

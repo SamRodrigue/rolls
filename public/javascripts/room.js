@@ -20,14 +20,15 @@ var users_color = {};
 var log_container_height = 90;
 var show_dice = true;
 var share_dice = true;
+var share_map = true;
 var initialized = false;
 var dice_type = 'd4';
 var selected_dice = null;
 var die_animation_time = { 
   min: 1000,
   max: 3000,
-  get: function(id) {
-    var i = parseInt(id, 36) % (this.max - this.min);
+  get: function(a_dice) {
+    var i = (parseInt(a_dice.id, 36) + a_dice.time) % (this.max - this.min);
     return  i + this.min;
   }
 };
@@ -92,6 +93,7 @@ e: entity mode</br>
 a: asset mode</br>
 b: brush texture mode</br>
 f: fill texture mode</br>
+h: fog mode</br>
 0-9: select one of first 10 wall/entity/asset/texture depending on mode`;
       // Load textures
       $.getJSON(MEDIA_MAPS + 'textures/textures.json', function(data) {
@@ -111,6 +113,18 @@ f: fill texture mode</br>
 
       $('#texture-containers').show();
       $('#fill-containers').show();
+
+      $('#fog-containers').append(`
+            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog', 0); $('#tools-modal').modal('toggle');">
+              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/null" />
+              <span class="mx-auto">Erase</span>
+            </div>
+            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog', 1); $('#tools-modal').modal('toggle');">
+              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/fog.png" />
+              <span class="mx-auto">Draw</span>
+            </div>`);
+
+      $('#fog-containers').show();
 
       // Load walls
       $.getJSON(MEDIA_MAPS + 'walls/walls.json', function(data) {
@@ -136,7 +150,7 @@ f: fill texture mode</br>
         });
       });
 
-      $('#update-button').show();
+      $('#share-map').show();
       $('#assets-button').show();
       $('#tools-modal-map').show();
     }
@@ -157,9 +171,9 @@ f: fill texture mode</br>
 
     // Load common tools
     [['map', 'Map Mode'],
-    ['move', 'Move Mode'],
-    ['draw', 'Draw Mode'],
-    ['erase', 'Erase Mode']
+     ['move', 'Move Mode'],
+     ['draw', 'Draw Mode'],
+     ['erase', 'Erase Mode']
     ].forEach(function(data) {
       $('#tool-containers').append(`
   <div class="tool-container">
@@ -231,6 +245,29 @@ function remove_user(data) {
 }
 
 // Map
+function toggle_share_map(val) {
+  if (val !== null && user.role === 'admin') {
+    var share_button = $('#share-map');
+    var share_status = $('#share-map-status');
+    var map_div = $('#map');
+    share_map = val;
+
+    if (share_map) { // Shown
+      share_button.removeClass('btn-danger');
+      share_button.addClass('btn-warning');
+      share_status.text('Hide');
+      map_div.css('border-color', 'grey');
+    } else { // Hidden
+      share_button.removeClass('btn-warning');
+      share_button.addClass('btn-danger');
+      share_status.text('Show');
+      map_div.css('border-color', 'red');
+    }
+
+    socket.emit('share-map', { room_id: room_id, share: share_map }); refresh_socket();
+  }
+}
+
 function save_map() {
   var data = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(myp5.save(true)));
   var a = document.createElement('a');
@@ -289,43 +326,65 @@ function send_map() {
 
 function map_data(data) {
   if (DEBUG) console.log('receiving map');
+
+  var share_button = $('#share-map');
+  var share_status = $('#share-map-status');
+  var map_div = $('#map');
+
+  share_map = data.share;
+  if (user.role === 'admin') {
+    if (share_map) { // Shown
+      share_button.removeClass('btn-danger');
+      share_button.addClass('btn-warning');
+      share_status.text('Hide');
+      map_div.css('border-color', 'grey');
+    } else { // Hidden
+      share_button.removeClass('btn-warning');
+      share_button.addClass('btn-danger');
+      share_status.text('Show');
+      map_div.css('border-color', 'red');
+    }
+  }
+
   myp5.load(data);
 }
 
-// Entities
-function send_entities() {
-  if (DEBUG) console.log('sending entities');
-  socket.emit('update-entities-map', {
-    room_id: room_id,
-    entities: myp5.entities_save()
-  }); refresh_socket();
+// Send a type
+function send(type) {
+  switch (type) {
+    case 'walls':
+    case 'assets':
+    case 'texture':
+    case 'fog':
+      if (user.role != 'admin') { console.log('not admin'); return; }
 
-  myp5.reset_update('entities');
-}
+    case 'entities':
+    case 'lines':
+      if (DEBUG) console.log('sending ' + type);
+      socket.emit('update-map-type', {
+        room_id: room_id,
+        type: type,
+        data: myp5.save_type(type)
+      }); refresh_socket();
 
-function receive_entities(data) {
-  if (DEBUG) console.log('receiving entities');
-  myp5.entities_load(data);
-}
-
-// Lines
-function send_lines() {
-  if (DEBUG) console.log('sending lines');
-  var out = myp5.lines_save();
-
-  if (out.lines.length > 0) {
-    socket.emit('update-lines-map', {
-      room_id: room_id,
-      id: out.id,
-      lines: out.lines
-    }); refresh_socket();
+      myp5.reset_update(type);
+      break;
   }
-
-  myp5.reset_update('lines');
 }
 
-function receive_lines(data) {
-  myp5.lines_load(data);
+// Receive a type
+function receive(data) {
+  switch (data.type) {
+    case 'walls':
+    case 'entities':
+    case 'assets':
+    case 'lines':
+    case 'texture':
+    case 'fog':
+      if (DEBUG) console.log('receiving ' + data.type);
+      myp5.load_type(data.type, data.data);
+      break;
+  }
 }
 
 // Dice
@@ -386,7 +445,7 @@ function remove_dice(data) {
   if (typeof data == 'undefined' && selected_dice !== null) {
     out = {
       room_id: room_id,
-      index: selected_dice.index
+      id: selected_dice.id
     }
   } else {
     out = {
@@ -412,7 +471,7 @@ function roll_dice(data) {
   } else if (selected_dice !== null) {
     out = {
       room_id: room_id,
-      index: selected_dice.index
+      id: selected_dice.id
     }
   }
 
@@ -464,7 +523,7 @@ function dice_animation(animate, time) {
   animate.forEach(function(a_dice) {
     var a_dice_div = $('#' + a_dice.id + '-die');
     var delta = time - a_dice.time;
-    var animation_time = die_animation_time.get(a_dice.id);
+    var animation_time = die_animation_time.get(a_dice);
 
     // TODO: is this needed
     if (delta > animation_time) return;
@@ -749,15 +808,7 @@ function create_user_dice(a_user, time) {
   }
 
   a_dice += `
-  </div>`;
-
-  // Status bar
-  if (a_user.id === user.id) {
-    a_dice += `
-  <div class="user-dice-status col-12 border border-success"></div>`;
-  }
-
-  a_dice += `
+  </div>
 </div>`;
 
   var a_user_color = 'rgba(' + a_color[0] + ',' + a_color[1] + ',' + a_color[2] + ',0.8)';
@@ -772,24 +823,23 @@ function create_user_dice(a_user, time) {
   }
 
   if (a_user.dice.length > 0) {
-    for (var j = 0, len_j = a_user.dice.length; j < len_j; j++) {
-      var die = a_user.dice[j];
+    a_user.dice.forEach(function (die) {
       var die_value = die.value;
 
       if (die.type === 'd10' && die.value === 10) die_value = 0; // Display 10 on d10 as 0
 
-      if ((time - die.time) < die_animation_time.get(die.id)) {
+      if ((time - die.time) < die_animation_time.get(die)) {
         animate.push(die);
       }
 
       // TODO: remove die index and start using die id
       a_dice += `
   <div class="a-dice-container mx-auto">
-    <div id="` + die.id + `-die" class="a-dice ` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center" ` + ((user.name === a_user.name) ? `index="` + j + `"` : ``) + `">
+    <div id="` + die.id + `-die" class="a-dice ` + die.type + ((user.name === a_user.name) ? ` dice-click`: ``) + ` text-center" ` + ((user.name === a_user.name) ? `die-id="` + die.id + `"` : ``) + `">
       <span class="die-number">` + ((die_value > -1) ? die_value : '?') + `</span>
     </div>
   </div>`;
-    }
+    });
   } else {
     if (!a_user.share) {
       a_dice += `
@@ -800,7 +850,17 @@ function create_user_dice(a_user, time) {
     }
   }
   a_dice += `
-</div>
+</div>`;
+
+  // Status bar
+  if (a_user.id === user.id) {
+    a_dice += `
+<div class="row user-status-bar bg-light">
+  <div class="user-dice-status col-12 border border-success"></div>
+</div>`;
+  }
+
+  a_dice += `
 </div>`;
 
   return { html: a_dice, animate: animate };
@@ -866,14 +926,13 @@ $(document).ready(function() {
     // Get map data
     get_map();
   });
-  socket.on('alert',             show_alert);
-  socket.on('user-data',         user_data);
-  socket.on('room-data',         room_data);
-  socket.on('map-data',          map_data);
-  socket.on('entities-map-data', receive_entities);
-  socket.on('lines-map-data',    receive_lines);
-  socket.on('room-log',          room_log);
-  socket.on('disconnect',        function(data) {
+  socket.on('alert',         show_alert);
+  socket.on('user-data',     user_data);
+  socket.on('room-data',     room_data);
+  socket.on('map-data',      map_data);
+  socket.on('map-data-type', receive);
+  socket.on('room-log',      room_log);
+  socket.on('disconnect',    function(data) {
     if (DEBUG) console.log('disconnected');
   });
 
@@ -889,7 +948,7 @@ $(document).ready(function() {
 
   // Display dice specific options when own dice is clicked
   $(document).on('click', '.dice-click', function(event) {
-    selected_dice = { anchor: this, index: $(this).attr('index')};
+    selected_dice = { anchor: this, id: $(this).attr('die-id')};
 
     //var pos = $(this).position();
     $('.dice-click').removeClass('dice-selected');

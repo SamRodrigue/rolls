@@ -17,9 +17,9 @@ block content
   #dice-content.content
     .container-fluid.mt-2.col-12.col-md-4.col-xl-3.float-md-right
       .row.user-roll.col-12.mx-auto.input-group
-        button#roll.btn.btn-primary.col-6(onClick="roll_dice()")
+        button#roll.btn.btn-primary.col-7(onClick="roll_dice()")
           span Roll
-        button#add-dice.btn.btn-success.col-3.offset-1(data-toggle="modal" data-target="#dice-modal")
+        button#add-dice.btn.btn-success.col-3(data-toggle="modal" data-target="#dice-modal")
           span Dice
         button#share-dice.btn.btn-warning.col-2(onClick="toggle_share_dice(!share_dice)")
           span#share-dice-status.oi(data-glyph="lock-unlocked")
@@ -42,14 +42,11 @@ block content
       .row.user-roll.col-12.mx-auto.input-group
         button#help-button.btn.btn-info.col-1(data-toggle="modal" data-target="#help-modal")
           span.oi(data-glyph="question-mark")
-        button#update-button.btn.btn-secondary.col-3.col-sm-1(onClick="send_map()", style="display: none;")
-          span Up
-        // TODO: Add hide map button for admin
-        //button.btn.btn-primary.col-3(onClick="hide_map()")
-          span Hide
-        button#tools-button.btn.btn-primary.col-4.offset-sm-1(data-toggle="modal" data-target="#tools-modal")
+        button#share-map.btn.btn-warning.col-2(style="display: none;" onClick="toggle_share_map(!share_map)")
+          span#share-map-status Hide
+        button#tools-button.btn.btn-primary.col-5(data-toggle="modal" data-target="#tools-modal")
           span Tools
-        button#entities-button.btn.btn-success.col-2.offset-sm-1(data-toggle="modal" data-target="#entities-modal")
+        button#entities-button.btn.btn-success.col-2(data-toggle="modal" data-target="#entities-modal")
           span Entities
         button#assets-button.btn.btn-success.col-2(style="display: none;" data-toggle="modal" data-target="#assets-modal")
           span Assets
@@ -176,6 +173,14 @@ block content
           button.close(data-dismiss="modal") &times;
         .modal-body
           #tool-containers.row.mx-auto
+          #wall-containers.row.border-top.mt-1(style="display: none;")
+            h5.col-12 Walls
+          #fog-containers.row.border-top.mt-1(style="display: none;")
+            h5.col-12 Fog
+          #texture-containers.row.border-top.mt-1(style="display: none;")
+            h5.col-12 Texture
+          #fill-containers.row.border-top.mt-1(style="display: none;")
+            h5.col-12 Fill
           #color-containers.row.border-top.mt-1.mx-auto
             h5.col-12 Token Color
             input#color-wheel(type="color")
@@ -196,12 +201,6 @@ block content
               span Load
             button.btn.btn-success.col-3(onClick="save_map()")
               span Save
-          #wall-containers.row.border-top.mt-1(style="display: none;")
-            h5.col-12 Walls
-          #texture-containers.row.border-top.mt-1(style="display: none;")
-            h5.col-12 Texture
-          #fill-containers.row.border-top.mt-1(style="display: none;")
-            h5.col-12 Fill
         .modal-footer
           button.btn.btn-dark(data-dismiss="modal")
             span Close

@@ -162,8 +162,9 @@ stdin.on('data', (cmd) => {
 // Debug mode. Enabled by running 'npm test' or 'bin/www debug'
 // TODO: Move to debug module/file
 if (global.DEBUG) {
+  var debug_emit = (sig, data) => { console.log('DEBUG: sending ' + JSON.stringify(data) + ' to ' + sig); };
   var debug_user1 = {
-    socket: { handshake: { sessionID: 0 } },
+    socket: { handshake: { sessionID: 0 }, emit: debug_emit },
     timeout: null,
     id: 'ABC1',
     name: 'User1',
@@ -188,7 +189,7 @@ if (global.DEBUG) {
   };
 
   var debug_user2 = {
-    socket: { handshake: { sessionID: 0 } },
+    socket: { handshake: { sessionID: 0 }, emit: debug_emit },
     timeout: null,
     id: 'ABC2',
     name: 'User2',
@@ -222,10 +223,11 @@ if (global.DEBUG) {
     users: [ debug_user1, debug_user2 ],
     timeout: null,
     map: {
+      share:    true,
       walls:    [],
       entities: [],
       assets:   [],
-      texture: null
+      texture:  null
     }
   };
 
@@ -276,6 +278,7 @@ app.io.on('connect', (socket) => {
           socket.leaveAll();
           console.log('a user joined ' + data);
           socket.join(data);
+          if (user.role === 'admin') socket.join(data + '-admin');
           user_joined = true;
 
           // // Disable user timeout

@@ -5,7 +5,8 @@ var data = {
   walls:    [],
   entities: [],
   assets:   [],
-  texture: null
+  texture:  null,
+  fog:      null
 };
 
 var update = {
@@ -14,7 +15,8 @@ var update = {
             this.entities ||
             this.assets   ||
             this.lines    ||
-            this.texture);
+            this.texture  ||
+            this.fog);
   },
   set: function(trgt, trgr) {
     if (typeof trgr === 'undefined') trgr = true;
@@ -24,15 +26,26 @@ var update = {
       this.assets   = true;
       this.lines    = true;
       this.texture  = true;
+      this.fog      = true;
     } else {
       this[trgt] = true;
     }
 
-    if (trgr && trgt === 'entities') send_entities();
-    else if (trgt && trgt === 'lines') send_lines();
-    else if (user.role === 'admin') {
-      $('#update-button').removeClass('btn-secondary');
-      $('#update-button').addClass('btn-primary');
+    if (trgr) { // TODO: Check if should use this['walls'] instead of trgt === 'walls'
+      if (trgt === 'walls')    send('walls');
+      if (trgt === 'entities') send('entities');
+      if (trgt === 'assets')   send('assets');
+      if (trgt === 'lines')    send('lines');
+      if (trgt === 'texture')  {
+        // Delay sending texture by 1 second after last texture is changed
+        clearTimeout(this.textureTimeout);
+        this.textureTimeout = setTimeout(send, 1000, 'texture');
+      }
+      if (trgt === 'fog')  {
+        // Delay sending texture by 1 second after last texture is changed
+        clearTimeout(this.fogTimeout);
+        this.fogTimeout = setTimeout(send, 1000, 'fog');
+      }
     }
   },
   reset: function(trgt) {
@@ -44,13 +57,9 @@ var update = {
       this.assets   = false;
       this.lines    = false;
       this.texture  = false;
+      this.fog      = false;
     } else {
       this[trgt] = false;
-    }
-
-    if (user.roll === 'admin') {
-      $('#update-button').removeClass('btn-primary');
-      $('#update-button').addClass('btn-secondary');
     }
   },
   data: function() {
@@ -59,7 +68,8 @@ var update = {
       entities: this.entities,
       assets:   this.assets,
       lines:    this.lines,
-      texture:  this.texture
+      texture:  this.texture,
+      fog:      this.fog
     };
   },
   copy: function(v) {
@@ -68,13 +78,17 @@ var update = {
     this.assets   = v.assets;
     this.lines    = v.lines;
     this.texture  = v.texture;
+    this.fog      = v.fog;
   },
   last:     false,
   walls:    false,
   entities: false,
   assets:   false,
   lines:    false,
-  texture:  false
+  texture:  false,
+  fog:      false,
+  textureTimeout: null,
+  fogTimeout: null
 };
 
 var map = {
@@ -84,6 +98,13 @@ var map = {
     spacing: 5
   },
   texture: {
+    width: null, // to be calculated
+    height: null, // to be calculated
+    val: [[]],
+    image: {},
+    scale: 0.25
+  },
+  fog: {
     width: null, // to be calculated
     height: null, // to be calculated
     val: [[]],
@@ -105,6 +126,7 @@ var map = {
     scale: 1.9
   },
 
+  share:    true,
   walls:    [],
   entities: [],
   assets:   [],
@@ -165,9 +187,14 @@ var mode = {
   dragging: {
     val: false,
     old: null,
-    count: 0
+    time: 0,
+    rate: {
+      slow: 10, // ms
+      fast: 100 // ms
+    }
   },
   texture: 0,
+  fog: 0,
   wall: 0,
   walling: null,
   entity: 0,
@@ -194,7 +221,6 @@ var mode = {
 
       if (mode.walling === null) { // Start new wall
         mode.walling = new Wall(mode.wall, wx, wy);
-
       } else {
         // TODO: Make .end return true if new wall is valid
         // TODO: Possibly remove mode from wall
@@ -277,7 +303,7 @@ var mode = {
       for (var i = map.entities.length - 1; i >= 0; --i) {
         if (map.entities[i].contains(ex, ey)) {
           if (user.role === 'admin' ||
-              (user.role === 'user' && user.name === map.entities[i].user.name)) {
+             (user.role === 'user' && user.name === map.entities[i].user.name)) {
             var oldEntity = map.entities.splice(i, 1)[0];
             mode.entity = oldEntity.type;
             mode.moving.val = true;
@@ -348,41 +374,16 @@ var mode = {
       }
     },
 
-    draw: function(drawing) { // Drag
-      if (drawing) {
-        // Skip dragging
-        mode.dragging.count--;
-        if (mode.dragging.count <= 0) {
-          mode.dragging.count = 4; // Use to optimize line detail vs number of lines sent to server
-
-          if (!mode.dragging.val) {
-            // First point
-            mode.dragging.val = true;
-            mode.dragging.old = { x: view.mx, y: view.my }
-          } else {
-            // Add point
-            var date = new Date();
-
-            // Send new line to server
-            if (!map.lines.hasOwnProperty(user.id)) {
-              map.lines[user.id] = [];
-            }
-
-            map.lines[user.id].push({
-              prev: mode.dragging.old,
-              curr: { x: view.mx, y: view.my },
-              time: date.getTime()
-            });
-
-            update.set('lines');
-
-            mode.dragging.old = { x: view.mx, y: view.my };
-          }
-        }
-      } else {
-        if (mode.dragging.val) {
-          // Last point
-          var date = new Date();
+    draw: function(dragging) { // Drag
+      // TODO: Implemente polyline simplification
+      //       https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
+      if (dragging) {
+        if (!mode.dragging.val) {
+          // First point
+          mode.dragging.val = true;
+          mode.dragging.old = { x: view.mx, y: view.my }
+        } else { // Add point
+          var current_time = (new Date()).getTime();
 
           // Send new line to server
           if (!map.lines.hasOwnProperty(user.id)) {
@@ -392,22 +393,41 @@ var mode = {
           map.lines[user.id].push({
             prev: mode.dragging.old,
             curr: { x: view.mx, y: view.my },
-            time: date.getTime()
+            time: current_time
+          });
+
+          update.set('lines');
+
+          mode.dragging.old = { x: view.mx, y: view.my };
+        }
+      } else {
+        if (mode.dragging.val) { // Last point
+          var current_time = (new Date()).getTime();
+          
+          // Send new line to server
+          if (!map.lines.hasOwnProperty(user.id)) {
+            map.lines[user.id] = [];
+          }
+
+          map.lines[user.id].push({
+            prev: mode.dragging.old,
+            curr: { x: view.mx, y: view.my },
+            time: current_time
           });
 
           update.set('lines');
 
           mode.dragging.val = false;
           mode.dragging.old = null;
-          mode.dragging.count = 0;
+          mode.dragging.time = 0;
         }
       }
 
       // Remove lines if number of lines exceeds the limit
       if (map.lines.hasOwnProperty(user.id)) {
         var len = map.lines[user.id].length;
-        if (len > MAX_LINES) {
-          map.lines[user.id].splice(0, len - MAX_LINES);
+        if (len > MAX_LINE_COUNT) {
+          map.lines[user.id].splice(0, len - MAX_LINE_COUNT);
         }
       }
     },
@@ -533,6 +553,79 @@ var mode = {
 
       map.texture.image.updatePixels();
       update.set('texture');
+    },
+
+    fog: function() { // Press/Drag
+      if (mode.fog < 0 || mode.fog > 1) return;
+
+      // Update map texture
+      map.fog.image.loadPixels();
+
+      if (!mode.fill) {
+        var dLimit = view.brush.val * view.brush.val / 4;
+        for (var i = -view.brush.val / 2; i < view.brush.val / 2; i += map.fog.scale) {
+          var x = Math.floor((view.mx + i) / map.fog.scale);
+
+          if (x < 0 || x >= map.fog.width) continue;
+          var di = i * i;
+
+          for (var j = -view.brush.val / 2; j < view.brush.val / 2; j += map.fog.scale) {
+            var y = Math.floor((view.my + j) / map.fog.scale);
+
+            if (y < 0 || y >= map.fog.height) continue;
+            var d = di + j * j;
+
+            if (d < dLimit) {
+              map.fog.val[x][y] = mode.fog;
+
+              if (map.fog.val[x][y] === 0) {
+                map.fog.image.set(x, y, [0, 0, 0, 0]);
+
+              } else {
+                var tx = x % textures.images[textures.FOG].width;
+                var ty = y % textures.images[textures.FOG].height;
+                var tex = textures.images[textures.FOG].get(tx, ty);
+                if (user.role !== 'admin') tex[3] = 255;
+                map.fog.image.set(x, y, tex);
+              }
+            }
+          }
+        }
+      } else {
+        var x = Math.floor(view.mx / map.fog.scale);
+        if (x < 0 || x >= map.fog.width) return;
+        var y = Math.floor(view.my / map.fog.scale);
+        if (y < 0 || y >= map.fog.height) return;
+
+        var gx = map.grid.spacing * map.fog.width / map.width;
+        var gy = map.grid.spacing * map.fog.height / map.height;
+        // Get top left corner of current grid
+        var fx = Math.floor(x / gx) * gx;
+        var fy = Math.floor(y / gy) * gy;
+
+        for (var i = 0; i < gx; ++i) {
+          x = fx + i;
+          for (var j = 0; j < gy; ++j) {
+            y = fy + j;
+
+            map.fog.val[x][y] = mode.fog;
+
+            if (map.fog.val[x][y] === 0) {
+              map.fog.image.set(x, y, [0, 0, 0, 0]);
+
+            } else {
+              var tx = x % textures.images[textures.FOG].width;
+              var ty = y % textures.images[textures.FOG].height;
+              var tex = textures.images[textures.FOG].get(tx, ty);
+              if (user.role !== 'admin') tex[3] = 255;
+              map.fog.image.set(x, y, tex);
+            }
+          }
+        }
+      }
+
+      map.fog.image.updatePixels();
+      update.set('fog');
     }
   },
 
@@ -582,12 +675,15 @@ var mode = {
 
     erase: function() { },
 
-    texture: function() { }
+    texture: function() { },
+
+    fog: function() { }
   }
 };
 
 const MEDIA_MAPS = '/media/maps/';
-const MAX_LINES = 32;
+const MAX_LINE_TIMEOUT = 10000; // 10 seconds
+const MAX_LINE_COUNT = 64;
 
 var cursors = {
   COUNT: 0,
@@ -788,9 +884,6 @@ class Wall {
     if (this.mode !== 1) return;
 
     if (this.type === walls.NONE) { // Solid wall
-      sketch.noStroke();
-      sketch.fill(0);
-
       var par = {
         x: x - this.x[0],
         y: y - this.y[0]
@@ -818,6 +911,8 @@ class Wall {
         y: y + per.y
       }];
 
+      sketch.noStroke();
+      sketch.fill(0);
       sketch.quad(
         points[0].x, points[0].y,
         points[1].x, points[1].y,
@@ -830,41 +925,82 @@ class Wall {
       sketch.ellipse(x, y, map.wall.width, map.wall.width);
 
     } else {
-      // Create image
+      // Draw full segements of wall if possible and remainder as solid line
       var par = {
         x: x - this.x[0],
         y: y - this.y[0]
       };
       if (par.x !== 0 || par.y !== 0) {
         var tex = walls.images[this.type];
+        var tex_width = tex.width * map.wall.scale;
 
-        var mag = Math.round(Math.sqrt(par.x * par.x + par.y * par.y) / map.wall.scale + tex.height);
+        var mag = Math.round(Math.sqrt(par.x * par.x + par.y * par.y) / map.wall.scale) + tex.height;
+        var segments = Math.floor(mag / tex.width);
+        var remain = mag % tex.width;
 
-        var img = sketch.createImage(mag, tex.height);
-
-        tex.loadPixels();
-        img.loadPixels();
-        for (var i = 0; i < img.width; ++i) {
-          var tx = i % tex.width;
-          for (var j = 0; j < img.height; ++j) {
-            img.set(i, j, tex.get(tx, j));
-          }
+        // Draw remaining wall as a solid line
+        // Drawn first to appear below full wall segments
+        if (remain) {
+          var scale_mag = Math.sqrt(par.x * par.x + par.y * par.y);
+          var per = {
+            x: -par.y * map.wall.width / 2 / scale_mag,
+            y:  par.x * map.wall.width / 2 / scale_mag
+          };
+    
+          var points = [
+          {
+            x: this.x[0] + per.x,
+            y: this.y[0] + per.y
+          }, {
+            x: this.x[0] - per.x,
+            y: this.y[0] - per.y
+          }, {
+            x: x - per.x,
+            y: y - per.y
+          }, {
+            x: x + per.x,
+            y: y + per.y
+          }];
+    
+          sketch.noStroke();
+          sketch.fill(255 * Math.random(), 255 * Math.random(), 255 * Math.random());
+          sketch.quad(
+            points[0].x, points[0].y,
+            points[1].x, points[1].y,
+            points[2].x, points[2].y,
+            points[3].x, points[3].y
+          );
+    
+          sketch.ellipseMode(sketch.CENTER);
+          sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
+          sketch.ellipse(x, y, map.wall.width, map.wall.width);
         }
-        img.updatePixels();
 
         sketch.push();
           sketch.scale(map.wall.scale);
           sketch.translate(this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
           sketch.rotate(Math.PI / 2 - Math.atan2(par.x, par.y));
           sketch.translate(-this.x[0] / map.wall.scale, -this.y[0] / map.wall.scale);
-          sketch.translate(img.height / -2, img.height / -2);
-          sketch.image(img, this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
+
+          var last = {
+            x: this.x[0],
+            y: this.y[0]
+          }
+
+          // Draw multiples of wall texture
+          for (var i = 0; i < segments; i++) {
+            sketch.translate(tex.height / -2, tex.height / -2);
+            sketch.image(tex, last.x / map.wall.scale, last.y / map.wall.scale);
+            sketch.translate(tex.height / 2, tex.height / 2);
+            last.x += tex_width;
+          }
         sketch.pop();
       }
     }
   }
 
   contains(x, y) {
+    var buf = 1;
     var v0 = {
       x: this.points[1].x - this.points[0].x,
       y: this.points[1].y - this.points[0].y
@@ -874,10 +1010,10 @@ class Wall {
       y: this.points[3].y - this.points[0].y
     };
 
-    if ((x - this.points[0].x) * v0.x + (y - this.points[0].y) * v0.y < 0) return false;
-    if ((x - this.points[1].x) * v0.x + (y - this.points[1].y) * v0.y > 0) return false;
-    if ((x - this.points[0].x) * v1.x + (y - this.points[0].y) * v1.y < 0) return false;
-    if ((x - this.points[3].x) * v1.x + (y - this.points[3].y) * v1.y > 0) return false;
+    if ((x - this.points[0].x) * v0.x + (y - this.points[0].y) * v0.y < -buf) return false;
+    if ((x - this.points[1].x) * v0.x + (y - this.points[1].y) * v0.y > buf) return false;
+    if ((x - this.points[0].x) * v1.x + (y - this.points[0].y) * v1.y < -buf) return false;
+    if ((x - this.points[3].x) * v1.x + (y - this.points[3].y) * v1.y > buf) return false;
 
     return true;
   }
@@ -892,9 +1028,9 @@ class Entity {
         this.x = first.x;
         this.y = first.y;
         if (typeof first.user === 'undefined') {
-          this.user = { name:'', role:'admin' };
+          this.user = { id:'', name:'', role:'admin' };
         } else {
-          this.user = first.user;
+          this.user = { id:first.user.id, name:first.user.name, role:first.user.role };
         }
         this.color = first.color;
         break;
@@ -902,15 +1038,15 @@ class Entity {
         this.type = first;
         this.x = x;
         this.y = y;
-        this.user = user;
+        this.user = { id:user.id, name:user.name, role:user.role };
         this.color = get_user_color(user);
         break;
       case 4:
         this.type = first;
         this.x = x;
         this.y = y;
-        this.user = usr;
-        this.color = get_user_color(user);
+        this.user = { id:usr.id, name:usr.name, role:usr.role };
+        this.color = get_user_color(usr);
         break;
     }
   }
@@ -1036,6 +1172,7 @@ sketch.setup = function() {
   canvas.mouseOver(function () { onCanvas = true; });
   canvas.mouseOut(function () { onCanvas = false; });
 
+  // Map texture
   map.texture.width = map.width / map.texture.scale;
   map.texture.height = map.height / map.texture.scale;
   map.texture.image = sketch.createImage(map.texture.width, map.texture.height);
@@ -1047,6 +1184,19 @@ sketch.setup = function() {
     }
   }
 
+  // Fog overlay
+  map.fog.width = map.width / map.fog.scale;
+  map.fog.height = map.height / map.fog.scale;
+  map.fog.image = sketch.createImage(map.fog.width, map.fog.height);
+
+  for (var i = 0; i < map.fog.width; ++i) {
+    map.fog.val[i] = [];
+    for (var j = 0; j < map.fog.height; ++j) {
+      map.fog.val[i][j] = 0;
+    }
+  }
+
+  // View
   view.x = map.width / 2;
   view.y = map.height / 2;
   var zx = view.width / map.width;
@@ -1067,14 +1217,17 @@ sketch.draw = function () {
   sketch.clear();
   sketch.fill(0);
   switch (mode.cursor.val) {
+    case cursors.FOG:
+      sketch.text('Fog: ' + (mode.fog === 0 ? 'Erase' : 'Draw'), 2, 10);
+      break;
     case cursors.TEXTURE:
-      sketch.text("Texture: " + textures.names[mode.texture], 2, 10);
+      sketch.text('Texture: ' + textures.names[mode.texture], 2, 10);
       break;
     case cursors.ASSET:
-      sketch.text("Asset: " + assets.names[mode.asset], 2, 10);
+      sketch.text('Asset: ' + assets.names[mode.asset], 2, 10);
       break;
     case cursors.ENTITY:
-      sketch.text("Entity: " + entities.names[mode.entity], 2, 10);
+      sketch.text('Entity: ' + entities.names[mode.entity], 2, 10);
       break;
   }
 
@@ -1082,13 +1235,8 @@ sketch.draw = function () {
   sketch.scale(view.zoom.val);
   sketch.translate(sketch.width/(2 * view.zoom.val), sketch.height/(2 * view.zoom.val));
 
-  sketch.push();
-    sketch.scale(map.texture.scale);
-    draw_texture();
-  sketch.pop();
-
   draw_map();
-  draw_line();
+  draw_hover();
   draw_cursor();
 };
 
@@ -1105,6 +1253,7 @@ sketch.resize = function() {
 }
 
 sketch.load = function(newData, updated) {
+  // TODO: Convert to individual calls to load_type for each type
   if (typeof updated === 'undefined') updated = true;
   if (typeof newData.texture === 'undefined' || newData.texture === null) {
     newData.texture = {
@@ -1113,13 +1262,23 @@ sketch.load = function(newData, updated) {
       val: [[0, map.texture.width * map.texture.height]]
     }
   }
+  if (typeof newData.fog === 'undefined' || newData.fog === null) {
+    newData.fog = {
+      width: map.fog.width,
+      height: map.fog.height,
+      val: [[0, map.fog.width * map.fog.height]]
+    }
+  }
 
   data = {
     walls:    newData.walls,
     entities: newData.entities,
     assets:   newData.assets,
-    texture:  decompress_texture(newData.texture)
+    texture:  decompress_texture(newData.texture),
+    fog:      decompress_texture(newData.fog)
   };
+
+  map.share = newData.share;
 
   if (newData.update.walls) {
     update.set('walls', false);
@@ -1145,7 +1304,6 @@ sketch.load = function(newData, updated) {
     }
   }
 
-
   if (newData.update.texture) {
     update.set('texture', false);
     if (data.texture.width !== map.texture.width || data.texture.height !== map.texture.height) {
@@ -1165,7 +1323,7 @@ sketch.load = function(newData, updated) {
       for (var j = 0; j < map.texture.height; ++j) {
         var curr = 0;
         if (i < data.texture.width && j < data.texture.height) {
-          var curr = data.texture.val[i][j];
+          curr = data.texture.val[i][j];
         }
 
         map.texture.val[i][j] = curr;
@@ -1183,12 +1341,48 @@ sketch.load = function(newData, updated) {
     map.texture.image.updatePixels();
   }
 
+  // Fog
+  if (newData.update.fog) {
+    update.set('fog', false);
+    if (data.fog.width !== map.fog.width || data.fog.height !== map.fog.height) {
+      alert('Fog map will be resized from ' +
+        data.fog.width + 'x' + data.fog.height +
+        ' to ' + map.fog.width + 'x' + map.fog.height);
+    }
+
+    map.fog.image.loadPixels();
+    textures.images[textures.FOG].loadPixels();
+
+    for (var i = 0; i < map.fog.width; ++i) {
+      for (var j = 0; j < map.fog.height; ++j) {
+        var curr = 0;
+        if (i < data.fog.width && j < data.fog.height) {
+          curr = data.fog.val[i][j];
+        }
+
+        map.fog.val[i][j] = curr;
+        if (curr === 0) {
+          map.fog.image.set(i, j, [0, 0, 0, 0]);
+        } else {
+          var ti = i % textures.images[textures.FOG].width;
+          var tj = j % textures.images[textures.FOG].height;
+          var tex = textures.images[textures.FOG].get(ti, tj);
+          if (user.role !== 'admin') tex[3] = 255;
+          map.fog.image.set(i, j, tex);
+        }
+      }
+    }
+
+    map.fog.image.updatePixels();
+  }
+
   // TODO: Ensure that this not overwrite user's changes
   // BUG: update can not be sent to server if another user sends update until another change is made
   if (updated) update.reset('all');
 };
 
 sketch.save = function(all) {
+  // TODO: Convert to individual calls to save_type for each type
   if (typeof all !== 'undefined' && all)
     update.set('all');
 
@@ -1197,7 +1391,8 @@ sketch.save = function(all) {
     entities: [],
     assets:   [],
     texture:  null,
-    update: update.data()
+    fog:      null,
+    update:   update.data()
   };
 
   if (update.walls) {
@@ -1219,61 +1414,153 @@ sketch.save = function(all) {
   }
 
   if (update.texture) {
-    data.texture = compress_texture();
+    data.texture = compress_texture(map.texture);
+  }
+
+  if (update.fog) {
+    data.fog = compress_texture(map.fog);
   }
 
   return data;
 };
 
-// TODO: replace with per entity get/set
-sketch.entities_load = function(newData) {
-  for (var i = map.entities.length - 1; i >= 0; --i) {
-    if (newData.user.role === 'admin' ||
-       (newData.user.role === 'user' && newData.user.name === map.entities[i].user.name)) {
-      map.entities.splice(i, 1)[0];
-    }
-  }
-
-  for (e of newData.entities) {
-    map.entities.push(new Entity(e));
-  }
-};
-
-sketch.entities_save = function() {
-  var out = [];
-  for (e of map.entities) {
-    if (user.role === 'admin' ||
-       (user.role === 'user' && user.name === e.user.name)) {
-      out.push(e.data());
-    }
-  }
-
-  return out;
-};
-
-sketch.lines_load = function(newData) {
-  if (map.lines.hasOwnProperty(newData.id)) {
-    var len = map.lines[newData.id].length;
-    var last = map.lines[newData.id][len - 1].time;
-
-    for (l of newData.lines) {
-      if (l.time > last) {
-        map.lines[newData.id].push(l);
+sketch.save_type = function(type) {
+  switch (type) {
+    case 'walls':
+      var out = [];
+      for (w of map.walls) {
+        out.push(w.data());
       }
-    }
-
-    len = map.lines[newData.id].length;
-    if (len > MAX_LINES) {
-      map.lines[newData.id].splice(0, len - MAX_LINES);
-    }
-  } else {
-    map.lines[newData.id] = newData.lines;
+      return { walls: out };
+    case 'entities':
+      var out = [];
+      for (e of map.entities) {
+        if (user.role === 'admin' ||
+          (user.role === 'user' && user.name === e.user.name)) {
+          out.push(e.data());
+        }
+      }
+      return { entities: out };
+    case 'assets':
+      var out = [];
+      for (a of map.assets) {
+        out.push(a.data());
+      }
+      return { assets: out };
+    case 'lines':
+      return { id: user.id, lines: map.lines[user.id] };
+    case 'texture':
+      return { texture: compress_texture(map.texture) };
+    case 'fog':
+      return { fog: compress_texture(map.fog) };
   }
 }
 
-sketch.lines_save = function() {
-  //console.log('sending: id:' + user.id + ' lines:' + JSON.stringify(map.lines[user.id]))
-  return { id: user.id, lines: map.lines[user.id] };
+sketch.load_type = function(type, newData) {
+  switch (type) {
+    case 'walls':
+      map.walls = [];
+
+      for (w of newData.walls) {
+        map.walls.push(new Wall(w));
+      }
+      break;
+
+    case 'entities':
+      map.entities = [];
+
+      for (e of newData.entities) {
+        map.entities.push(new Entity(e));
+      }
+      break;
+
+    case 'assets':
+      map.assets = [];
+
+      for (a of newData.assets) {
+        map.assets.push(new Asset(a));
+      }
+      break;
+
+    case 'lines':
+      if (map.lines.hasOwnProperty(newData.id)) {
+        var len = map.lines[newData.id].length;
+        var last = map.lines[newData.id][len - 1].time;
+    
+        for (l of newData.lines) {
+          if (l.time > last) {
+            map.lines[newData.id].push(l);
+          }
+        }
+    
+        len = map.lines[newData.id].length;
+        if (len > MAX_LINE_COUNT) {
+          map.lines[newData.id].splice(0, len - MAX_LINE_COUNT);
+        }
+      } else {
+        map.lines[newData.id] = newData.lines;
+      }
+      break;
+
+    case 'texture':
+      var texture = decompress_texture(newData.texture);
+      map.texture.image.loadPixels();
+      for (tex of textures.images) {
+        if (tex !== null) {
+          tex.loadPixels();
+        }
+      }
+  
+      for (var i = 0; i < map.texture.width; ++i) {
+        for (var j = 0; j < map.texture.height; ++j) {
+          var curr = 0;
+          if (i < texture.width && j < texture.height) {
+            var curr = texture.val[i][j];
+          }
+  
+          map.texture.val[i][j] = curr;
+          if (curr === 0) {
+            map.texture.image.set(i, j, [0, 0, 0, 0]);
+          } else {
+            var ti = i % textures.images[curr].width;
+            var tj = j % textures.images[curr].height;
+            var tex = textures.images[curr].get(ti, tj);
+            map.texture.image.set(i, j, tex);
+          }
+        }
+      }
+  
+      map.texture.image.updatePixels();
+      break;
+
+    case 'fog':
+      var fog = decompress_texture(newData.fog);
+      map.fog.image.loadPixels();
+      textures.images[textures.FOG].loadPixels();
+  
+      for (var i = 0; i < map.fog.width; ++i) {
+        for (var j = 0; j < map.fog.height; ++j) {
+          var curr = 0;
+          if (i < fog.width && j < fog.height) {
+            var curr = fog.val[i][j];
+          }
+  
+          map.fog.val[i][j] = curr;
+          if (curr === 0) {
+            map.fog.image.set(i, j, [0, 0, 0, 0]);
+          } else {
+            var ti = i % textures.images[textures.FOG].width;
+            var tj = j % textures.images[textures.FOG].height;
+            var tex = textures.images[textures.FOG].get(ti, tj);
+            if (user.role !== 'admin') tex[3] = 255;
+            map.fog.image.set(i, j, tex);
+          }
+        }
+      }
+  
+      map.fog.image.updatePixels();
+      break;
+  }
 }
 
 sketch.reset_update = function(target) {
@@ -1318,6 +1605,9 @@ function mouseLeft() {
     case cursors.TEXTURE:
       mode.do.texture();
       break;
+    case cursors.FOG:
+      mode.do.fog();
+      break;
   }
 };
 
@@ -1350,15 +1640,33 @@ function mouseRight() {
 sketch.mouseDragged = function() {
   if (!onCanvas) return;
 
+  var current_time = (new Date()).getTime();
+  var dt = current_time - mode.dragging.time;
+
   switch (mode.cursor.val) {
     case cursors.MAP:
-      mode.do.map();
+      if (dt >= mode.dragging.rate.fast) {
+        mode.dragging.time = current_time;
+        mode.do.map();
+      }
       break;
     case cursors.TEXTURE:
-      mode.do.texture();
+      if (dt >= mode.dragging.rate.slow) {
+        mode.dragging.time = current_time;
+        mode.do.texture(true);
+      }
+      break;
+    case cursors.FOG:
+      if (dt >= mode.dragging.rate.slow) {
+        mode.dragging.time = current_time;
+        mode.do.fog(true);
+      }
       break;
     case cursors.DRAW:
-      mode.do.draw(true);
+      if (dt >= mode.dragging.rate.slow) {
+        mode.dragging.time = current_time;
+        mode.do.draw(true);
+      }
       break;
   }
 };
@@ -1371,6 +1679,8 @@ sketch.mouseReleased = function() {
       mode.do.draw(false);
       break;
   }
+
+  mode.dragging.time = 0;
 }
 
 sketch.mouseWheel = function(event) {
@@ -1386,6 +1696,7 @@ sketch.mouseWheel = function(event) {
       view.asset.zoom.set(view.asset.zoom.val - 0.1 * Math.sign(event.delta));
       break;
     case cursors.TEXTURE:
+    case cursors.FOG:
       view.brush.set(view.brush.val - Math.sign(event.delta));
       break;
   }
@@ -1463,6 +1774,10 @@ sketch.keyPressed = function() {
         mode.fill = true;
         sketch.setMode(cursors.TEXTURE);
         break;
+      case 'h': // Fog Mode
+        //mode.fill = true;
+        sketch.setMode(cursors.FOG);
+        break;
       case '0':
       case '1':
       case '2':
@@ -1475,6 +1790,12 @@ sketch.keyPressed = function() {
       case '9':
         var key = sketch.key - '0';
         switch (mode.cursor.val) {
+          case cursors.FOG:
+            mode.fog = key;
+            if (key === 1) {
+              textures.images[textures.FOG].loadPixels();
+            }
+            break;
           case cursors.TEXTURE:
             mode.texture = key;
             if (key > 0 && key < textures.COUNT) {
@@ -1544,6 +1865,14 @@ sketch.setSpecificMode = function(name, key) {
       mode.texture = key;
       if (key > 0 && key < textures.COUNT) {
         textures.images[key].loadPixels();
+      }
+      break;
+    case 'fog':
+      mode.fill = false;
+      sketch.setMode(cursors.FOG);
+      mode.fog = key;
+      if (key === 1) {
+        textures.images[textures.FOG].loadPixels();
       }
       break;
     case 'wall':
@@ -1633,59 +1962,26 @@ function loadAssets(data) {
 }
 
 function draw_map() {
-  if (view.grid) draw_grid();
+  draw_texture();
+  draw_grid();
   draw_walls();
   draw_assets();
   draw_entities();
-  draw_hover();
-}
-
-function draw_line() {
-  if (Object.keys(map.lines).length === 0) return;
-
-  // TODO Should only start removing when drag stops up to a certain length
-  //      Different drags should not connect.
-  var timeout = 10000; // 10 seconds
-  var date = new Date();
-  var time = date.getTime();
-
-  // Per user lines
-  Object.keys(map.lines).forEach(function(a_user_id) {
-    if (map.lines[a_user_id].length === 0) {
-      delete map.lines[a_user_id];
-      return;
-    }
-
-    // Remove expired markers
-    map.lines[a_user_id].some(function(marker, i, iarr) {
-      var dt = time - marker.time;
-      if (time - marker.time > timeout) {
-        iarr.splice(i, 1);
-      }
-    });
-  
-    if (map.lines[a_user_id].length === 0) {
-      delete map.lines[a_user_id];
-      return;
-    }
-  
-    // Draw remaining markers
-    var color = get_user_color(a_user_id);
-    sketch.strokeWeight(8 / view.zoom.val);
-    sketch.stroke(color[0], color[1], color[2]);
-    
-    map.lines[a_user_id].forEach(function(marker) {
-      sketch.line(marker.prev.x, marker.prev.y, marker.curr.x, marker.curr.y);
-    });
-  });
+  draw_fog();
+  draw_lines();
 }
 
 function draw_texture() {
-  sketch.imageMode(sketch.CORNER);
-  sketch.image(map.texture.image, 0, 0);
+  sketch.push();
+    sketch.scale(map.texture.scale);
+    sketch.imageMode(sketch.CORNER);
+    sketch.image(map.texture.image, 0, 0);
+  sketch.pop();
 }
 
 function draw_grid() {
+  if (!view.grid) return;
+
   sketch.strokeWeight(1 / view.zoom.val);
   sketch.stroke(0, 0, 0);
   for (var i = 0; i <= map.width; i += map.grid.spacing) {
@@ -1709,6 +2005,15 @@ function draw_walls() {
   }
 }
 
+function draw_assets() {
+  sketch.push();
+    sketch.scale(map.asset.scale);
+    for (asset of map.assets) {
+      asset.draw();
+    }
+  sketch.pop();
+}
+
 function draw_entities() {
   sketch.push();
     sketch.scale(map.entity.scale);
@@ -1718,12 +2023,95 @@ function draw_entities() {
   sketch.pop();
 }
 
+function draw_fog() {
+  if (!map.share && user.role !== 'admin') {
+    sketch.push();
+      // sketch.translate(-sketch.width/(2 * view.zoom.val), -sketch.height/(2 * view.zoom.val));
+      // sketch.scale(1/view.zoom.val);
+      // sketch.translate(view.x * view.zoom.val, view.y * view.zoom.val);
+
+      // sketch.rectMode(sketch.CORNER);
+      // sketch.noStroke();
+      // sketch.fill(64, 64, 64, 75);
+      // sketch.rect(0, 0, map.width, map.height);
+
+      sketch.scale(map.texture.scale);
+      sketch.imageMode(sketch.CORNER);
+      sketch.image(textures.images[textures.FOG], 0, 0);
+    sketch.pop();
+  } else {
+    sketch.push();
+      sketch.scale(map.fog.scale);
+      sketch.imageMode(sketch.CORNER);
+      sketch.image(map.fog.image, 0, 0);
+    sketch.pop();
+
+    // TODO: Redraw user entities over fog
+    //       Re-add fog effect
+    sketch.push();
+    sketch.scale(map.entity.scale);
+    for (entity of map.entities) {
+      if (entity.user.id === user.id) {
+        entity.draw();
+      }
+    }
+  sketch.pop();
+  }
+}
+
+function draw_lines() {
+  if (Object.keys(map.lines).length === 0) return;
+
+  // TODO Should only start removing when drag stops up to a certain length
+  //      Different drags should not connect.
+  var time = (new Date()).getTime();
+
+  // Per user lines
+  Object.keys(map.lines).forEach(function(a_user_id) {
+    if (map.lines[a_user_id].length === 0) {
+      delete map.lines[a_user_id];
+      return;
+    }
+
+    // Remove expired markers
+    map.lines[a_user_id].some(function(marker, i, iarr) {
+      if ((time - marker.time) > MAX_LINE_TIMEOUT) {
+        iarr.splice(i, 1);
+        return true;
+      }
+    });
+  
+    if (map.lines[a_user_id].length === 0) {
+      delete map.lines[a_user_id];
+      return;
+    }
+  
+    // Draw remaining markers
+    var color = get_user_color(a_user_id);
+    sketch.strokeWeight(8 / view.zoom.val);
+    sketch.stroke(color[0], color[1], color[2]);
+    
+    map.lines[a_user_id].forEach(function(marker) {
+      sketch.line(marker.prev.x, marker.prev.y, marker.curr.x, marker.curr.y);
+    });
+  });
+}
+
 function draw_hover() {
   if (mode.cursor.val === cursors.MOVE ||
       mode.cursor.val === cursors.ERASE) {
     var ex = view.mx / map.entity.scale;
     var ey = view.my / map.entity.scale;
+    var fx = Math.floor(view.mx / map.fog.scale);
+    var fy = Math.floor(view.my / map.fog.scale);
+
+    // Cursor is out of map
+    if (fx < 0 || fx >= map.fog.width || fy < 0 || fy >= map.fog.height) return;
+
     for (entity of map.entities) {
+      // TODO: Do not show hover if entity does not belong to user and is hidden behind fog
+      if (user.role !== 'admin' && entity.user.id !== user.id && map.fog.val[fx][fy] === 1) continue;
+
       if (entity.contains(ex, ey)) {
         var t_size = 16;
         var e_width = Math.min(256, sketch.width / 3);
@@ -1767,15 +2155,6 @@ function draw_hover() {
       }
     }
   }
-}
-
-function draw_assets() {
-  sketch.push();
-    sketch.scale(map.asset.scale);
-    for (asset of map.assets) {
-      asset.draw();
-    }
-  sketch.pop();
 }
 
 function draw_cursor() {
@@ -1866,6 +2245,7 @@ function draw_cursor() {
       break;
 
     case cursors.TEXTURE:
+    case cursors.FOG:
       var radius = view.brush.val;
       if (mode.fill) {
         radius = view.brush.MIN;
@@ -1888,30 +2268,30 @@ function draw_cursor_image() {
   sketch.pop();
 }
 
-function compress_texture() {
-  var tex = {
-    width: map.texture.width,
-    height: map.texture.height,
+function compress_texture(tex) {
+  var out = {
+    width: tex.width,
+    height: tex.height,
     val: []
   };
 
   var count = 0;
-  var val = map.texture.val[0][0];
-  for (var i = 0; i < tex.width; ++i) {
-    for (var j = 0; j < tex.height; ++j) {
-      var curr = map.texture.val[i][j];
+  var val = tex.val[0][0];
+  for (var i = 0; i < out.width; ++i) {
+    for (var j = 0; j < out.height; ++j) {
+      var curr = tex.val[i][j];
       if (val === curr) {
         count++;
       } else {
-        tex.val.push([val, count]);
+        out.val.push([val, count]);
         val = curr;
         count = 1;
       }
     }
   }
-  tex.val.push([val, count]);
+  out.val.push([val, count]);
 
-  return tex;
+  return out;
 }
 
 function decompress_texture(tex) {

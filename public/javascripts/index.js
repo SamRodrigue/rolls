@@ -40,9 +40,9 @@ $(document).ready(function() {
     if (DEBUG) console.log('connected');
     socket.emit('join', 'index'); socket.send('');
   });
-  socket.on('alert', function(data) { show_alert(data) });
-  socket.on('update-rooms', function(data) { update_rooms(data) });
-  socket.on('join-room', function(data) { join_room(data) });
+  socket.on('alert',        show_alert);
+  socket.on('update-rooms', update_rooms);
+  socket.on('join-room',    join_room);
   socket.on('disconnect', function() { 
     if (DEBUG) console.log('disconnected');
   });

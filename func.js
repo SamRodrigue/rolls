@@ -85,6 +85,7 @@ var remove_user = (sid, rooms, room_id, sockets) => {
     // Send user leave message
     user.socket.emit('alert', 'You have been removed from the room');
     user.socket.leave(room_id);
+    if (user.role === 'admin') user.socket.leave(room_id + '-admin');
     room.users.splice(user_index, 1);
     user.socket.in(room_id).emit('room-data', room_array(room));
     console.log('users remaining ' + room.users.length);

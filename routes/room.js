@@ -52,14 +52,32 @@ router.sockets = (io, socket, rooms, func) => {
     var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = func.find_user_socket(room, socket);
-    if (user) { 
+    if (user) {
       room.map.update = {
-        walls: true,
+        walls:    true,
         entities: true,
-        assets: true,
-        texture: true
+        assets:   true,
+        texture:  true,
+        fog:      true
       };
-      socket.emit('map-data', room.map);
+
+      // Send map data to single user
+      if (room.map.share || user.role === 'admin') {
+        socket.emit('map-data', room.map);
+      } else {
+        var entities = room.map.entities.filter(function(entity) {
+          return entity.user.id === user.id;
+        });
+        var out = {
+          share:    false,
+          walls:    [],
+          entities: entities,
+          assets:   [],
+          texture:  null,
+          fog:      null
+        }
+        socket.emit('map-data', out);
+      }
     }
   });
   
@@ -67,6 +85,7 @@ router.sockets = (io, socket, rooms, func) => {
     var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = func.find_user_socket(room, socket);
+    // Admin only
     if (user && (user.role === 'admin')) {
       var update = data.map.update;
       if (update.walls) {
@@ -85,61 +104,126 @@ router.sockets = (io, socket, rooms, func) => {
         room.map.texture = data.map.texture;
       }
 
+      if (update.fog) {
+        room.map.fog = data.map.fog;
+      }
+
       //room.map = data.map;
-      socket.broadcast.to(data.room_id).emit('map-data', data.map);
+
+      // Send map data to all other users
+      if (room.map.share) {
+        socket.broadcast.to(data.room_id).emit('map-data', data.map);
+      } else {
+        socket.broadcast.to(data.room_id + '-admin').emit('map-data', data.map);
+      }
     }
   });
 
-  socket.on('update-entities-map', (data) => {
+  socket.on('update-map-type', (data) => {
     var room = func.find_room(rooms, data.room_id, socket);
     if (!room) return;
     var user = func.find_user_socket(room, socket);
-    
-    var verify = true;
+
     if (user) {
-      if(user.role === 'user') {
-        for (e of data.entities) {
-          if (e.user.name !== user.name) {
-            verify = false;
-            break;
+    var out = null;
+      var newData = data.data;
+      
+      switch (data.type) {
+        case 'walls':
+          if (user.role === 'admin') {
+            room.map.walls = newData.walls;
+
+            out = {
+              walls: newData.walls
+            }
+          }
+          break;
+
+        case 'entities':
+          var verify = true;
+
+          // Data from role user must only contain own data
+          if (user.role === 'user') {
+            for (e of newData.entities) {
+              if (e.user.name !== user.name) {
+                verify = false;
+                break;
+              }
+            }
+          }
+
+          if (verify) {
+            for (var i = room.map.entities.length - 1; i >= 0; --i) {
+              // Remove all data that will be updated
+              if (user.role === 'admin' || 
+                (user.role === 'user' && user.name === room.map.entities[i].user.name)) {
+                room.map.entities.splice(i, 1);
+              }
+            }
+
+            // Add data
+            Array.prototype.push.apply(room.map.entities, newData.entities);
+
+            out = { 
+              entities: room.map.entities
+            };
+          }
+          break;
+
+        case 'assets':
+          if (user.role === 'admin') {
+            room.map.assets = newData.assets;
+            out = { assets: newData.assets };
+          }
+          break;
+
+        case 'lines':
+          // Must only contain own data
+          if (user.id === newData.id && newData.lines.length !== 0) {
+            out = {
+              lines: newData.lines,
+              id: newData.id
+            };
+          }
+          break;
+
+        case 'texture':
+          if (user.role === 'admin') {
+            room.map.texture = newData.texture;
+            out = { texture: newData.texture };
+          }
+          break;
+
+        case 'fog':
+          if (user.role === 'admin') {
+            room.map.fog = newData.fog;
+            out = { fog: newData.fog };
+          }
+          break;
+      }
+
+      if (out !== null) {
+        if (room.map.share) {
+          socket.broadcast.to(data.room_id).emit('map-data-type', { type: data.type, data: out });
+        } else {
+          // Send data to admin
+          socket.broadcast.to(data.room_id + '-admin').emit('map-data-type', { type: data.type, data: out });
+
+          // Filter entity updates if map is not shared
+          if (data.type === 'entities') {
+            room.users.forEach((a_user) => {
+              // Admin do not have to have data filtered
+              if (a_user.role === 'admin') return;
+
+              out.entities = room.map.entities.filter(function(entity) {
+                return entity.user.id === a_user.id;
+              });
+                
+              a_user.socket.emit('map-data-type', { type: data.type, data:out });
+            });
           }
         }
       }
-    } else {
-      verify = false;
-    }
-
-    if (verify) {
-      for (var i = room.map.entities.length - 1; i >= 0; --i) {
-        if (user.role === 'admin' || 
-           (user.role === 'user' && user.name === room.map.entities[i].user.name)) {
-          room.map.entities.splice(i, 1)[0];
-        }
-      }
-
-      for (e of data.entities) {
-        room.map.entities.push(e);
-      }
-
-      var out = {
-        entities: data.entities,
-        user: {
-          name: user.name,
-          role: user.role
-        }
-      };
-
-      socket.broadcast.to(data.room_id).emit('entities-map-data', out);
-    }
-  });
-
-  socket.on('update-lines-map', (data) => {
-    var room = func.find_room(rooms, data.room_id, socket);
-    if (!room) return;
-    var user = func.find_user_socket(room, socket);
-    
-    if (user.id === data.id && data.lines.length !== 0) {
-      socket.broadcast.to(data.room_id).emit('lines-map-data', { id: data.id, lines: data.lines });
     }
   });
 
@@ -226,9 +310,17 @@ router.sockets = (io, socket, rooms, func) => {
     if (user) { 
       // Roll dice
       var changed = false;
-      if (data.hasOwnProperty('index')) { // Roll single dice
-        changed = true;
-        func.roll(user.dice[data.index]);
+      if (data.hasOwnProperty('id')) { // Roll single dice
+        var dice = user.dice.filter((a_dice) => {
+          return a_dice.id === data.id; // TODO: Allow data.id to be array to select/roll multiple dice
+        });
+
+        if (dice.length > 0) {
+          changed = true;
+          for (die of dice) {
+            func.roll(die);
+          }
+        }
       } else  { // Roll all dice
         user.dice.forEach((die) => {
           changed = true;
@@ -257,7 +349,7 @@ router.sockets = (io, socket, rooms, func) => {
           } else {
             socket.emit('room-log', out);
           }
-        }, 3000);
+        }, 3000); // TODO: Move to constant set int server settings
       }
     }
   });
@@ -289,6 +381,55 @@ router.sockets = (io, socket, rooms, func) => {
       func.set_updated(user);
       socket.emit('room-data', func.room_array(room, user)); // TODO: is needed?
       socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+    }
+  })
+
+  socket.on('share-map', (data) => {
+    var room = func.find_room(rooms, data.room_id, socket);
+    if (!room) return;
+    var user = func.find_user_socket(room, socket);
+    if (user && user.role === 'admin') {
+      console.log('user ' + user.name + ' is ' + (data.share ? 'sharing' : 'hiding') + ' the map');
+      // Share/Hide map
+      room.map.share = Boolean(data.share);
+
+      room.map.update = {
+        walls:    true,
+        entities: true,
+        assets:   true,
+        texture:  true,
+        fog:      true
+      };
+
+      if (room.map.share) {
+        socket.broadcast.to(data.room_id).emit('map-data', room.map);
+      } else {
+        var out = {
+          update:   room.map.update,
+          share:    false,
+          walls:    [],
+          entities: [],
+          assets:   [],
+          texture:  null,
+          fog:      null
+        }
+
+        // Send map data to admin only and and empty map to users
+        room.users.forEach((a_user) => {
+          // Modification is made client side for originating admin
+          if (a_user.id === user.id) return;
+
+          if (a_user.role === 'admin') {
+            a_user.socket.emit('map-data', room.map);
+          } else {
+            out.entities = room.map.entities.filter(function(entity) {
+              return entity.user.id === a_user.id;
+            });
+            
+            a_user.socket.emit('map-data', out);
+          }
+        });
+      }
     }
   })
 
