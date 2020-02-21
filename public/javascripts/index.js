@@ -1,5 +1,5 @@
 // Elements
-var create = {
+const create = {
   modal: '#create-modal',
   form: 'form#create',
   inputs: {
@@ -10,7 +10,7 @@ var create = {
   },
   submit: '#create-submit'
 };
-var join = {
+const join = {
   modal: '#join-modal',
   form: 'form#join',
   title: '#join-title',
@@ -27,41 +27,41 @@ var join = {
     password: '#join-button-password'
   }
 };
-var rooms = {
+const rooms = {
   table: 'table#rooms',
   body: '#rooms-body'
 };
 
-$(document).ready(function() {
+$(document).ready(() => {
   // Load web socket
-  var socket = io();
+  const socket = io();
   
-  socket.on('connect', function() {
+  socket.on('connect', () => {
     if (DEBUG) console.log('connected');
     socket.emit('join', 'index'); socket.send('');
   });
   socket.on('alert',        show_alert);
   socket.on('update-rooms', update_rooms);
   socket.on('join-room',    join_room);
-  socket.on('disconnect', function() { 
+  socket.on('disconnect', () => { 
     if (DEBUG) console.log('disconnected');
   });
 
   function show_alert(data) {
-    $('#alert-message').html('<span>' + data + '</span>');
+    $('#alert-message').html(`<span>${data}</span>`);
     $('#alert').modal();
   }
 
   function update_rooms(data) {
     if (DEBUG) console.log('updating rooms');
-    var room_table = '';
+    let room_table = '';
     if (data.length == 0) {
       room_table = `
 <tr scope="row" id="no-rooms">
   <td colspan="5" class="text-center"><div><span>No rooms, create a new one!</span></div></td>
 </tr>`;
     } else {
-      for (var [id, room] of data) {
+      for (const [id, room] of data) {
         room_table += `
   <tr scope="row">
     <td class="room-id d-none" scope="col">` + id + `</td>
@@ -76,17 +76,17 @@ $(document).ready(function() {
   }
 
   function join_room(data) {
-    if (DEBUG) console.log('joining ' + data);
-    window.location.href = '/room/' + data;
+    if (DEBUG) console.log(`joining ${data}`);
+    window.location.href = `/room/${data}`;
   }
 
   // Form: Create Room
-  $('button#create-button').on('click', (event) => {
+  $('button#create-button').on('click', event => {
     $(create.modal).modal();
   });
 
-  $(create.form).submit(function() {
-    var data = {
+  $(create.form).submit(() => {
+    const data = {
       user_name: $(create.inputs.user_name).val(),
       room_name: $(create.inputs.room_name).val(),
       admin_password: $(create.inputs.admin_password).val(),
@@ -102,11 +102,11 @@ $(document).ready(function() {
       $(create.modal).modal();
       return;
     }
-    var room_name = $(this).find('td.room-name').html();
-    var room_id = $(this).find('td.room-id').html();
-    var room_locked = ($(this).find('td.room-locked').html() == 1);
+    const room_name = $(this).find('td.room-name').html();
+    const room_id = $(this).find('td.room-id').html();
+    const room_locked = ($(this).find('td.room-locked').html() == 1);
     
-    $(join.title).html('Join: ' + room_name);
+    $(join.title).html(`Join: ${room_name}`);
     $(join.inputs.room_id).val(room_id);
 
     if (room_locked) {
@@ -123,20 +123,20 @@ $(document).ready(function() {
   });
 
   // Form: Join Room
-  $(join.buttons.password).on('click', function(event) {
+  $(join.buttons.password).on('click', event => {
     $(join.buttons.password).addClass('d-none');
     $(join.labels.password).removeClass('d-none');
     $(join.inputs.password).removeClass('d-none');
   });
 
-  $(join.form).submit(function() {
-    var data = {
+  $(join.form).submit(() => {
+    const data = {
       room_id: $(join.inputs.room_id).val(),
       user_name: $(join.inputs.user_name).val(),
       password: $(join.inputs.password).val()
     };
     socket.emit('join-room', data); socket.send('');
-    if (DEBUG) console.log('Connecting ' + JSON.stringify(data));
+    if (DEBUG) console.log(`Connecting ${JSON.stringify(data)}`);
     return false;
   });
 });

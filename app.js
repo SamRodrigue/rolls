@@ -1,24 +1,24 @@
-var express = require('express');
-var http = require('http');
-var path = require('path');
-var socketio = require('socket.io');
-var session = require('express-session')({
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const socketio = require('socket.io');
+const session = require('express-session')({
   secret: 'letsroll',
   resave: true,
   saveUninitialized: true
 });
-var sharedsession = require('express-socket.io-session');
-var favicon = require('serve-favicon');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
+const sharedsession = require('express-socket.io-session');
+const favicon = require('serve-favicon');
+const logger = require('morgan');
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
 
 // Routes
-var index = require('./routes/index');
-var room  = require('./routes/room.js');
+const index = require('./routes/index');
+const room  = require('./routes/room.js');
 
 // Express
-var app = express();
+const app = express();
 app.server = http.createServer(app);
 app.io = socketio(http, {
   pingInterval: 25000,
@@ -52,7 +52,7 @@ app.use('/room', room);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
-  var err = new Error('Not Found');
+  const err = new Error('Not Found');
   err.status = 404;
   next(err);
 });
@@ -73,20 +73,20 @@ app.func = require('./func.js');
 
 // cli
 // TODO: Move to cli module/file
-var stdin = process.stdin;
-var stdout = process.stdout;
+const stdin = process.stdin;
+const stdout = process.stdout;
 stdin.resume();
 stdin.setEncoding('utf8');
  
-stdin.on('data', (cmd) => {
+stdin.on('data', cmd => {
   // helper functions
   function display_rooms() {
-    stdout.write('number of rooms: ' + app.rooms.size + '\n');
-    for (var [id, room] of app.rooms) {
-      stdout.write('Room: ' + room.name + ' (' + id + ')\n');
-      stdout.write('  Users: ' + room.users.length + '\n');
-      room.users.forEach((user) => {
-        stdout.write('    User: ' + user.name + '\n');
+    stdout.write(`number of rooms: ${app.rooms.size}\n`);
+    for (const [id, room] of app.rooms) {
+      stdout.write(`Room: ${room.name} (${id})\n`);
+      stdout.write(`  Users: ${room.users.length}\n`);
+      room.users.forEach(user => {
+        stdout.write(`    User: ${user.name}\n`);
       });
     }
   }
@@ -96,7 +96,7 @@ stdin.on('data', (cmd) => {
       stdout.write('Provide a room id\n');
       return;
     }
-    var id = args[1];
+    const id = args[1];
     if (!app.rooms.has(id)) {
       console.log('ERROR: a user requested an unregistered room');
       return;
@@ -118,33 +118,33 @@ stdin.on('data', (cmd) => {
       return;
     }
 
-    var room = app.rooms.get('debug');
-    var user = app.func.find_user_name(room, 'User1')[0];
+    const room = app.rooms.get('debug');
+    const user = app.func.find_user_name(room, 'User1')[0];
 
     switch (args[1]) {
       case 'roll':
-        user.dice.forEach((die) => {
+        user.dice.forEach(die => {
           app.func.roll(die);
         });
-        console.log('user ' + user.name + ' is rolling');
+        console.log(`user ${user.name} is rolling`);
         app.func.set_updated(user);
         app.io.sockets.in('debug').emit('room-data', app.func.room_array(room));
-        var date = new Date();
+        const time = new Date().getTime();
         app.io.sockets.in('debug').emit('room-log', 
         {
           user: user.name,
-          time: date.getTime(),
+          time: time,
           log: app.func.dice_status(user.dice, user.counter)
         });
         break;
       default:
-        stdout.write('Unknown command: ' + args[0] + ' ' + args[1] + '\n');
+        stdout.write(`Unknown command: ${args[0]} ${args[1]}\n`);
     }
   }
 
   // Split cmd
-  var cmd = cmd.trim();
-  var args = cmd.split(' ');
+  cmd = cmd.trim();
+  const args = cmd.split(' ');
   //stdout.write('Raw: ' + cmd + '\n');
   //stdout.write('Number of args: ' + args.length + '\n');
   if (args.length > 0) {
@@ -154,7 +154,7 @@ stdin.on('data', (cmd) => {
       case 'close': close_room(args); break;
       case 'debug': debug_room(args); break;
       default:
-        stdout.write('Unknown command: ' + args[0] + '\n');
+        stdout.write(`Unknown command: ${args[0]}\n`);
     }
   }
 });
@@ -162,8 +162,8 @@ stdin.on('data', (cmd) => {
 // Debug mode. Enabled by running 'npm test' or 'bin/www debug'
 // TODO: Move to debug module/file
 if (global.DEBUG) {
-  var debug_emit = (sig, data) => { console.log('DEBUG: sending ' + JSON.stringify(data) + ' to ' + sig); };
-  var debug_user1 = {
+  const debug_emit = (sig, data) => { console.log(`DEBUG: sending ${JSON.stringify(data)} to ${sig}`); };
+  const debug_user1 = {
     socket: { handshake: { sessionID: 0 }, emit: debug_emit },
     timeout: null,
     id: 'ABC1',
@@ -188,7 +188,7 @@ if (global.DEBUG) {
     updated: 0
   };
 
-  var debug_user2 = {
+  const debug_user2 = {
     socket: { handshake: { sessionID: 0 }, emit: debug_emit },
     timeout: null,
     id: 'ABC2',
@@ -213,7 +213,7 @@ if (global.DEBUG) {
     updated: 0
   };
 
-  var debug_room = {
+  const debug_room = {
     name: 'Debug',
     locked: false,
     password: {
@@ -231,12 +231,12 @@ if (global.DEBUG) {
     }
   };
 
-  debug_user1.dice.forEach((die) => {
+  debug_user1.dice.forEach(die => {
     die.id = app.func.create_id('dice', debug_room.users); 
     app.func.roll(die);
   });
 
-  debug_user2.dice.forEach((die) => {
+  debug_user2.dice.forEach(die => {
     die.id = app.func.create_id('dice', debug_room.users);
     app.func.roll(die);
   });
@@ -246,7 +246,7 @@ if (global.DEBUG) {
 }
 
 // sockets
-app.io.on('connect', (socket) => {
+app.io.on('connect', socket => {
   // Register route sockets
   index.sockets(app.io, socket, app.rooms, app.func);
   room.sockets(app.io, socket, app.rooms, app.func);
@@ -255,7 +255,7 @@ app.io.on('connect', (socket) => {
   console.log('a user connected');
 
   // Join io rooms
-  socket.on('join', (data) => {
+  socket.on('join', data => {
     socket.current_room = data;
     // Confirm room
     if (data == 'index') { // anyone can join index
@@ -268,17 +268,17 @@ app.io.on('connect', (socket) => {
     } else {
       // Check if user has access to room
       if (!app.rooms.has(data)) {
-        console.log('a user tried to access an unavailable room: ' + data);
+        console.log(`a user tried to access an unavailable room: ${data}`);
         return;
       }
-      var room = app.rooms.get(data);
-      var user_joined = false;
-      room.users.some((user) => {
+      const room = app.rooms.get(data);
+      let user_joined = false;
+      room.users.some(user => {
         if (socket.handshake.sessionID === user.socket.handshake.sessionID) {
           socket.leaveAll();
-          console.log('a user joined ' + data);
+          console.log(`a user joined ${data}`);
           socket.join(data);
-          if (user.role === 'admin') socket.join(data + '-admin');
+          if (user.role === 'admin') socket.join(`${data}-admin`);
           user_joined = true;
 
           // // Disable user timeout
@@ -287,14 +287,14 @@ app.io.on('connect', (socket) => {
           return true;
         }
       });
-      if (!user_joined) console.log('a user tried to join ' + data);
+      if (!user_joined) console.log(`a user tried to join ${data}`);
     }
   });
 
   socket.on('disconnect', () => {
     console.log('a user disconnected');
     // Get user from session id
-    for (var [id, a_room] of app.rooms) {
+    for (const [id, a_room] of app.rooms) {
       a_room.users.some((a_user, index) => {
         if (a_user.socket.handshake.sessionID === socket.handshake.sessionID) {
           // Clear any existing timeout

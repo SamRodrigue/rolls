@@ -1,6 +1,6 @@
-var express = require('express');
-var router = express.Router();
-var app_version = require('../package.json').version;
+const express = require('express');
+const router = express.Router();
+const app_version = require('../package.json').version;
 
 /* GET home page. */
 router.get('/', (req, res, next) => {
@@ -9,8 +9,8 @@ router.get('/', (req, res, next) => {
 
 router.sockets = (io, socket, rooms, func) => {
   // Added rolls room
-  socket.on('create-room', (data) => {
-    console.log('creating new room ' + data.room_name);
+  socket.on('create-room', data => {
+    console.log(`creating new room ${data.room_name}`);
     // Check room name
     if (!data.room_name || !data.room_name.trim()) {
       socket.emit('alert', 'Error: New room requires a name');
@@ -45,11 +45,11 @@ router.sockets = (io, socket, rooms, func) => {
 
     // Add room
     var id = func.create_id('room', rooms);
-    console.log('created a new room ' + id);
+    console.log(`created a new room ${id}`);
 
     // Create user
-    var user = {
-      socket: socket,
+    const user = {
+      socket,
       timeout: null,
       id: func.create_id(),
       name: data.user_name,
@@ -102,8 +102,8 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   // Join request
-  socket.on('join-room', (data) => {
-    console.log('a user requested to join room ' + data.room_id);
+  socket.on('join-room', data => {
+    console.log(`a user requested to join room ${data.room_id}`);
     // Trim username
     data.user_name = data.user_name.trim();
     // Check user name
@@ -122,11 +122,11 @@ router.sockets = (io, socket, rooms, func) => {
     }
 
     // Get room
-    var room = rooms.get(data.room_id);
+    const room = rooms.get(data.room_id);
 
     // Create user
-    var user = {
-      socket: socket,
+    const user = {
+      socket,
       timeout: null,
       id: func.create_id('user', room.users),
       name: data.user_name,
@@ -160,18 +160,18 @@ router.sockets = (io, socket, rooms, func) => {
     }
 
     // Check if user is already in room
-    var user_error = false;
-    var new_user = true;
+    let user_error = false;
+    let new_user = true;
     room.users.some((a_user, index) => {
       if (user.socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-        console.log('a user rejoined room ' + room.name);
+        console.log(`a user rejoined room ${room.name}`);
         // Remove old timeout
         clearTimeout(a_user.timeout);
 
         // Check if user name is unique in room
-        room.users.some((another_user) => {
-          if (user.name === another_user.name && 
-              user.socket.handshake.sessionID !== another_user.socket.handshake.sessionID) {
+        room.users.some(b_user => {
+          if (user.name === b_user.name && 
+              user.socket.handshake.sessionID !== b_user.socket.handshake.sessionID) {
             socket.emit('alert', 'Error: A user with that name is already in the room');
             user_error = true;
             return true;
@@ -189,7 +189,7 @@ router.sockets = (io, socket, rooms, func) => {
       // New user
       if (new_user) {
         // Check if user name is unique in room
-        room.users.some((a_user) => {
+        room.users.some(a_user => {
           if (user.name === a_user.name) {
             socket.emit('alert', 'Error: A user with that name is already in the room');
             user_error = true;
@@ -199,9 +199,9 @@ router.sockets = (io, socket, rooms, func) => {
 
         if (!user_error) {
           // Add user to room
-          console.log('adding user to ' + room.name);
+          console.log(`adding user to ${room.name}`);
           room.users.push(user);
-          console.log('Room Size ' + rooms.get(data.room_id).users.length);
+          console.log(`Room Size ${rooms.get(data.room_id).users.length}`);
         } else {
           return;
         }
