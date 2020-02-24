@@ -2,7 +2,7 @@ extends layout
 
 block scripts
   script.
-    const DEBUG = ('#{show_debug}' === 'true');
+    const DEBUG = ('#{debugMode}' === 'true');
   script(src='/javascripts/index.js')
 
 block content
@@ -11,7 +11,7 @@ block content
     p.text-light A virtual tabletop for maps and dice.
     button#create-button.btn.btn-primary
       span Create Room
-  
+
   .content.mt-3
     .container
       table#rooms.table.table-striped.table-responsive.table-hover.table-bordered.table-condensed.mx-auto.bg-light
@@ -26,7 +26,7 @@ block content
           tr
             td.text-center(colspan='5')
               .loader
-  
+
   .footer
     .container
       .row
@@ -37,7 +37,7 @@ block content
     .modal-dialog
       .modal-content
         .modal-header
-          h2 Create Room 
+          h2 Create Room
           button.close(data-dismiss='modal') &times;
         .modal-body
           form#create

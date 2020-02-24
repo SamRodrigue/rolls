@@ -1,58 +1,58 @@
 const express = require('express');
 const router = express.Router();
-const app_version = require('../package.json').version;
+const version = require('../package.json').version;
 
 /* GET home page. */
 router.get('/', (req, res, next) => {
-  res.render('index', { title: 'Rolls', version: app_version, show_debug: global.DEBUG ? 'true' : 'false' });
+  res.render('index', { title: 'Rolls', version, debugMode: global.DEBUG ? 'true' : 'false' });
 });
 
 router.sockets = (io, socket, rooms, func) => {
   // Added rolls room
   socket.on('create-room', data => {
-    console.log(`creating new room ${data.room_name}`);
+    console.log(`creating new room ${data.roomName}`);
     // Check room name
-    if (!data.room_name || !data.room_name.trim()) {
+    if (!data.roomName || !data.roomName.trim()) {
       socket.emit('alert', 'Error: New room requires a name');
       return;
     }
 
     // Check user name
-    if (!data.user_name || !data.user_name.trim() || data.user_name.length > 32) {
+    if (!data.userName || !data.userName.trim() || data.userName.length > 32) {
       socket.emit('alert', 'Error: Invalid user name');
       return;
     }
 
     // Check admin password
-    if (!data.admin_password) {
+    if (!data.adminPassword) {
       socket.emit('alert', 'Error: An admin password is required');
       return;
     }
 
     // Check that admin and user passwords are different
-    if (data.user_password && data.user_password === data.admin_password) {
+    if (data.userPassword && data.userPassword === data.adminPassword) {
       socket.emit('alert', 'Error: Admin and user passwords cannot match');
       return;
     }
 
     // Check if room exists
     for (var [id, room] in rooms) {
-      if (room.name == data.room_name) {
+      if (room.name == data.roomName) {
         socket.emit('alert', 'Error: A room with the same name already exists');
         return;
       }
     }
 
     // Add room
-    var id = func.create_id('room', rooms);
+    var id = func.createID('room', rooms);
     console.log(`created a new room ${id}`);
 
     // Create user
     const user = {
       socket,
       timeout: null,
-      id: func.create_id(),
-      name: data.user_name,
+      id: func.createID(),
+      name: data.userName,
       role: 'admin',
       color: [0, 0, 0],
       dice: [],
@@ -67,18 +67,18 @@ router.sockets = (io, socket, rooms, func) => {
         dice: [],
         counter: 0
       }],
-      updated: func.get_updated()
+      updated: func.getUpdated()
     };
 
     // Update default color to one based on user id
-    user.color = func.color_from_string(user.id);
-    
+    user.color = func.colorFromString(user.id);
+
     var room = {
-      name: data.room_name,
-      locked: (data.user_password ? true : false),
+      name: data.roomName,
+      locked: (data.userPassword ? true : false),
       password: {
-        admin: data.admin_password,
-        user: data.user_password
+        admin: data.adminPassword,
+        user: data.userPassword
       },
       users: [],
       timeout: null,
@@ -95,7 +95,7 @@ router.sockets = (io, socket, rooms, func) => {
     rooms.set(id, room);
 
     // Update all other index clients
-    socket.broadcast.to('index').emit('update-rooms', func.rooms_array(rooms));
+    socket.broadcast.to('index').emit('update-rooms', func.roomsArray(rooms));
 
     // Move to new room
     socket.emit('join-room', id);
@@ -103,33 +103,33 @@ router.sockets = (io, socket, rooms, func) => {
 
   // Join request
   socket.on('join-room', data => {
-    console.log(`a user requested to join room ${data.room_id}`);
+    console.log(`a user requested to join room ${data.roomID}`);
     // Trim username
-    data.user_name = data.user_name.trim();
+    data.userName = data.userName.trim();
     // Check user name
-    if (!data.user_name || data.user_name.length > 32) {
+    if (!data.userName || data.userName.length > 32) {
       socket.emit('alert', 'Error: Invalid user name');
       return;
     }
 
     // Find requested room
-    if (!rooms.has(data.room_id)) {
+    if (!rooms.has(data.roomID)) {
       console.log('ERROR: a user requested an unregistered room');
-      
+
       // Send response to user
       socket.emit('alert', 'Error: Unknown room');
       return;
     }
 
     // Get room
-    const room = rooms.get(data.room_id);
+    const room = rooms.get(data.roomID);
 
     // Create user
     const user = {
       socket,
       timeout: null,
-      id: func.create_id('user', room.users),
-      name: data.user_name,
+      id: func.createID('user', room.users),
+      name: data.userName,
       role: '',
       color: [0, 0, 0],
       dice: [],
@@ -144,10 +144,10 @@ router.sockets = (io, socket, rooms, func) => {
         dice: [],
         counter: 0
       }],
-      updated: func.get_updated()
+      updated: func.getUpdated()
     };
 
-    user.color = func.color_from_string(user.id);
+    user.color = func.colorFromString(user.id);
 
     // Check password
     if (data.password === room.password.admin) {
@@ -160,57 +160,57 @@ router.sockets = (io, socket, rooms, func) => {
     }
 
     // Check if user is already in room
-    let user_error = false;
-    let new_user = true;
-    room.users.some((a_user, index) => {
-      if (user.socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
+    let userError = false;
+    let newUser = true;
+    room.users.some((aUser, index) => {
+      if (user.socket.handshake.sessionID === aUser.socket.handshake.sessionID) {
         console.log(`a user rejoined room ${room.name}`);
         // Remove old timeout
-        clearTimeout(a_user.timeout);
+        clearTimeout(aUser.timeout);
 
         // Check if user name is unique in room
-        room.users.some(b_user => {
-          if (user.name === b_user.name && 
-              user.socket.handshake.sessionID !== b_user.socket.handshake.sessionID) {
+        room.users.some(bUser => {
+          if (user.name === bUser.name &&
+              user.socket.handshake.sessionID !== bUser.socket.handshake.sessionID) {
             socket.emit('alert', 'Error: A user with that name is already in the room');
-            user_error = true;
+            userError = true;
             return true;
           }
         });
-        if (user_error) return true;
+        if (userError) return true;
 
-        new_user = false;
+        newUser = false;
         room.users[index] = user;
         return true;
       }
     });
 
-    if (!user_error) {
+    if (!userError) {
       // New user
-      if (new_user) {
+      if (newUser) {
         // Check if user name is unique in room
-        room.users.some(a_user => {
-          if (user.name === a_user.name) {
+        room.users.some(aUser => {
+          if (user.name === aUser.name) {
             socket.emit('alert', 'Error: A user with that name is already in the room');
-            user_error = true;
+            userError = true;
             return true;
           }
         });
 
-        if (!user_error) {
+        if (!userError) {
           // Add user to room
           console.log(`adding user to ${room.name}`);
           room.users.push(user);
-          console.log(`Room Size ${rooms.get(data.room_id).users.length}`);
+          console.log(`Room Size ${rooms.get(data.roomID).users.length}`);
         } else {
           return;
         }
-      } 
+      }
       // Move to room
-      socket.emit('join-room', data.room_id);
+      socket.emit('join-room', data.roomID);
 
       // Update all other index clients
-      socket.broadcast.to('index').emit('update-rooms', func.rooms_array(rooms));
+      socket.broadcast.to('index').emit('update-rooms', func.roomsArray(rooms));
     }
   });
 }

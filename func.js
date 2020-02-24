@@ -1,8 +1,8 @@
-const rooms_array = rooms => {
+const roomsArray = rooms => {
   const data = [];
 
   rooms.forEach((room, id) => {
-    data.push([ id, 
+    data.push([ id,
     {
       name: room.name,
       users: room.users.length,
@@ -13,7 +13,7 @@ const rooms_array = rooms => {
   return data;
 };
 
-const room_array = (room, user) => {
+const roomArray = (room, user) => {
   const data = {
     name: room.name,
     users: [],
@@ -21,24 +21,24 @@ const room_array = (room, user) => {
   };
 
   // Data is not specific to a user
-  let user_id = null;
+  let userID = null;
   if (typeof user !== 'undefined') {
-    user_id = user.id;
+    userID = user.id;
   }
 
-  room.users.forEach(a_user => {
+  room.users.forEach(aUser => {
     const out = {
-      id: a_user.id,
-      name: a_user.name,
-      color: a_user.color,
+      id: aUser.id,
+      name: aUser.name,
+      color: aUser.color,
       dice: [],
-      share: a_user.share,
-      counter: a_user.counter,
-      updated: a_user.updated
+      share: aUser.share,
+      counter: aUser.counter,
+      updated: aUser.updated
     };
 
-    if (a_user.share || a_user.id === user_id) {
-      out.dice = a_user.dice;
+    if (aUser.share || aUser.id === userID) {
+      out.dice = aUser.dice;
     }
 
     data.users.push(out);
@@ -47,83 +47,83 @@ const room_array = (room, user) => {
   return data;
 };
 
-const remove_user = (sid, rooms, room_id, sockets) => {
+const removeUser = (sid, rooms, roomID, sockets) => {
   let user = null;
-  let user_index = -1;
+  let userIndex = -1;
   let room = null;
-  if (typeof room_id == 'undefined') {
+  if (typeof roomID == 'undefined') {
     // Find room with sid
-    for (const [id, a_room] of rooms) {
-      a_room.users.some((a_user, index) => {
-        if (a_user.socket.handshake.sessionID === sid) {
-          user_index = index;
-          user = a_user;
-          room_id = id;
-          room = a_room;
+    for (const [id, aRoom] of rooms) {
+      aRoom.users.some((aUser, index) => {
+        if (aUser.socket.handshake.sessionID === sid) {
+          userIndex = index;
+          user = aUser;
+          roomID = id;
+          room = aRoom;
           return true;
         }
       });
     }
   } else {
-    if (!rooms.has(room_id)) {
-      console.log(`ERROR: a user requested an unregistered room ${room_id}`);
+    if (!rooms.has(roomID)) {
+      console.log(`ERROR: a user requested an unregistered room ${roomID}`);
       return;
     }
-    room = rooms.get(room_id);
-    room.users.some((a_user, index) => {
-      if (a_user.socket.handshake.sessionID === sid) {
-        user_index = index;
-        user = a_user;
+    room = rooms.get(roomID);
+    room.users.some((aUser, index) => {
+      if (aUser.socket.handshake.sessionID === sid) {
+        userIndex = index;
+        user = aUser;
         return true;
       }
     });
   }
 
   if (room && user) {
-    console.log(`removing user ${user.name} from ${room_id}`);
+    console.log(`removing user ${user.name} from ${roomID}`);
 
     // Send user leave message
     user.socket.emit('alert', 'You have been removed from the room');
-    user.socket.leave(room_id);
-    if (user.role === 'admin') user.socket.leave(`${room_id}-admin`);
-    room.users.splice(user_index, 1);
-    user.socket.in(room_id).emit('room-data', room_array(room));
+    user.socket.leave(roomID);
+    if (user.role === 'admin') user.socket.leave(`${roomID}-admin`);
+    room.users.splice(userIndex, 1);
+    user.socket.in(roomID).emit('room-data', roomArray(room));
     console.log(`users remaining ${room.users.length}`);
 
     if (room.users.length === 0) {
       room.timeout = setTimeout(() => {
-        remove_room(rooms, room_id, sockets)}, 
+        removeRoom(rooms, roomID, sockets)},
         global.ROOM_TIMEOUT);
-      console.log(`room is empty ${room_id}`);
+      console.log(`room is empty ${roomID}`);
     }
 
-    user.socket.in('index').emit('update-rooms', rooms_array(rooms));
+    user.socket.in('index').emit('update-rooms', roomsArray(rooms));
   }
 };
 
-const remove_room = (rooms, room_id, sockets) => {
-  if (!rooms.has(room_id)) {
-    console.log(`ERROR: trying to remove an unregistered room ${room_id}`);
+const removeRoom = (rooms, roomID, sockets) => {
+  if (!rooms.has(roomID)) {
+    console.log(`ERROR: trying to remove an unregistered room ${roomID}`);
     return;
   }
-  const room = rooms.get(room_id);
+  const room = rooms.get(roomID);
   if (room.users.length === 0) {
-    rooms.delete(room_id);
-    console.log(`removing room ${room_id}`);
-    sockets.in('index').emit('update-rooms', rooms_array(rooms));
+    rooms.delete(roomID);
+    console.log(`removing room ${roomID}`);
+    sockets.in('index').emit('update-rooms', roomsArray(rooms));
   }
 };
 
-const create_id = (type, arr) => {
-  const get_id = () => { return Math.random().toString(36).substr(2, 9); };
-  let id = get_id();
+const createID = (type, arr) => {
+  const getID = () => { return Math.random().toString(36).substr(2, 9); };
+  let id = getID();
   // check if id colides with existing array of id
   // No checking required if type not specified.
   switch (type) {
     case 'room':
       while (arr.has(id)) {
         console.log('ABN: Room ID collision');
-        id = get_id();
+        id = getID();
       }
       break;
     case 'user':
@@ -131,7 +131,7 @@ const create_id = (type, arr) => {
         return user.id === id;
       }).length) {
         console.log('ABN: User ID collision');
-        id = get_id();
+        id = getID();
       }
       break;
     case 'dice':
@@ -144,7 +144,7 @@ const create_id = (type, arr) => {
         return false;
       }).length) {
         console.log('ABN: Dice ID collision');
-        id = get_id();
+        id = getID();
       }
       break;
   }
@@ -152,12 +152,12 @@ const create_id = (type, arr) => {
   return id;
 };
 
-const get_updated = () => {
+const getUpdated = () => {
   return Date.now().toString(36);
 };
 
-const set_updated = user => {
-  user.updated = get_updated();
+const setUpdated = user => {
+  user.updated = getUpdated();
 };
 
 const roll = die => {
@@ -177,47 +177,47 @@ const roll = die => {
   die.time = Date.now();
   die.anime = [];
 
-  let last_die = die.value;
+  let lastDie = die.value;
   for (let i = 20; i > 0; i--) {
     let val;
     let count = 10;
     do {
       val = Math.floor(Math.random() * floor) + offset;
-    } while (val === last_die && --count > 0);
+    } while (val === lastDie && --count > 0);
 
     if (--count <= 0) {
       console.log('ABN: Unable to get unique value for roll animation');
     }
 
     die.anime[i - 1] = val;
-    last_die = val;
+    lastDie = val;
   }
 };
 
-const dice_status = (dice, counter) => {
+const diceStatus = (dice, counter) => {
   let out = '';
   const total = new Map();
   total.set('total', 0);
   dice.forEach(die => {
     if (die.value > -1) {
-      let old_value = 0;
-      let old_count = 0;
+      let oldValue = 0;
+      let oldCount = 0;
       if (total.has(die.type)) {
-        old_value = total.get(die.type).value;
-        old_count = total.get(die.type).count;
+        oldValue = total.get(die.type).value;
+        oldCount = total.get(die.type).count;
       }
-      const new_total = {
-        value: old_value + die.value,
-        count: old_count + 1
+      const newTotal = {
+        value: oldValue + die.value,
+        count: oldCount + 1
       };
-      total.set(die.type, new_total);
+      total.set(die.type, newTotal);
       total.set('total', total.get('total') + die.value);
     }
   });
-  ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].forEach(die_type => {
-    if (total.has(die_type)) {
-      const curr = total.get(die_type);
-      out += `<p class="${die_type}-label">${curr.count}${die_type}:${curr.value}</p>&nbsp;`;
+  ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].forEach(dieType => {
+    if (total.has(dieType)) {
+      const curr = total.get(dieType);
+      out += `<p class="${dieType}-label">${curr.count}${dieType}:${curr.value}</p>&nbsp;`;
     }
   });
   out += `Total: ${total.get('total')}`;
@@ -228,10 +228,10 @@ const dice_status = (dice, counter) => {
   return out;
 };
 
-const find_room = (rooms, id, socket) => {
+const findRoom = (rooms, id, socket) => {
   if (!rooms.has(id)) {
     console.log('ERROR: a user requested an unregistered room');
-    
+
     // Send response to user
     socket.emit('alert', { kick: true, alert: 'Error: Unknown room' });
     return null;
@@ -240,11 +240,11 @@ const find_room = (rooms, id, socket) => {
   return rooms.get(id);
 };
 
-const find_user_socket = (room, socket) => {
+const findUserSocket = (room, socket) => {
   let user = null;
-  room.users.some(a_user => {
-    if (socket.handshake.sessionID === a_user.socket.handshake.sessionID) {
-      user = a_user;
+  room.users.some(aUser => {
+    if (socket.handshake.sessionID === aUser.socket.handshake.sessionID) {
+      user = aUser;
       return true;
     }
   });
@@ -252,22 +252,22 @@ const find_user_socket = (room, socket) => {
   return user;
 };
 
-const find_user_name = (room, name) => {
-  let target_user = null;
-  let target_user_index = -1;
-  room.users.some((a_user, index) => {
-    if (a_user.name === name) {
-      target_user = a_user;
-      target_user_index = index;
+const findUserName = (room, name) => {
+  let targetUser = null;
+  let targetUserIndex = -1;
+  room.users.some((aUser, index) => {
+    if (aUser.name === name) {
+      targetUser = aUser;
+      targetUserIndex = index;
       return true;
     }
   });
 
-  return [target_user, target_user_index];
+  return [targetUser, targetUserIndex];
 };
 
 // User Colors
-const color_from_string = str => {
+const colorFromString = str => {
   let hash = 5381;
   let i = str.length;
 
@@ -285,20 +285,20 @@ const color_from_string = str => {
   return out;
 };
 
-const color_to_array = color_string => {
-  if (!color_string) {
+const colorToArray = colorString => {
+  if (!colorString) {
     return;
   }
 
   let out = [0, 0, 0];
 
   const regex = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/;
-  if (regex.test(color_string)) {
-    const out_string = color_string.match(regex);
+  if (regex.test(colorString)) {
+    const outString = colorString.match(regex);
     out = [
-      parseInt(out_string[1]),
-      parseInt(out_string[2]),
-      parseInt(out_string[3])
+      parseInt(outString[1]),
+      parseInt(outString[2]),
+      parseInt(outString[3])
     ];
   }
 
@@ -306,18 +306,18 @@ const color_to_array = color_string => {
 };
 
 module.exports = {
-  rooms_array,
-  room_array,
-  remove_user,
-  remove_room,
-  create_id,
-  get_updated,
-  set_updated,
+  roomsArray,
+  roomArray,
+  removeUser,
+  removeRoom,
+  createID,
+  getUpdated,
+  setUpdated,
   roll,
-  dice_status,
-  find_room,
-  find_user_socket,
-  find_user_name,
-  color_from_string,
-  color_to_array
+  diceStatus,
+  findRoom,
+  findUserSocket,
+  findUserName,
+  colorFromString,
+  colorToArray
 };

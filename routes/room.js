@@ -14,14 +14,22 @@ router.get('/:id', (req, res, next) => {
     return;
   }
 
-  res.render('room', { title: `Room: ${rooms.get(id).name}`, room: rooms.get(id), show_debug: global.DEBUG ? 'true' : 'false' });
+  const room = rooms.get(id);
+  const debugMode = global.DEBUG ? 'true' : 'false';
+
+  res.render('room', {
+    title : `Room ${room.name}`,
+    id,
+    name: room.name,
+    debugMode
+  });
 });
 
 router.sockets = (io, socket, rooms, func) => {
   socket.on('enter-room', data => {
-    const room = func.find_room(rooms, data, socket);
+    const room = func.findRoom(rooms, data, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     if (!user) {
       console.log(`ERROR: an unauthorized user attempted to enter ${room.name}`);
       // Send response to user
@@ -50,7 +58,7 @@ router.sockets = (io, socket, rooms, func) => {
 
     // Send room data
     socket.emit('user-data', { name: user.name, role: user.role, id: user.id, color: user.color, preset: user.preset });
-    socket.broadcast.to(data).emit('room-data', func.room_array(room));
+    socket.broadcast.to(data).emit('room-data', func.roomArray(room));
 
     // Send updated entities
     if (changed) {
@@ -63,33 +71,33 @@ router.sockets = (io, socket, rooms, func) => {
         socket.broadcast.to(`${data}-admin`).emit('map-data-type', { type: 'entities', data: out });
 
         // Filter entity updates if map is not shared
-        room.users.forEach(a_user => {
+        room.users.forEach(aUser => {
           // Admin do not have to have data filtered
-          if (a_user.role === 'admin') return;
+          if (aUser.role === 'admin') return;
 
           out.entities = room.map.entities.filter(entity => {
-            return entity.user.id === a_user.id;
+            return entity.user.id === aUser.id;
           });
-            
-          a_user.socket.emit('map-data-type', { type: 'entities', data: out });
+
+          aUser.socket.emit('map-data-type', { type: 'entities', data: out });
         });
       }
     }
   });
 
   socket.on('get-room', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
-    if (user) { 
-      socket.emit('room-data', func.room_array(room));
+    const user = func.findUserSocket(room, socket);
+    if (user) {
+      socket.emit('room-data', func.roomArray(room));
     }
   });
 
   socket.on('get-map', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     if (user) {
       room.map.update = {
         walls:    true,
@@ -118,11 +126,11 @@ router.sockets = (io, socket, rooms, func) => {
       }
     }
   });
-  
+
   socket.on('update-map', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     // Admin only
     if (user && (user.role === 'admin')) {
       console.log(`Admin ${user.name} update the map`);
@@ -135,22 +143,22 @@ router.sockets = (io, socket, rooms, func) => {
 
       // Send map data to all other users
       if (room.map.share) {
-        socket.broadcast.to(data.room_id).emit('map-data', room.map);
+        socket.broadcast.to(data.id).emit('map-data', room.map);
       } else {
-        socket.broadcast.to(`${data.room_id}-admin`).emit('map-data', room.map);
+        socket.broadcast.to(`${data.id}-admin`).emit('map-data', room.map);
       }
     }
   });
 
   socket.on('update-map-type', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
 
     if (user) {
     let out = null;
       const newData = data.data;
-      
+
       switch (data.type) {
         case 'walls':
           if (user.role === 'admin') {
@@ -188,7 +196,7 @@ router.sockets = (io, socket, rooms, func) => {
               // Add data
               Array.prototype.push.apply(room.map.entities, newData.entities);
 
-              out = { 
+              out = {
                 entities: room.map.entities
               };
             }
@@ -229,22 +237,22 @@ router.sockets = (io, socket, rooms, func) => {
 
       if (out !== null) {
         if (room.map.share) {
-          socket.broadcast.to(data.room_id).emit('map-data-type', { type: data.type, data: out });
+          socket.broadcast.to(data.id).emit('map-data-type', { type: data.type, data: out });
         } else {
           // Send data to admin
-          socket.broadcast.to(`${data.room_id}-admin`).emit('map-data-type', { type: data.type, data: out });
+          socket.broadcast.to(`${data.id}-admin`).emit('map-data-type', { type: data.type, data: out });
 
           // Filter entity updates if map is not shared
           if (data.type === 'entities') {
-            room.users.forEach(a_user => {
+            room.users.forEach(aUser => {
               // Admin do not have to have data filtered
-              if (a_user.role === 'admin') return;
+              if (aUser.role === 'admin') return;
 
               out.entities = room.map.entities.filter(entity => {
-                return entity.user.id === a_user.id;
+                return entity.user.id === aUser.id;
               });
-                
-              a_user.socket.emit('map-data-type', { type: data.type, data: out });
+
+              aUser.socket.emit('map-data-type', { type: data.type, data: out });
             });
           }
         }
@@ -253,20 +261,20 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('remove-user', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
-    const [target_user, target_user_index] = func.find_user_name(room, data.name);
-    if (user && target_user && 
+    const user = func.findUserSocket(room, socket);
+    const [targetUser, targetUserIndex] = func.findUserName(room, data.name);
+    if (user && targetUser &&
         (user.role === 'admin' || user.name === data.name)) {
-      func.remove_user(target_user.socket.handshake.sessionID, rooms, data.room_id, io.sockets);
+      func.removeUser(targetUser.socket.handshake.sessionID, rooms, data.id, io.sockets);
     }
   });
 
   socket.on('add-dice', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     if (user) {
       const dice = {
         id: '',
@@ -275,7 +283,7 @@ router.sockets = (io, socket, rooms, func) => {
         time: Date.now(),
         anime: []
       };
-  
+
       // Check dice type
       if (['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].includes(data.type)) {
         dice.type = data.type;
@@ -285,25 +293,25 @@ router.sockets = (io, socket, rooms, func) => {
       }
 
       // Get dice id
-      dice.id = func.create_id('dice', room.users);
+      dice.id = func.createID('dice', room.users);
       console.log(`user ${user.name} added a ${data.type}`);
 
       if (user.dice.length >= global.MAX_DICE) {
         socket.emit('alert', { kick: false, alert: `Error: You are unable to add more dice (max:${global.MAX_DICE})`});
       } else {
         user.dice.push(dice);
-        func.set_updated(user);
-        socket.emit('room-data', func.room_array(room, user));
-        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+        func.setUpdated(user);
+        socket.emit('room-data', func.roomArray(room, user));
+        socket.broadcast.to(data.id).emit('room-data', func.roomArray(room));
       }
     }
   });
 
   socket.on('remove-dice', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
-    if (user) { 
+    const user = func.findUserSocket(room, socket);
+    if (user) {
       // Remove dice
       let changed = false;
       if (data.hasOwnProperty('index')) {
@@ -321,23 +329,23 @@ router.sockets = (io, socket, rooms, func) => {
       }
 
       if (changed) {
-        func.set_updated(user);
-        socket.emit('room-data', func.room_array(room, user));
-        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+        func.setUpdated(user);
+        socket.emit('room-data', func.roomArray(room, user));
+        socket.broadcast.to(data.id).emit('room-data', func.roomArray(room));
       }
     }
   });
 
   socket.on('roll-dice', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
-    if (user) { 
+    const user = func.findUserSocket(room, socket);
+    if (user) {
       // Roll dice
       let changed = false;
-      if (data.hasOwnProperty('id')) { // Roll single dice
-        const dice = user.dice.filter(a_dice => {
-          return a_dice.id === data.id; // TODO: Allow data.id to be array to select/roll multiple dice
+      if (data.hasOwnProperty('die')) { // Roll single dice
+        const dice = user.dice.filter(aDice => {
+          return aDice.id === data.die; // TODO: Allow data.die to be array to select/roll multiple dice
         });
 
         if (dice.length > 0) {
@@ -355,22 +363,22 @@ router.sockets = (io, socket, rooms, func) => {
 
       if (changed) {
         console.log(`user ${user.name} is rolling`);
-        func.set_updated(user);
-        socket.emit('room-data', func.room_array(room, user));
-        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
-        
+        func.setUpdated(user);
+        socket.emit('room-data', func.roomArray(room, user));
+        socket.broadcast.to(data.id).emit('room-data', func.roomArray(room));
+
         const date = new Date();
-        const out = { 
+        const out = {
           user: user.name,
           time: date.getTime(),
           share: user.share,
-          log: func.dice_status(user.dice, user.counter)
+          log: func.diceStatus(user.dice, user.counter)
         };
-        
+
         // Delay log by animation time
         setTimeout(() => {
           if (user.share) {
-            io.sockets.in(data.room_id).emit('room-log', out);
+            io.sockets.in(data.id).emit('room-log', out);
           } else {
             socket.emit('room-log', out);
           }
@@ -380,46 +388,46 @@ router.sockets = (io, socket, rooms, func) => {
   });
 
   socket.on('clear-dice', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     if (user) {
       console.log(`user ${user.name} is clearing dice`);
       // Clear dice
       user.dice = [];
 
-      func.set_updated(user);
-      socket.emit('room-data', func.room_array(room, user));
-      socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+      func.setUpdated(user);
+      socket.emit('room-data', func.roomArray(room, user));
+      socket.broadcast.to(data.id).emit('room-data', func.roomArray(room));
     }
   });
 
   socket.on('share-dice', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     if (user) {
       console.log(`user ${user.name} is ${data.share ? 'sharing' : 'hiding'} dice`);
       // Share/Hide dice
       user.share = Boolean(data.share);
 
-      func.set_updated(user);
-      socket.emit('room-data', func.room_array(room, user)); // TODO: is needed?
-      socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+      func.setUpdated(user);
+      socket.emit('room-data', func.roomArray(room, user)); // TODO: is needed?
+      socket.broadcast.to(data.id).emit('room-data', func.roomArray(room));
     }
   })
 
   socket.on('share-map', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     if (user && user.role === 'admin') {
       console.log(`user ${user.name} is ${data.share ? 'sharing' : 'hiding'} the map`);
       // Share/Hide map
       room.map.share = Boolean(data.share);
 
       if (room.map.share) {
-        socket.broadcast.to(data.room_id).emit('map-data', room.map);
+        socket.broadcast.to(data.id).emit('map-data', room.map);
       } else {
         const out = {
           share:    false,
@@ -431,18 +439,18 @@ router.sockets = (io, socket, rooms, func) => {
         };
 
         // Send map data to admin only and and empty map to users
-        room.users.forEach(a_user => {
+        room.users.forEach(aUser => {
           // Modification is made client side for originating admin
-          if (a_user.id === user.id) return;
+          if (aUser.id === user.id) return;
 
-          if (a_user.role === 'admin') {
-            a_user.socket.emit('map-data', room.map);
+          if (aUser.role === 'admin') {
+            aUser.socket.emit('map-data', room.map);
           } else {
             out.entities = room.map.entities.filter(entity => {
-              return entity.user.id === a_user.id;
+              return entity.user.id === aUser.id;
             });
-            
-            a_user.socket.emit('map-data', out);
+
+            aUser.socket.emit('map-data', out);
           }
         });
       }
@@ -450,29 +458,29 @@ router.sockets = (io, socket, rooms, func) => {
   })
 
   socket.on('counter', data => {
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
-    const [target_user, target_user_index] = func.find_user_name(room, data.name);
-    if (user && target_user && 
+    const user = func.findUserSocket(room, socket);
+    const [targetUser, targetUserIndex] = func.findUserName(room, data.name);
+    if (user && targetUser &&
         (user.role === 'admin' || user.name === data.name)) {
-      if (user.role === 'admin' && user.name !== target_user.name) {
-        console.log(`admin ${user.name} is changing user ${target_user.name} counter (${data.counter})`);
+      if (user.role === 'admin' && user.name !== targetUser.name) {
+        console.log(`admin ${user.name} is changing user ${targetUser.name} counter (${data.counter})`);
       } else {
         console.log(`user ${user.name} is changing a counter (${data.counter})`);
       }
 
-      const old_counter = target_user.counter;
+      const oldCounter = targetUser.counter;
       // Change counter
       if (data.counter === 0) {
-        target_user.counter = 0;
+        targetUser.counter = 0;
       } else {
-        target_user.counter += data.counter;
+        targetUser.counter += data.counter;
       }
-      if (target_user.counter !== old_counter) { // Only update on change
-        func.set_updated(target_user);
-        socket.emit('room-data', func.room_array(room, user));
-        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+      if (targetUser.counter !== oldCounter) { // Only update on change
+        func.setUpdated(targetUser);
+        socket.emit('room-data', func.roomArray(room, user));
+        socket.broadcast.to(data.id).emit('room-data', func.roomArray(room));
       }
     }
   });
@@ -483,9 +491,9 @@ router.sockets = (io, socket, rooms, func) => {
       console.log('ERROR: a user is using an unsupported preset number');
       return;
     }
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     if (!user) return;
 
     if (data.type === PRESET.SAVE) console.log(`user ${user.name} is saving a preset`);
@@ -513,7 +521,7 @@ router.sockets = (io, socket, rooms, func) => {
         user.dice = [];
         user.preset[data.preset].dice.forEach(die => {
           user.dice.push({
-            id: func.create_id('dice', room.users),
+            id: func.createID('dice', room.users),
             type: die.type,
             value: -1,
             time: Date.now(),
@@ -521,9 +529,9 @@ router.sockets = (io, socket, rooms, func) => {
           });
         });
         user.counter = user.preset[data.preset].counter;
-        func.set_updated(user);
-        socket.emit('room-data', func.room_array(room, user));
-        socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+        func.setUpdated(user);
+        socket.emit('room-data', func.roomArray(room, user));
+        socket.broadcast.to(data.id).emit('room-data', func.roomArray(room));
         break;
     }
   });
@@ -534,17 +542,17 @@ router.sockets = (io, socket, rooms, func) => {
       return;
     }
 
-    const room = func.find_room(rooms, data.room_id, socket);
+    const room = func.findRoom(rooms, data.id, socket);
     if (!room) return;
-    const user = func.find_user_socket(room, socket);
+    const user = func.findUserSocket(room, socket);
     if (!user) return;
 
     console.log(`user ${user.name} is changing color`);
 
     user.color = data.color;
-    func.set_updated(user);
-    socket.emit('room-data', func.room_array(room, user));
-    socket.broadcast.to(data.room_id).emit('room-data', func.room_array(room));
+    func.setUpdated(user);
+    socket.emit('room-data', func.roomArray(room, user));
+    socket.broadcast.to(data.id).emit('room-data', func.roomArray(room));
   });
 };
 

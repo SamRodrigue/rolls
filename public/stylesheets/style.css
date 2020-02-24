@@ -18,7 +18,7 @@ body {
   image-rendering: auto;
 }
 
-@media (min-width: 576px) { 
+@media (min-width: 576px) {
   body {
     background-size: 100% auto;
   }
@@ -56,7 +56,7 @@ a {
 }
 
 #rooms td:hover {
-  cursor: pointer;  
+  cursor: pointer;
 }
 
 #toggle-dice {
@@ -172,7 +172,7 @@ a {
   width: 64px;
   margin: auto;
   background-size: contain;
-  background-position: center; 
+  background-position: center;
   background-repeat: no-repeat;
   background-color: transparent;
   border: 0;

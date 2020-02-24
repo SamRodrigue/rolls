@@ -3,10 +3,10 @@ const create = {
   modal: '#create-modal',
   form: 'form#create',
   inputs: {
-    user_name: '#create-user-name',
-    room_name: '#create-room-name',
-    admin_password: '#create-admin-password',
-    user_password: '#create-user-password'
+    userName: '#create-user-name',
+    roomName: '#create-room-name',
+    adminPassword: '#create-admin-password',
+    userPassword: '#create-user-password'
   },
   submit: '#create-submit'
 };
@@ -15,8 +15,8 @@ const join = {
   form: 'form#join',
   title: '#join-title',
   inputs: {
-    room_id: '#join-room-id',
-    user_name: '#join-user-name',
+    roomID: '#join-room-id',
+    userName: '#join-user-name',
     password: '#join-password'
   },
   submit: '#join-submit',
@@ -35,34 +35,34 @@ const rooms = {
 $(document).ready(() => {
   // Load web socket
   const socket = io();
-  
+
   socket.on('connect', () => {
     if (DEBUG) console.log('connected');
     socket.emit('join', 'index'); socket.send('');
   });
-  socket.on('alert',        show_alert);
-  socket.on('update-rooms', update_rooms);
-  socket.on('join-room',    join_room);
-  socket.on('disconnect', () => { 
+  socket.on('alert',        showAlert);
+  socket.on('update-rooms', updateRooms);
+  socket.on('join-room',    joinRoom);
+  socket.on('disconnect', () => {
     if (DEBUG) console.log('disconnected');
   });
 
-  function show_alert(data) {
+  function showAlert(data) {
     $('#alert-message').html(`<span>${data}</span>`);
     $('#alert').modal();
   }
 
-  function update_rooms(data) {
+  function updateRooms(data) {
     if (DEBUG) console.log('updating rooms');
-    let room_table = '';
+    let roomTable = '';
     if (data.length == 0) {
-      room_table = `
+      roomTable = `
 <tr scope="row" id="no-rooms">
   <td colspan="5" class="text-center"><div><span>No rooms, create a new one!</span></div></td>
 </tr>`;
     } else {
       for (const [id, room] of data) {
-        room_table += `
+        roomTable += `
   <tr scope="row">
     <td class="room-id d-none" scope="col">` + id + `</td>
     <td class="room-name" scope="col">` + room.name + `</td>
@@ -72,10 +72,10 @@ $(document).ready(() => {
   </tr>`;
       }
     }
-    $(rooms.body).html(room_table);
+    $(rooms.body).html(roomTable);
   }
 
-  function join_room(data) {
+  function joinRoom(data) {
     if (DEBUG) console.log(`joining ${data}`);
     window.location.href = `/room/${data}`;
   }
@@ -87,10 +87,10 @@ $(document).ready(() => {
 
   $(create.form).submit(() => {
     const data = {
-      user_name: $(create.inputs.user_name).val(),
-      room_name: $(create.inputs.room_name).val(),
-      admin_password: $(create.inputs.admin_password).val(),
-      user_password: $(create.inputs.user_password).val()
+      userName: $(create.inputs.userName).val(),
+      roomName: $(create.inputs.roomName).val(),
+      adminPassword: $(create.inputs.adminPassword).val(),
+      userPassword: $(create.inputs.userPassword).val()
     };
     socket.emit('create-room', data); socket.send('');
     return false;
@@ -102,14 +102,14 @@ $(document).ready(() => {
       $(create.modal).modal();
       return;
     }
-    const room_name = $(this).find('td.room-name').html();
-    const room_id = $(this).find('td.room-id').html();
-    const room_locked = ($(this).find('td.room-locked').html() == 1);
-    
-    $(join.title).html(`Join: ${room_name}`);
-    $(join.inputs.room_id).val(room_id);
+    const roomName = $(this).find('td.room-name').html();
+    const roomID = $(this).find('td.room-id').html();
+    const roomLocked = ($(this).find('td.room-locked').html() == 1);
 
-    if (room_locked) {
+    $(join.title).html(`Join: ${roomName}`);
+    $(join.inputs.roomID).val(roomID);
+
+    if (roomLocked) {
       $(join.labels.password).removeClass('d-none');
       $(join.inputs.password).removeClass('d-none');
       $(join.buttons.password).addClass('d-none');
@@ -131,8 +131,8 @@ $(document).ready(() => {
 
   $(join.form).submit(() => {
     const data = {
-      room_id: $(join.inputs.room_id).val(),
-      user_name: $(join.inputs.user_name).val(),
+      roomID: $(join.inputs.roomID).val(),
+      userName: $(join.inputs.userName).val(),
       password: $(join.inputs.password).val()
     };
     socket.emit('join-room', data); socket.send('');

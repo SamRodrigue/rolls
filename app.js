@@ -77,10 +77,10 @@ const stdin = process.stdin;
 const stdout = process.stdout;
 stdin.resume();
 stdin.setEncoding('utf8');
- 
+
 stdin.on('data', cmd => {
   // helper functions
-  function display_rooms() {
+  function displayRooms() {
     stdout.write(`number of rooms: ${app.rooms.size}\n`);
     for (const [id, room] of app.rooms) {
       stdout.write(`Room: ${room.name} (${id})\n`);
@@ -91,7 +91,7 @@ stdin.on('data', cmd => {
     }
   }
 
-  function close_room(args) {
+  function closeRoom(args) {
     if (args.length < 2) {
       stdout.write('Provide a room id\n');
       return;
@@ -103,10 +103,10 @@ stdin.on('data', cmd => {
     }
     app.rooms.delete(id);
     app.io.in(id).emit('alert', 'This room has been closed');
-    app.io.in('index').emit('update-rooms', app.func.rooms_array(app.rooms));
+    app.io.in('index').emit('update-rooms', app.func.roomsArray(app.rooms));
   }
 
-  function debug_room(args) {
+  function debugRoom(args) {
     if (!global.DEBUG || !app.rooms.has('debug')) {
       stdout.write('Not in debug mod or unable to locate debug room');
       return;
@@ -119,7 +119,7 @@ stdin.on('data', cmd => {
     }
 
     const room = app.rooms.get('debug');
-    const user = app.func.find_user_name(room, 'User1')[0];
+    const user = app.func.findUserName(room, 'User1')[0];
 
     switch (args[1]) {
       case 'roll':
@@ -127,14 +127,14 @@ stdin.on('data', cmd => {
           app.func.roll(die);
         });
         console.log(`user ${user.name} is rolling`);
-        app.func.set_updated(user);
-        app.io.sockets.in('debug').emit('room-data', app.func.room_array(room));
+        app.func.setUpdated(user);
+        app.io.sockets.in('debug').emit('room-data', app.func.roomArray(room));
         const time = new Date().getTime();
-        app.io.sockets.in('debug').emit('room-log', 
+        app.io.sockets.in('debug').emit('room-log',
         {
           user: user.name,
           time: time,
-          log: app.func.dice_status(user.dice, user.counter)
+          log: app.func.diceStatus(user.dice, user.counter)
         });
         break;
       default:
@@ -150,9 +150,9 @@ stdin.on('data', cmd => {
   if (args.length > 0) {
     //stdout.write('Checking command: ' + args[0] + '\n');
     switch (args[0]) {
-      case 'rooms': display_rooms(); break;
-      case 'close': close_room(args); break;
-      case 'debug': debug_room(args); break;
+      case 'rooms': displayRooms(); break;
+      case 'close': closeRoom(args); break;
+      case 'debug': debugRoom(args); break;
       default:
         stdout.write(`Unknown command: ${args[0]}\n`);
     }
@@ -162,9 +162,9 @@ stdin.on('data', cmd => {
 // Debug mode. Enabled by running 'npm test' or 'bin/www debug'
 // TODO: Move to debug module/file
 if (global.DEBUG) {
-  const debug_emit = (sig, data) => { console.log(`DEBUG: sending ${JSON.stringify(data)} to ${sig}`); };
-  const debug_user1 = {
-    socket: { handshake: { sessionID: 0 }, emit: debug_emit },
+  const debugEmit = (sig, data) => { console.log(`DEBUG: sending ${JSON.stringify(data)} to ${sig}`); };
+  const debugUser1 = {
+    socket: { handshake: { sessionID: 0 }, emit: debugEmit },
     timeout: null,
     id: 'ABC1',
     name: 'User1',
@@ -188,8 +188,8 @@ if (global.DEBUG) {
     updated: 0
   };
 
-  const debug_user2 = {
-    socket: { handshake: { sessionID: 0 }, emit: debug_emit },
+  const debugUser2 = {
+    socket: { handshake: { sessionID: 0 }, emit: debugEmit },
     timeout: null,
     id: 'ABC2',
     name: 'User2',
@@ -213,14 +213,14 @@ if (global.DEBUG) {
     updated: 0
   };
 
-  const debug_room = {
+  const debugRoom = {
     name: 'Debug',
     locked: false,
     password: {
       admin: '1',
       user: ''
     },
-    users: [ debug_user1, debug_user2 ],
+    users: [ debugUser1, debugUser2 ],
     timeout: null,
     map: {
       share:    true,
@@ -231,17 +231,17 @@ if (global.DEBUG) {
     }
   };
 
-  debug_user1.dice.forEach(die => {
-    die.id = app.func.create_id('dice', debug_room.users); 
+  debugUser1.dice.forEach(die => {
+    die.id = app.func.createID('dice', debugRoom.users);
     app.func.roll(die);
   });
 
-  debug_user2.dice.forEach(die => {
-    die.id = app.func.create_id('dice', debug_room.users);
+  debugUser2.dice.forEach(die => {
+    die.id = app.func.createID('dice', debugRoom.users);
     app.func.roll(die);
   });
 
-  app.rooms.set('debug', debug_room);
+  app.rooms.set('debug', debugRoom);
   app.use(logger('dev'));
 }
 
@@ -256,7 +256,7 @@ app.io.on('connect', socket => {
 
   // Join io rooms
   socket.on('join', data => {
-    socket.current_room = data;
+    socket.currentRoom = data;
     // Confirm room
     if (data == 'index') { // anyone can join index
       socket.leaveAll();
@@ -264,7 +264,7 @@ app.io.on('connect', socket => {
       socket.join('index');
 
       // Send rooms list
-      socket.emit('update-rooms', app.func.rooms_array(app.rooms));  
+      socket.emit('update-rooms', app.func.roomsArray(app.rooms));
     } else {
       // Check if user has access to room
       if (!app.rooms.has(data)) {
@@ -272,14 +272,14 @@ app.io.on('connect', socket => {
         return;
       }
       const room = app.rooms.get(data);
-      let user_joined = false;
+      let userJoined = false;
       room.users.some(user => {
         if (socket.handshake.sessionID === user.socket.handshake.sessionID) {
           socket.leaveAll();
           console.log(`a user joined ${data}`);
           socket.join(data);
           if (user.role === 'admin') socket.join(`${data}-admin`);
-          user_joined = true;
+          userJoined = true;
 
           // // Disable user timeout
           // clearTimeout(user.timeout);
@@ -287,22 +287,22 @@ app.io.on('connect', socket => {
           return true;
         }
       });
-      if (!user_joined) console.log(`a user tried to join ${data}`);
+      if (!userJoined) console.log(`a user tried to join ${data}`);
     }
   });
 
   socket.on('disconnect', () => {
     console.log('a user disconnected');
     // Get user from session id
-    for (const [id, a_room] of app.rooms) {
-      a_room.users.some((a_user, index) => {
-        if (a_user.socket.handshake.sessionID === socket.handshake.sessionID) {
+    for (const [id, aRoom] of app.rooms) {
+      aRoom.users.some((aUser, index) => {
+        if (aUser.socket.handshake.sessionID === socket.handshake.sessionID) {
           // Clear any existing timeout
-          clearTimeout(a_user.timeout);
+          clearTimeout(aUser.timeout);
 
           // Create new timeout
-          a_user.timeout = setTimeout(() => {
-            app.func.remove_user(socket.handshake.sessionID, app.rooms, id, app.io.sockets);
+          aUser.timeout = setTimeout(() => {
+            app.func.removeUser(socket.handshake.sessionID, app.rooms, id, app.io.sockets);
           }, global.JOIN_TIMEOUT);
 
           // Break forEach
