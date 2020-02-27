@@ -76,23 +76,22 @@ function userData(data) {
 
   if (!initialized) {
     let helpText = `
-m: map mode</br>
-g: move/grab mode</br>
+m: map/move mode</br>
 d: draw mode</br>
 x: erase mode</br>
 o: toggle grid overlay</br>
 +: zoom in</br>
--: zoom out</br>`;
+-: zoom out</br>
+SHIFT: map mode while held`;
 
     if (user.role === 'admin') {
       helpText += `
-- Admin Only -</br>
+</br>- Admin Only -</br>
 w: wall mode</br>
 e: entity mode</br>
 a: asset mode</br>
-b: brush texture mode</br>
-f: fill texture mode</br>
-h: fog mode</br>
+t: texture mode (toggle paint mode)</br>
+h: fog mode (toggle paint mode)</br>
 0-9: select one of first 10 wall/entity/asset/texture depending on mode`;
       // Load textures
       $.getJSON(`${MEDIA_MAPS}textures/textures.json`, data => {
@@ -115,12 +114,16 @@ h: fog mode</br>
 
       $('#fog-containers').append(`
             <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog', 0); $('#tools-modal').modal('toggle');">
-              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/null" />
+              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/erase.png" />
               <span class="mx-auto">Erase</span>
             </div>
-            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog', 1); $('#tools-modal').modal('toggle');">
+            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog-brush', 1); $('#tools-modal').modal('toggle');">
               <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/fog.png" />
-              <span class="mx-auto">Draw</span>
+              <span class="mx-auto">Brush</span>
+            </div>
+            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog-fill', 1); $('#tools-modal').modal('toggle');">
+              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/fog.png" style="border-radius: 0"/>
+              <span class="mx-auto">Fill</span>
             </div>`);
 
       $('#fog-containers').show();
@@ -166,18 +169,6 @@ h: fog mode</br>
     <span class="mx-auto">` + val[1] + `</span>
   </div>`);
       });
-    });
-
-    // Load common tools
-    [['map', 'Map Mode'],
-     ['move', 'Move Mode'],
-     ['draw', 'Draw Mode'],
-     ['erase', 'Erase Mode']
-    ].forEach(data => {
-      $('#tool-containers').append(`
-  <div class="tool-container">
-    <button onclick="myp5.setSpecificMode('` + data[0] + `'); $('#tools-modal').modal('toggle');">` + data[1] + `</button>
-  </div>`);
     });
 
     // Set user color
@@ -986,11 +977,11 @@ $(document).ready(() => {
     event.preventDefault();
   });
 
-  $(document).on('change', 'input#color-wheel', function(event) {
+  $(document).on('change', 'input#color-wheel', event =>{
     setUserColor(this.value);
   });
 
-  $(document).on('animationend', '.a-dice', function(event) {
+  $(document).on('animationend', '.a-dice', event => {
     $(this).css('animation-name', '');
     $(this).css('animation-timing-function', '');
     $(this).css('animation-duration', '');

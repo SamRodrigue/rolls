@@ -53,8 +53,6 @@ block content
           span Assets
       .row.mt-2
         #map.col-12
-          //.loader
-          // loading graphic used by p5js
           #p5_loading.text-center
             #loader-progress
               #loader-bar
@@ -174,28 +172,35 @@ block content
           h2 Tools
           button.close(data-dismiss="modal") &times;
         .modal-body
-          #tool-containers.row.mx-auto
+          #tool-containers.row.mt-1
+            h5.col-12 Modes
+            button.btn.btn-primary.col-4(onclick="myp5.setSpecificMode('none')" data-dismiss="modal") Map/Move
+            button.btn.btn-primary.col-4(onclick="myp5.setSpecificMode('draw')" data-dismiss="modal") Draw
+            button.btn.btn-primary.col-4(onclick="myp5.setSpecificMode('erase')" data-dismiss="modal") Erase
           #wall-containers.row.border-top.mt-1(style="display: none;")
             h5.col-12 Walls
           #fog-containers.row.border-top.mt-1(style="display: none;")
             h5.col-12 Fog
           #texture-containers.row.border-top.mt-1(style="display: none;")
-            h5.col-12 Texture
+            h5.col-3 Texture
+            h6.col-2.my-auto Blend
+            input#blend-range.col-6(type="range" min="0" max="100" value="100" oninput="myp5.setBrushBlend(this.value);" onchange="myp5.setBrushBlend(this.value);")
           #fill-containers.row.border-top.mt-1(style="display: none;")
             h5.col-12 Fill
-          #color-containers.row.border-top.mt-1.mx-auto
+          #color-containers.row.border-top.mt-1
             h5.col-12 Token Color
-            input#color-wheel(type="color")
-            .token-color(style="background-color: #FFF100;" onClick="setUserColor('#FFF100')")
-            .token-color(style="background-color: #FF8C00;" onClick="setUserColor('#FF8C00')")
-            .token-color(style="background-color: #E81123;" onClick="setUserColor('#E81123')")
-            .token-color(style="background-color: #EC008C;" onClick="setUserColor('#EC008C')")
-            .token-color(style="background-color: #68217A;" onClick="setUserColor('#68217A')")
-            .token-color(style="background-color: #00188F;" onClick="setUserColor('#00188F')")
-            .token-color(style="background-color: #00BCF2;" onClick="setUserColor('#00BCF2')")
-            .token-color(style="background-color: #00B294;" onClick="setUserColor('#00B294')")
-            .token-color(style="background-color: #009E49;" onClick="setUserColor('#009E49')")
-            .token-color(style="background-color: #BAD80A;" onClick="setUserColor('#BAD80A')")
+            .row.col-12.mx-auto
+              input#color-wheel(type="color")
+              .token-color(style="background-color: #FFF100;" onClick="setUserColor('#FFF100')")
+              .token-color(style="background-color: #FF8C00;" onClick="setUserColor('#FF8C00')")
+              .token-color(style="background-color: #E81123;" onClick="setUserColor('#E81123')")
+              .token-color(style="background-color: #EC008C;" onClick="setUserColor('#EC008C')")
+              .token-color(style="background-color: #68217A;" onClick="setUserColor('#68217A')")
+              .token-color(style="background-color: #00188F;" onClick="setUserColor('#00188F')")
+              .token-color(style="background-color: #00BCF2;" onClick="setUserColor('#00BCF2')")
+              .token-color(style="background-color: #00B294;" onClick="setUserColor('#00B294')")
+              .token-color(style="background-color: #009E49;" onClick="setUserColor('#009E49')")
+              .token-color(style="background-color: #BAD80A;" onClick="setUserColor('#BAD80A')")
           #tools-modal-map.row.border-top.mt-1(style="display: none;")
             h5.col-12 Load/Save Map
             input#map-data-input.col-6(type="file")

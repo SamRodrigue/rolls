@@ -49,10 +49,11 @@ const s = sketch => {
       scale: 0.025
     },
     asset: {
-      scale: 0.033
+      scale: 0.033,
+      step: 45
     },
     cursor: {
-      scale: 1.9
+      scale: 1.75
     },
 
     share:    true,
@@ -77,43 +78,42 @@ const s = sketch => {
     mx: 0,
     my: 0,
     brush: {
-      val: 10,
-      MIN: 2,
-      MAX: 100,
-      set(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
-    },
-    asset: {
-      zoom: {
-        val: 1,
-        MIN: 1, // 0.5 - disable asset scaling
-        MAX: 1, // 4
+      paint: {
+        val: 10,
+        MIN: 2,
+        MAX: 100,
+        set(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
+      },
+      blend: {
+        val: 100,
+        MIN: 0,
+        MAX: 100,
         set(v) {
           this.val = sketch.constrain(v, this.MIN, this.MAX);
-        },
-        reset() { this.val = 1; }
-      },
-      rot: {
-        val: 0,
-        MIN: 0,
-        MAX: 360,
-        step: 45,
-        set(v) {
-          while (v < this.MIN) v += this.MAX;
-          while (v > this.MAX) v -= this.MAX;
-          this.val = v;
-        },
-        reset() { this.val = 0; }
+          $('input#blend-range').val(this.val);
+        }
       }
     }
   };
 
+  const modes = {
+    NONE:    0,
+    WALL:    1,
+    ENTITY:  2,
+    ASSET:   3,
+    DRAW:    4,
+    ERASE:   5,
+    TEXTURE: 6,
+    FOG:     7,
+    COUNT:   8
+  };
+
   const mode = {
     loaded: false,
+    primary: modes.NONE,
+    secondary: null,
     ctrl: false,
-    cursor: {
-      val: 0,
-      old: 0
-    },
+    shift: false,
     dragging: {
       val: false,
       old: null,
@@ -123,16 +123,7 @@ const s = sketch => {
         fast: 10 // ms
       }
     },
-    texture: 0,
-    fog: 0,
-    wall: 0,
-    walling: null,
-    entity: 0,
-    asset: 0,
-    moving: {
-      val: false,
-      user: null
-    },
+    moving: null,
     fill: false,
 
     do: {
@@ -144,164 +135,138 @@ const s = sketch => {
       },
 
       wall() { // Press
-        if (mode.wall < 0 || mode.wall >= walls.COUNT) return;
+        if (mode.secondary < 0 || mode.secondary >= walls.COUNT) return;
 
         const wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
         const wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
 
-        if (mode.walling === null) { // Start new wall
-          mode.walling = new Wall(mode.wall, wx, wy);
-        } else {
-          // TODO: Make .end return true if new wall is valid
-          // TODO: Possibly remove mode from wall
-          mode.walling.end(wx, wy);
-
-          if (mode.walling.mode === 2) { // End of wall is at new location
+        if (mode.moving instanceof Wall) { // Complete wall
+          if (mode.moving.end(wx, wy)) {
             // Add new wall
-            map.walls.push(mode.walling.copy());
+            map.walls.push(mode.moving);
 
             if (mode.ctrl) { // Start new wall
-              mode.walling = new Wall(mode.wall, wx, wy);
-
+              mode.moving = new Wall(mode.secondary, wx, wy);
             } else {
-              mode.walling = null;
-
-              if (!mode.ctrl) {
-                sketch.setMode(cursors.MOVE);
-              }
+              sketch.setMode(modes.NONE);
+              mode.moving = null;
             }
 
             update.set('walls');
-
-          } else {
-            mode.walling = null;
-
-            if (!mode.ctrl) {
-              sketch.setMode(cursors.MOVE);
-            }
           }
+        } else { // Start new wall
+          mode.moving = new Wall(mode.secondary, wx, wy);
         }
       },
 
       entity() { // Press
-        if (mode.entity < 0 || mode.entity >= entities.COUNT) return;
+        if (!(mode.moving instanceof Entity)) return;
 
-        const ex = view.mx / map.entity.scale;
-        const ey = view.my / map.entity.scale;
+        const entity = mode.moving;
+        entity.x = view.mx;
+        entity.y = view.my;
 
-        let newEntity;
-        if (mode.moving.val) { // Moving mode
-          newEntity = new Entity(mode.entity, ex, ey, mode.moving.user);
-          mode.moving.val = false;
+        map.entities.push(entity);
 
-        } else { // Creating mode
-          newEntity = new Entity(mode.entity, ex, ey);
-        }
-
-        map.entities.push(newEntity);
-
-        if (!mode.ctrl) {
-          sketch.setMode(cursors.MOVE);
+        // Create new entity
+        if (mode.ctrl) {
+          mode.moving = new Entity(entity);
+        } else {
+          sketch.setMode(modes.NONE);
+          mode.moving = null;
         }
 
         update.set('entities');
       },
 
       asset() { // Press
-        if (mode.asset < 0 || mode.asset >= assets.COUNT) return;
+        if (!(mode.moving instanceof Asset)) return;
 
-        const ax = view.mx / map.asset.scale;
-        const ay = view.my / map.asset.scale;
+        const asset = mode.moving;
+        asset.x = view.mx;
+        asset.y = view.my;
 
-        map.assets.push(new Asset(mode.asset, ax, ay, view.asset.zoom.val, view.asset.rot.val));
-        if (!mode.ctrl) {
-          view.asset.zoom.reset();
-          view.asset.rot.reset();
-          sketch.setMode(cursors.MOVE);
+        map.assets.push(asset);
+
+        if (mode.ctrl) {
+          mode.moving = new Asset(asset);
+        } else {
+          sketch.setMode(modes.NONE);
+          mode.moving = null;
         }
 
         update.set('assets');
       },
 
-      move() { // Press
-        let found = false;
-
-        // Move Entity
-        const ex = view.mx / map.entity.scale;
-        const ey = view.my / map.entity.scale;
-
+      hover() {
+        // Entity
         for (let i = map.entities.length - 1; i >= 0; --i) {
-          if (map.entities[i].contains(ex, ey)) {
-            if (user.role === 'admin' ||
-               (user.role === 'user' && user.id === map.entities[i].user.id)) {
-              const oldEntity = map.entities.splice(i, 1)[0];
-              mode.entity = oldEntity.type;
-              mode.moving.val = true;
-              mode.moving.user = oldEntity.user;
-
-              sketch.setMode(cursors.ENTITY);
-
-              found = true;
-              update.set('entities');
-
-              break;
+          if (user.id === map.entities[i].user.id) {
+            if (map.entities[i].contains(view.mx, view.my)) {
+              return { type: modes.ENTITY, index: i };
             }
           }
         }
-
-        if (found) return;
 
         if (user.role === 'admin') {
-          // Move Asset
-          const ax = view.mx / map.asset.scale;
-          const ay = view.my / map.asset.scale;
-
-          for (let i = map.assets.length - 1; i >= 0; --i) {
-            if (map.assets[i].contains(ax, ay)) {
-              const oldAsset = map.assets.splice(i, 1)[0];
-              mode.asset = oldAsset.type;
-              view.asset.zoom.set(oldAsset.zoom);
-              view.asset.rot.set(oldAsset.rot);
-
-              sketch.setMode(cursors.ASSET);
-
-              found = true;
-              update.set('assets');
-
-              break;
+          // Entity
+          for (let i = map.entities.length - 1; i >= 0; --i) {
+            if (map.entities[i].contains(view.mx, view.my)) {
+              return { type: modes.ENTITY, index: i };
             }
           }
 
-          if (found) return;
+          // Asset
+          for (let i = map.assets.length - 1; i >= 0; --i) {
+            if (map.assets[i].contains(view.mx, view.my)) {
+              return { type: modes.ASSET, index: i };
+            }
+          }
 
-          // Move Wall
-          const wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
-          const wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
-
+          // Wall
           for (let i = map.walls.length - 1; i >= 0; --i) {
-            if (map.walls[i].contains(wx, wy)) {
-              // Determin what end is closer
-              const selected = map.walls.splice(i, 1)[0];
-              mode.wall = selected.type;
-
-              const d0 = (wx - selected.x[0]) ** 2 + (wy - selected.y[0]) ** 2;
-              const d1 = (wx - selected.x[1]) ** 2 + (wy - selected.y[1]) ** 2;
-
-              if (d0 > d1) {
-                mode.walling = new Wall(mode.wall, selected.x[0], selected.y[0]);
-              } else {
-                mode.walling = new Wall(mode.wall, selected.x[1], selected.y[1]);
-              }
-
-              sketch.setMode(cursors.WALL, false);
-
-              found = true;
-              update.set('walls');
-
-              break;
+            if (map.walls[i].contains(view.mx, view.my)) {
+              return { type: modes.WALL, index: i };
             }
           }
         }
+
+        return null;
+      },
+
+      move(hover = this.hover()) { // Press
+        if (hover === null) return;
+
+        let selected = null;
+        switch (hover.type) {
+          case modes.ENTITY:
+            selected = map.entities.splice(hover.index, 1)[0];
+            update.set('entities');
+            break;
+          case modes.ASSET:
+            selected = map.assets.splice(hover.index, 1)[0];
+            update.set('assets');
+            break;
+          case modes.WALL:
+            // Determine which end is closest
+            selected = map.walls.splice(hover.index, 1)[0];
+
+            const d0 = (view.mx - selected.x[0]) ** 2 + (view.my - selected.y[0]) ** 2;
+            const d1 = (view.mx - selected.x[1]) ** 2 + (view.my - selected.y[1]) ** 2;
+
+            if (d0 > d1) {
+              selected = new Wall(selected.type, selected.x[0], selected.y[0]);
+            } else {
+              selected = new Wall(selected.type, selected.x[1], selected.y[1]);
+            }
+
+            update.set('walls');
+            break;
+        }
+
+        mode.secondary = selected.type;
+        mode.moving = selected;
+        sketch.setMode(hover.type, hover.type !== modes.WALL);
       },
 
       draw(dragging) { // Drag
@@ -362,91 +327,68 @@ const s = sketch => {
         }
       },
 
-      erase() { // Press
-        let found = false;
+      erase(hover = this.hover()) { // Press
+        if (hover === null) return;
 
-        // Erase Entity
-        const ex = view.mx / map.entity.scale;
-        const ey = view.my / map.entity.scale;
-        for (let i = map.entities.length - 1; i >= 0; --i) {
-          if (map.entities[i].contains(ex, ey)) {
-            map.entities.splice(i, 1);
-
-            found = true;
+        switch (hover.type) {
+          case modes.ENTITY:
+            map.entities.splice(hover.index, 1);
             update.set('entities');
-
             break;
-          }
-        }
-
-        if (found) return;
-
-        // Erase Asset
-        const ax = view.mx / map.asset.scale;
-        const ay = view.my / map.asset.scale;
-
-        for (let i = map.assets.length - 1; i >= 0; --i) {
-          if (map.assets[i].contains(ax, ay)) {
-            map.assets.splice(i, 1);
-
-            found = true;
+          case modes.ASSET:
+            map.assets.splice(hover.index, 1);
             update.set('assets');
-
             break;
-          }
-        }
-
-        if (found) return;
-
-        // Erase Wall
-        const wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
-        const wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
-
-        for (let i = map.walls.length - 1; i >= 0; --i) {
-          if (map.walls[i].contains(wx, wy)) {
-            map.walls.splice(i, 1);
-
-            found = true;
+          case modes.WALL:
+            // Determine which end is closest
+            map.walls.splice(hover.index, 1);
             update.set('walls');
-
             break;
-          }
         }
       },
 
       texture() { // Press/Drag
         // TODO: Use new render object to modify texture using p5 lines/elipses
         //       https://p5js.org/examples/structure-create-graphics.html
-        if (mode.texture < 0 || mode.texture >= textures.COUNT) return;
+        if (mode.secondary < 0 || mode.secondary >= textures.COUNT) return;
 
         // Update map texture
         map.texture.image.loadPixels();
 
         if (!mode.fill) { // Brush mode
-          const dLimit = view.brush.val * view.brush.val / 4;
-          for (let i = -view.brush.val / 2; i < view.brush.val / 2; i += map.texture.scale) {
+          const paintLimit = view.brush.paint.val ** 2 / 4;
+          const blendLimit = (view.brush.blend.val / view.brush.blend.MAX) ** 2 * paintLimit;
+
+          for (let i = -view.brush.paint.val / 2; i < view.brush.paint.val / 2; i += map.texture.scale) {
             const x = Math.floor((view.mx + i) / map.texture.scale);
 
             if (x < 0 || x >= map.texture.width) continue;
             const di = i * i;
 
-            for (let j = -view.brush.val / 2; j < view.brush.val / 2; j += map.texture.scale) {
+            for (let j = -view.brush.paint.val / 2; j < view.brush.paint.val / 2; j += map.texture.scale) {
               const y = Math.floor((view.my + j) / map.texture.scale);
 
               if (y < 0 || y >= map.texture.height) continue;
               const d = di + j * j;
 
-              if (d < dLimit) {
+              if (d < paintLimit) {
                 const index = 4 * (y * map.texture.width + x);
-                map.texture.val[x][y] = mode.texture;
 
-                if (mode.texture === 0) {
+                if (d > blendLimit) {
+                  const r = Math.random();
+                  const s = (d - blendLimit) / (paintLimit - blendLimit);
+                  if (r < s) continue;
+                }
+
+                map.texture.val[x][y] = mode.secondary;
+
+                if (mode.secondary === 0) {
                   map.texture.image.pixels[index]     = 0;
                   map.texture.image.pixels[index + 1] = 0;
                   map.texture.image.pixels[index + 2] = 0;
                   map.texture.image.pixels[index + 3] = 0;
                 } else {
-                  const image = textures.images[mode.texture];
+                  const image = textures.images[mode.secondary];
                   const tx = x % image.width;
                   const ty = y % image.height;
                   const tindex = 4 * (ty * image.width + tx);
@@ -477,15 +419,15 @@ const s = sketch => {
               const y = fy + j;
 
               const index = 4 * (y * map.texture.width + x);
-              map.texture.val[x][y] = mode.texture;
+              map.texture.val[x][y] = mode.secondary;
 
-              if (mode.texture === 0) {
+              if (mode.secondary === 0) {
                 map.texture.image.pixels[index]     = 0;
                 map.texture.image.pixels[index + 1] = 0;
                 map.texture.image.pixels[index + 2] = 0;
                 map.texture.image.pixels[index + 3] = 0;
               } else {
-                const image = textures.images[mode.texture];
+                const image = textures.images[mode.secondary];
                 const tx = x % image.width;
                 const ty = y % image.height;
                 const tindex = 4 * (ty * image.width + tx);
@@ -506,21 +448,21 @@ const s = sketch => {
       fog() { // Press/Drag
         // TODO: Use new render object to modify texture using p5 lines/elipses
         //       https://p5js.org/examples/structure-create-graphics.html
-        if (mode.fog < 0 || mode.fog > 1) return;
+        if (mode.secondary < 0 || mode.secondary > 1) return;
 
         // Update map texture
         const image = textures.images[textures.FOG];
         map.fog.image.loadPixels();
 
         if (!mode.fill) { // Brush mode
-          const dLimit = view.brush.val * view.brush.val / 4;
-          for (let i = -view.brush.val / 2; i < view.brush.val / 2; i += map.fog.scale) {
+          const dLimit = view.brush.paint.val * view.brush.paint.val / 4;
+          for (let i = -view.brush.paint.val / 2; i < view.brush.paint.val / 2; i += map.fog.scale) {
             const x = Math.floor((view.mx + i) / map.fog.scale);
 
             if (x < 0 || x >= map.fog.width) continue;
             const di = i * i;
 
-            for (let j = -view.brush.val / 2; j < view.brush.val / 2; j += map.fog.scale) {
+            for (let j = -view.brush.paint.val / 2; j < view.brush.paint.val / 2; j += map.fog.scale) {
               const y = Math.floor((view.my + j) / map.fog.scale);
 
               if (y < 0 || y >= map.fog.height) continue;
@@ -528,9 +470,9 @@ const s = sketch => {
 
               if (d < dLimit) {
                 const index = 4 * (y * map.fog.width + x);
-                map.fog.val[x][y] = mode.fog;
+                map.fog.val[x][y] = mode.secondary;
 
-                if (mode.fog === 0) {
+                if (mode.secondary === 0) {
                   map.fog.image.pixels[index]     = 0;
                   map.fog.image.pixels[index + 1] = 0;
                   map.fog.image.pixels[index + 2] = 0;
@@ -566,9 +508,9 @@ const s = sketch => {
               const y = fy + j;
 
               const index = 4 * (y * map.fog.width + x);
-              map.fog.val[x][y] = mode.fog;
+              map.fog.val[x][y] = mode.secondary;
 
-              if (mode.fog === 0) {
+              if (mode.secondary === 0) {
                 map.fog.image.pixels[index]     = 0;
                 map.fog.image.pixels[index + 1] = 0;
                 map.fog.image.pixels[index + 2] = 0;
@@ -597,37 +539,31 @@ const s = sketch => {
 
       wall() { // Press
         // Stop creating wall
-        mode.walling = null;
+        mode.moving = null;
       },
 
       entity() { // Press
-        // Set mode to move
-        sketch.setMode(cursors.MOVE);
+        // Reset mode
+        sketch.setMode(modes.NONE);
       },
 
       asset() { // Press
         if (mode.ctrl) {
-          // Set asset to move mode
-          sketch.setMode(cursors.MOVE);
-        } else {
-          view.asset.rot.set(view.asset.rot.val + view.asset.rot.step);
+          // Reset mode
+          sketch.setMode(modes.NONE);
+        } else if (mode.moving instanceof Asset) {
+          mode.moving.rotate(map.asset.step);
         }
       },
 
-      move() { // Press
-        if (user.role === 'admin') {
-          // Rotate assets
-          const ax = view.mx / map.asset.scale;
-          const ay = view.my / map.asset.scale;
-          // Rotate asset if mouse is over
-          for (let i = map.assets.length - 1; i >= 0; --i) {
-            if (map.assets[i].contains(ax, ay)) {
-              map.assets[i].rotate(view.asset.rot.step);
-              update.set('assets');
-              break;
-            }
-          }
-        }
+      move(hover = mode.do.hover()) { // Press
+        if (hover === null) return;
+        if (user.role !== 'admin') return;
+        if (hover.type !== modes.ASSET) return;
+
+        // Rotate assets
+        map.assets[hover.index].rotate(map.asset.step);
+        update.set('assets');
       },
 
       erase() { },
@@ -676,17 +612,12 @@ const s = sketch => {
     constructor(first, second, third) { // (type, x0, y0), (wall)
       this.x = [];
       this.y = [];
-      this.points = null;
       this.image = null;
       switch (arguments.length) {
-        case 0:
-          this.mode = 0;
-          break;
         case 1:
           this.type = first.type;
           this.x = first.x;
           this.y = first.y;
-          this.mode = 2;
           break;
         case 3:
           this.type = first;
@@ -695,23 +626,29 @@ const s = sketch => {
       }
     }
 
-    start(x0, y0) {
-      this.x[0] = x0;
-      this.y[0] = y0;
-      this.mode = 1;
+    start(x, y) {
+      this.x[0] = x;
+      this.y[0] = y;
     }
 
-    end(x1, y1) {
-      if (x1 === this.x[0] && y1 === this.y[0]) return;
-      this.x[1] = x1;
-      this.y[1] = y1;
-      this.mode = 2;
+    end(x, y) {
+      if (x === this.x[0] && y === this.y[0]) {
+        return false;
+      }
+
+      this.x[1] = x;
+      this.y[1] = y;
+
+      if (this.type !== walls.NONE) {
+        this.image = this.createImage();
+      }
+
+      return true;
     }
 
     copy() {
       const out = new Wall();
       out.type = this.type;
-      out.mode = this.mode;
       out.x[0] = this.x[0];
       out.x[1] = this.x[1];
       out.y[0] = this.y[0];
@@ -722,7 +659,6 @@ const s = sketch => {
     }
 
     data() {
-      if (this.mode !== 2) return null;
       return {
         type: this.type,
         x: this.x,
@@ -730,218 +666,103 @@ const s = sketch => {
       };
     }
 
-    draw() {
-      if (this.mode !== 2) return;
-
+    draw(x = this.x[1], y = this.y[1]) {
       if (this.type === walls.NONE) { // Solid wall
-        sketch.noStroke();
-        sketch.fill(0);
+        sketch.stroke(0);
+        sketch.strokeWeight(map.wall.width);
 
-        if (this.points === null) { // Could be done in end or copy constructor
-          let par = {
-            x: this.x[1] - this.x[0],
-            y: this.y[1] - this.y[0]
-          };
-          let mag = Math.sqrt(par.x * par.x + par.y * par.y);
-          par.x /= mag;
-          par.y /= mag;
-          let per = {
-            x: -par.y * map.wall.width / 2,
-            y:  par.x * map.wall.width / 2
-          };
-
-          this.points = [{
-            x: this.x[0] + per.x,
-            y: this.y[0] + per.y
-          }, {
-            x: this.x[0] - per.x,
-            y: this.y[0] - per.y
-          }, {
-            x: this.x[1] - per.x,
-            y: this.y[1] - per.y
-          }, {
-            x: this.x[1] + per.x,
-            y: this.y[1] + per.y
-          }];
-        }
-
-        sketch.quad(
-          this.points[0].x, this.points[0].y,
-          this.points[1].x, this.points[1].y,
-          this.points[2].x, this.points[2].y,
-          this.points[3].x, this.points[3].y
-        );
-
-        sketch.ellipseMode(sketch.CENTER);
-        sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
-        sketch.ellipse(this.x[1], this.y[1], map.wall.width, map.wall.width);
-
-      } else {
-        const par = {
-          x: this.x[1] - this.x[0],
-          y: this.y[1] - this.y[0]
-        };
-
-        if (this.points === null) { // Could be done in end or copy constructor
-          const mag = Math.sqrt(par.x * par.x + par.y * par.y);
-          const ppar = {
-            x: par.x / mag,
-            y: par.y / mag
-          };
-          let per = {
-            x: -ppar.y * map.wall.width / 2,
-            y:  ppar.x * map.wall.width / 2
-          };
-
-          this.points = [{
-            x: this.x[0] + per.x,
-            y: this.y[0] + per.y
-          }, {
-            x: this.x[0] - per.x,
-            y: this.y[0] - per.y
-          }, {
-            x: this.x[1] - per.x,
-            y: this.y[1] - per.y
-          }, {
-            x: this.x[1] + per.x,
-            y: this.y[1] + per.y
-          }];
-        }
-
-        if (this.image === null) {
-          const image = walls.images[this.type];
-          const mag = Math.round(Math.sqrt(par.x * par.x + par.y * par.y) / map.wall.scale + image.height);
-
-          this.image = sketch.createImage(mag, image.height);
-          this.image.loadPixels();
-          image.loadPixels();
-
-          for (let i = 0; i < this.image.width; ++i) {
-            const tx = i % image.width;
-            for (let j = 0; j < this.image.height; ++j) {
-              const index = 4 * (j * this.image.width + i);
-              const tindex = 4 * (j * image.width + tx);
-
-              this.image.pixels[index] = image.pixels[tindex];
-              this.image.pixels[index + 1] = image.pixels[tindex + 1];
-              this.image.pixels[index + 2] = image.pixels[tindex + 2];
-              this.image.pixels[index + 3] = image.pixels[tindex + 3];
-            }
-          }
-          this.image.updatePixels();
-        }
-
-        sketch.push();
-          sketch.scale(map.wall.scale);
-          sketch.translate(this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
-          sketch.rotate(Math.PI / 2 - Math.atan2(par.x, par.y));
-          sketch.translate(-this.x[0] / map.wall.scale, -this.y[0] / map.wall.scale);
-          sketch.translate(this.image.height / -2, this.image.height / -2);
-          sketch.image(this.image, this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
-        sketch.pop();
-      }
-    }
-
-    drawToMouse(x, y) {
-      if (this.mode !== 1) return;
-
-      if (this.type === walls.NONE) { // Solid wall
-        const par = {
-          x: x - this.x[0],
-          y: y - this.y[0]
-        };
-        const mag = Math.sqrt(par.x * par.x + par.y * par.y);
-        par.x /= mag;
-        par.y /= mag;
-        const per = {
-          x: -par.y * map.wall.width / 2,
-          y:  par.x * map.wall.width / 2
-        };
-
-        const points = [
-        {
-          x: this.x[0] + per.x,
-          y: this.y[0] + per.y
-        }, {
-          x: this.x[0] - per.x,
-          y: this.y[0] - per.y
-        }, {
-          x: x - per.x,
-          y: y - per.y
-        }, {
-          x: x + per.x,
-          y: y + per.y
-        }];
+        sketch.line(this.x[0], this.y[0], x, y);
 
         sketch.noStroke();
         sketch.fill(0);
-        sketch.quad(
-          points[0].x, points[0].y,
-          points[1].x, points[1].y,
-          points[2].x, points[2].y,
-          points[3].x, points[3].y
-        );
-
         sketch.ellipseMode(sketch.CENTER);
         sketch.ellipse(this.x[0], this.y[0], map.wall.width, map.wall.width);
         sketch.ellipse(x, y, map.wall.width, map.wall.width);
 
       } else {
-        const par = {
+        const d = {
           x: x - this.x[0],
           y: y - this.y[0]
         };
-        if (par.x !== 0 || par.y !== 0) {
-          const image = walls.images[this.type];
-          const mag = Math.round(Math.sqrt(par.x * par.x + par.y * par.y) / map.wall.scale) + image.height;
+        const image = this.image !== null ? this.image : this.createImage(x, y);
 
-          this.image = sketch.createImage(mag, image.height);
-          this.image.loadPixels();
-          image.loadPixels();
-
-          for (let i = 0; i < this.image.width; ++i) {
-            const tx = i % image.width;
-            for (let j = 0; j < this.image.height; ++j) {
-              const index = 4 * (j * this.image.width + i);
-              const tindex = 4 * (j * image.width + tx);
-
-              this.image.pixels[index] = image.pixels[tindex];
-              this.image.pixels[index + 1] = image.pixels[tindex + 1];
-              this.image.pixels[index + 2] = image.pixels[tindex + 2];
-              this.image.pixels[index + 3] = image.pixels[tindex + 3];
-            }
-          }
-          this.image.updatePixels();
-
-          sketch.push();
-            sketch.scale(map.wall.scale);
-            sketch.translate(this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
-            sketch.rotate(Math.PI / 2 - Math.atan2(par.x, par.y));
-            sketch.translate(-this.x[0] / map.wall.scale, -this.y[0] / map.wall.scale);
-            sketch.translate(this.image.height / -2, this.image.height / -2);
-            sketch.image(this.image, this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
-          sketch.pop();
-        }
+        sketch.push();
+          sketch.scale(map.wall.scale);
+          sketch.translate(this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
+          sketch.rotate(Math.PI / 2 - Math.atan2(d.x, d.y));
+          sketch.translate(-this.x[0] / map.wall.scale, -this.y[0] / map.wall.scale);
+          sketch.translate(image.height / -2, image.height / -2);
+          sketch.image(image, this.x[0] / map.wall.scale, this.y[0] / map.wall.scale);
+        sketch.pop();
       }
     }
 
     contains(x, y) {
-      const buf = 1;
-      const v0 = {
-        x: this.points[1].x - this.points[0].x,
-        y: this.points[1].y - this.points[0].y
+      const buf = 2.5;
+      const d = {
+        x: this.x[1] - this.x[0],
+        y: this.y[1] - this.y[0]
       };
-      const v1 = {
-        x: this.points[3].x - this.points[0].x,
-        y: this.points[3].y - this.points[0].y
+      const dp = {
+        x: x - this.x[0],
+        y: y - this.y[0]
+      };
+      const c = {
+        x: -1,
+        y: -1
       };
 
-      if ((x - this.points[0].x) * v0.x + (y - this.points[0].y) * v0.y < -buf) return false;
-      if ((x - this.points[1].x) * v0.x + (y - this.points[1].y) * v0.y >  buf) return false;
-      if ((x - this.points[0].x) * v1.x + (y - this.points[0].y) * v1.y < -buf) return false;
-      if ((x - this.points[3].x) * v1.x + (y - this.points[3].y) * v1.y >  buf) return false;
+      const dot = dp.x * d.x + dp.y * d.y;
+      const mag2 = d.x ** 2 + d.y ** 2;
+      let factor = -1;
 
-      return true;
+      if (mag2 !== 0) {
+        factor = dot / mag2;
+      }
+
+      if (factor < 0) {
+        c.x = this.x[0];
+        c.y = this.y[0];
+      } else if (factor > 1) {
+        c.x = this.x[1];
+        c.y = this.y[1];
+      } else {
+        c.x = this.x[0] + factor * d.x;
+        c.y = this.y[0] + factor * d.y;
+      }
+
+      const distance = (x - c.x) ** 2 + (y - c.y) ** 2
+
+      return distance < buf;
+    }
+
+    createImage(x = this.x[1], y = this.y[1]) {
+      const d = {
+        x: x - this.x[0],
+        y: y - this.y[0]
+      };
+      const texture = walls.images[this.type];
+      const mag = Math.max(1, Math.round(Math.sqrt(d.x * d.x + d.y * d.y) / map.wall.scale + texture.height));
+      const image = sketch.createImage(mag, texture.height);
+
+      image.loadPixels();
+      texture.loadPixels();
+
+      for (let i = 0; i < image.width; ++i) {
+        const tx = i % texture.width;
+        for (let j = 0; j < image.height; ++j) {
+          const index = 4 * (j * image.width + i);
+          const tindex = 4 * (j * texture.width + tx);
+
+          image.pixels[index] = texture.pixels[tindex];
+          image.pixels[index + 1] = texture.pixels[tindex + 1];
+          image.pixels[index + 2] = texture.pixels[tindex + 2];
+          image.pixels[index + 3] = texture.pixels[tindex + 3];
+        }
+      }
+      image.updatePixels();
+
+      return image;
     }
   }
 
@@ -986,27 +807,26 @@ const s = sketch => {
       };
     }
 
-    draw(x, y) {
-      if (arguments.length !== 2) {
-        x = this.x;
-        y = this.y;
-      }
-
+    draw(x = this.x, y = this.y) {
       // Update user color
       this.color = getUserColor(this.user);
 
+      sketch.imageMode(sketch.CENTER);
       sketch.ellipseMode(sketch.CENTER);
       sketch.noStroke();
       sketch.fill(this.color[0], this.color[1], this.color[2], 255);
-      sketch.ellipse(x, y, entities.images[this.type].width + 50, entities.images[this.type].height + 50);
 
-      sketch.imageMode(sketch.CENTER);
-      sketch.image(entities.images[this.type], x, y);
+      sketch.push();
+        sketch.translate(x, y);
+        sketch.scale(map.entity.scale);
+        sketch.ellipse(0, 0, entities.images[this.type].width + 50, entities.images[this.type].height + 50);
+        sketch.image(entities.images[this.type], 0, 0);
+      sketch.pop();
     }
 
     contains(x, y) {
-      const dx = Math.abs(x - this.x) * 2.5;
-      const dy = Math.abs(y - this.y) * 2.5;
+      const dx = Math.abs(x - this.x) * 2.5 / map.entity.scale;
+      const dy = Math.abs(y - this.y) * 2.5 / map.entity.scale;
 
       if (dx <= entities.images[this.type].width &&
           dy <= entities.images[this.type].height) return true;
@@ -1015,20 +835,27 @@ const s = sketch => {
   }
 
   class Asset {
-    constructor(first, x, y, zoom, rot) {
+    constructor(first, x, y, scale, rot) {
       switch (arguments.length) {
         case 1:
           this.type = first.type;
           this.x = first.x;
           this.y = first.y;
-          this.zoom = first.zoom;
+          this.scale = first.scale;
           this.rot = first.rot;
+          break;
+        case 3:
+          this.type = first;
+          this.x = x;
+          this.y = y;
+          this.scale = 1;
+          this.rot = 0;
           break;
         case 5:
           this.type = first;
-          this.x = x / zoom;
-          this.y = y / zoom;
-          this.zoom = zoom;
+          this.x = x;
+          this.y = y;
+          this.scale = scale;
           this.rot = rot;
           break;
       }
@@ -1039,25 +866,25 @@ const s = sketch => {
         type: this.type,
         x: this.x,
         y: this.y,
-        zoom: this.zoom,
+        scale: this.scale,
         rot: this.rot
       };
     }
 
-    draw() {
+    draw(x = this.x, y = this.y) {
       sketch.imageMode(sketch.CENTER);
       sketch.push();
-        sketch.scale(this.zoom);
-        sketch.translate(this.x, this.y);
+        sketch.translate(x, y);
+        sketch.scale(this.scale);
+        sketch.scale(map.asset.scale);
         sketch.rotate(sketch.radians(this.rot));
-        sketch.translate(-this.x, -this.y);
-        sketch.image(assets.images[this.type], this.x, this.y);
+        sketch.image(assets.images[this.type], 0, 0);
       sketch.pop();
     }
 
     contains(x, y) {
-      const dx = Math.abs(x / this.zoom - this.x) * 2.5;
-      const dy = Math.abs(y / this.zoom - this.y) * 2.5;
+      const dx = Math.abs(x - this.x) * 2.5 / map.asset.scale / this.scale;
+      const dy = Math.abs(y - this.y) * 2.5 / map.asset.scale / this.scale;
 
       if (dx <= assets.images[this.type].width &&
           dy <= assets.images[this.type].height) return true;
@@ -1066,14 +893,18 @@ const s = sketch => {
 
     rotate(rot) {
       this.rot += rot;
-      while (this.rot > 360) this.rot -= 360;
-      while (this.rot < 0) this.rot += 360;
+      this.rot = this.rot % 360;
+    }
+
+    zoom(scale) {
+      this.scale += scale;
+      this.scale = Math.min(2, Math.max(0.5, this.scale));
     }
   }
 
   let onCanvas = false;
   let totalLoading = 0;
-  let loading = 0;
+  let loaded = 0;
 
   sketch.preload = () => {
     // Load media
@@ -1137,35 +968,12 @@ const s = sketch => {
     view.mx = (sketch.mouseX - sketch.width/2) / view.zoom.val + view.x;
     view.my = (sketch.mouseY - sketch.height/2) / view.zoom.val + view.y;
 
-    //sketch.background(235);
     sketch.clear();
-    sketch.fill(0);
-    switch (mode.cursor.val) {
-      case cursors.FOG:
-        sketch.text(`Fog: ${mode.fog === 0 ? 'Erase' : 'Draw'}`, 2, 10);
-        break;
-      case cursors.TEXTURE:
-        sketch.text(`Texture: ${textures.names[mode.texture]}`, 2, 10);
-        break;
-      case cursors.ASSET:
-        sketch.text(`Asset: ${assets.names[mode.asset]}`, 2, 10);
-        break;
-      case cursors.ENTITY:
-        sketch.text(`Entity: ${entities.names[mode.entity]}`, 2, 10);
-        break;
-      case cursors.WALL:
-        sketch.text(`Wall: ${walls.names[mode.wall]}`, 2, 10);
-        break;
-    }
-
-    // TODO: Move canvas manipulation into drawMap. Possibly remove some transforms from hover and cursor.
-    sketch.translate(-view.x * view.zoom.val, -view.y * view.zoom.val);
-    sketch.scale(view.zoom.val);
-    sketch.translate(sketch.width/(2 * view.zoom.val), sketch.height/(2 * view.zoom.val));
 
     drawMap();
     drawHover();
     drawCursor();
+    drawText();
   };
 
   sketch.resize = () => {
@@ -1319,60 +1127,69 @@ const s = sketch => {
   }
 
   function mouseLeft() {
-    if (view.mx < 0 || view.mx > map.width ||
-        view.my < 0 || view.my > map.height) return;
+    const mod = mode.shift ? modes.NONE: mode.primary;
 
-    switch (mode.cursor.val) {
-      case cursors.MAPS:
-        mode.do.map();
+    switch (mod) {
+      case modes.NONE:
+      case modes.WALL:
+      case modes.ENTITY:
+      case modes.ASSET:
+      case modes.DRAW:
+      case modes.ERASE:
+        if (view.mx < 0 || view.mx > map.width ||
+          view.my < 0 || view.my > map.height) return;
         break;
-      case cursors.WALL:
+    }
+
+    switch (mod) {
+      case modes.NONE:
+        const hover = mode.do.hover();
+        if (hover === null) {
+          mode.do.map();
+        } else {
+          mode.do.move(hover);
+        }
+        break;
+      case modes.WALL:
         mode.do.wall();
         break;
-      case cursors.ENTITY:
+      case modes.ENTITY:
         mode.do.entity();
         break;
-      case cursors.ASSET:
+      case modes.ASSET:
         mode.do.asset();
         break;
-      case cursors.MOVE:
+      case modes.MOVE:
         mode.do.move();
         break;
-      case cursors.ERASE:
+      case modes.ERASE:
         mode.do.erase();
         break;
-      case cursors.TEXTURE:
+      case modes.TEXTURE:
         mode.do.texture();
         break;
-      case cursors.FOG:
+      case modes.FOG:
         mode.do.fog();
         break;
     }
   };
 
   function mouseRight() {
-    switch (mode.cursor.val) {
-      // case cursors.MAPS:
-      //   mode.done.map();
-      //   break;
-      case cursors.WALL:
-        mode.done.wall();
-        break;
-      case cursors.ENTITY:
-        mode.done.entity();
-        break;
-      case cursors.ASSET:
-        mode.done.asset();
-        break;
-      case cursors.MOVE:
+    const mod = mode.shift ? modes.NONE: mode.primary;
+
+    switch (mod) {
+      case modes.NONE:
         mode.done.move();
         break;
-      // case cursors.ERASE:
-      //   mode.done.erase();
-      //   break;
-      // case cursors.TEXTURE:
-      //   mode.done.texture();
-      //   break;
+      case modes.WALL:
+        mode.done.wall();
+        break;
+      case modes.ENTITY:
+        mode.done.entity();
+        break;
+      case modes.ASSET:
+        mode.done.asset();
+        break;
     }
   }
 
@@ -1381,27 +1198,28 @@ const s = sketch => {
 
     const time = new Date().getTime();
     const dt = time - mode.dragging.time;
+    const mod = mode.shift ? modes.NONE: mode.primary;
 
-    switch (mode.cursor.val) {
-      case cursors.MAP:
+    switch (mod) {
+      case modes.NONE:
         if (dt >= mode.dragging.rate.fast) {
           mode.dragging.time = time;
           mode.do.map();
         }
         break;
-      case cursors.TEXTURE:
+      case modes.TEXTURE:
         if (dt >= mode.dragging.rate.fast) {
           mode.dragging.time = time;
           mode.do.texture(true);
         }
         break;
-      case cursors.FOG:
+      case modes.FOG:
         if (dt >= mode.dragging.rate.fast) {
           mode.dragging.time = time;
           mode.do.fog(true);
         }
         break;
-      case cursors.DRAW:
+      case modes.DRAW:
         if (dt >= mode.dragging.rate.slow) {
           mode.dragging.time = time;
           mode.do.draw(true);
@@ -1413,8 +1231,8 @@ const s = sketch => {
   sketch.mouseReleased = () => {
     if (!onCanvas) return;
 
-    switch (mode.cursor.val) {
-      case cursors.DRAW:
+    switch (mode.primary) {
+      case modes.DRAW:
         mode.do.draw(false);
         break;
     }
@@ -1425,18 +1243,26 @@ const s = sketch => {
   sketch.mouseWheel = event => {
     if (!onCanvas) return;
 
-    switch (mode.cursor.val) {
-      case cursors.MAP:
-      case cursors.WALL:
-      case cursors.ERASE:
+    const mod = mode.shift ? modes.NONE: mode.primary;
+
+    switch (mod) {
+      case modes.NONE:
+      case modes.WALL:
+      case modes.ERASE:
         view.zoom.set(view.zoom.val - 0.2 * Math.sign(event.delta));
         break;
-      case cursors.ASSET:
-        view.asset.zoom.set(view.asset.zoom.val - 0.1 * Math.sign(event.delta));
+      case modes.ASSET:
+        if (mode.moving instanceof Asset) {
+          mode.moving.zoom(-0.1 * Math.sign(event.delta));
+        }
         break;
-      case cursors.TEXTURE:
-      case cursors.FOG:
-        view.brush.set(view.brush.val - Math.sign(event.delta));
+      case modes.TEXTURE:
+      case modes.FOG:
+        if (mode.ctrl) {
+          view.brush.blend.set(view.brush.blend.val - Math.sign(event.delta));
+        } else {
+          view.brush.paint.set(view.brush.paint.val - Math.sign(event.delta));
+        }
         break;
     }
   };
@@ -1445,35 +1271,34 @@ const s = sketch => {
     if (sketch.key === 'Control') mode.ctrl = true;
 
     if (sketch.key === 'Shift') {
-      mode.cursor.old = mode.cursor.val;
-      mode.cursor.val = cursors.MAP;
+      mode.shift = true;
     }
 
     if (!onCanvas) return;
     switch (sketch.key) {
       case 'm': // Map Mode
-        sketch.setMode(cursors.MAP);
-        break;
-      case 'g': // Move Mode
-        sketch.setMode(cursors.MOVE);
+        sketch.setMode(modes.NONE);
         break;
       case 'd': // Draw Mode
-        sketch.setMode(cursors.DRAW);
+        sketch.setMode(modes.DRAW);
         break;
       case 'x': // Erase Mode
-        sketch.setMode(cursors.ERASE);
+        sketch.setMode(modes.ERASE);
         break;
       case 'o': // Grid Overlay
         view.grid = !view.grid;
         break;
       case '=':
       case '+':
-        switch (mode.cursor.val) {
-          case cursors.ASSET:
-            view.asset.zoom.set(view.asset.zoom.val * 1.1);
+        switch (mode.primary) {
+          case modes.ASSET:
+            if (mode.moving instanceof Asset) {
+              mode.moving.zoom(0.1);
+            }
             break;
-          case cursors.TEXTURE:
-            view.brush.set(view.brush.val * 1.1);
+          case modes.TEXTURE:
+          case modes.FOG:
+            view.brush.paint.set(view.brush.paint.val * 1.1);
             break;
           default:
             view.zoom.set(view.zoom.val * 1.1);
@@ -1481,12 +1306,15 @@ const s = sketch => {
         break;
       case '-':
       case '_':
-        switch (mode.cursor.val) {
-          case cursors.ASSET:
-            view.asset.zoom.set(view.asset.zoom.val * 0.9);
+        switch (mode.primary) {
+          case modes.ASSET:
+            if (mode.moving instanceof Asset) {
+              mode.moving.zoom(-0.1);
+            }
             break;
-          case cursors.TEXTURE:
-            view.brush.set(view.brush.val * 0.9);
+          case modes.TEXTURE:
+          case modes.FOG:
+            view.brush.paint.set(view.brush.paint.val * 0.9);
             break;
           default:
             view.zoom.set(view.zoom.val * 0.9);
@@ -1497,25 +1325,33 @@ const s = sketch => {
     if (user.role === 'admin') {
       switch (sketch.key) {
         case 'w':
-          sketch.setMode(cursors.WALL);
+          sketch.setMode(modes.WALL);
           break;
         case 'e':
-          sketch.setMode(cursors.ENTITY);
+          sketch.setMode(modes.ENTITY);
+          if (!(mode.moving instanceof Entity)) {
+            mode.moving = new Entity(mode.secondary, 0, 0);
+          }
           break;
         case 'a':
-          sketch.setMode(cursors.ASSET);
+          sketch.setMode(modes.ASSET);
+          if (!(mode.moving instanceof Asset)) {
+            mode.moving = new Asset(mode.secondary, 0, 0);
+          }
           break;
-        case 'b': // Texture Mode (brush)
-          mode.fill = false;
-          sketch.setMode(cursors.TEXTURE);
+        case 't': // Texture Mode
+          if (mode.primary === modes.TEXTURE) {
+            mode.fill = !mode.fill;
+          } else {
+            sketch.setMode(modes.TEXTURE);
+          }
           break;
-        case 'f': // Texture Mode (fill)
-          mode.fill = true;
-          sketch.setMode(cursors.TEXTURE);
-          break;
-        case 'h': // Fog Mode
-          //mode.fill = true;
-          sketch.setMode(cursors.FOG);
+        case 'f': // Fog Mode
+          if (mode.primary === modes.FOG) {
+            mode.fill = !mode.fill;
+          } else {
+            sketch.setMode(modes.FOG);
+          }
           break;
         case '0':
         case '1':
@@ -1528,40 +1364,59 @@ const s = sketch => {
         case '8':
         case '9':
           const key = sketch.key - '0';
-          switch (mode.cursor.val) {
-            case cursors.FOG:
-              mode.fog = key;
+          switch (mode.primary) {
+            case modes.FOG:
+              if (key < 0 || key >= 1) break;
+
+              mode.secondary = key;
               if (key === 1) {
                 textures.images[textures.FOG].loadPixels();
               }
               break;
-            case cursors.TEXTURE:
-              mode.texture = key;
-              if (key > 0 && key < textures.COUNT) {
+            case modes.TEXTURE:
+              if (key < 0 || key >= textures.COUNT) break;
+
+              mode.secondary = key;
+              if (key !== 0) {
                 textures.images[key].loadPixels();
               }
             break;
-            case cursors.WALL:
-              mode.wall = key;
-            break;
-            case cursors.ENTITY:
-              // Temp fix for Entity 9 (colors)
-              if (key === 9) {
-                if (mode.entity > 8 && mode.entity < 12) {
-                  mode.entity++;
-                  if (mode.entity > 11) {
-                    mode.entity = 9;
+            case modes.ENTITY:
+              if (key < 0 || key >= entities.COUNT) break;
+
+              if (key === 9 && mode.secondary > 8 && mode.secondary < entities.COUNT) {
+                if (mode.shift) {
+                  if (--mode.secondary < 9) {
+                    mode.secondary = entities.COUNT - 1;
                   }
                 } else {
-                  mode.entity = key;
+                  if (++mode.secondary >= entities.COUNT) {
+                    mode.secondary = 9;
+                  }
                 }
               } else {
-                mode.entity = key;
+                mode.secondary = key;
+              }
+
+              if (mode.moving instanceof Entity) {
+                mode.moving.type = mode.secondary;
               }
               break;
-            case cursors.ASSET:
-              mode.asset = key;
+            case modes.ASSET:
+              if (key < 0 || key >= assets.COUNT) break;
+
+              mode.secondary = key;
+              if (mode.moving instanceof Entity) {
+                mode.moving.type = mode.secondary;
+              }
               break;
+            case modes.WALL:
+              if (key < 0 || key >= walls.COUNT) break;
+
+              mode.secondary = key;
+              if (mode.moving instanceof Wall) {
+                mode.moving.type = mode.secondary;
+              }
           }
           break;
       }
@@ -1569,20 +1424,19 @@ const s = sketch => {
   };
 
   sketch.keyReleased = () => {
-    if (sketch.key === "Control") mode.ctrl = false;
+    if (sketch.key === "Control") {
+      mode.ctrl = false;
+    }
 
-    if (sketch.key === 'Shift' &&
-        mode.cursor.val !== mode.cursor.old) {
-      mode.cursor.val = mode.cursor.old;
+    if (sketch.key === 'Shift') {
+      mode.shift = false;
     }
   }
 
   sketch.setMode = (m, reset = true) => {
-    if (m >= 0 && m < cursors.COUNT) {
-      if (reset) mode.walling = null;
-
-      mode.cursor.old = m;
-      mode.cursor.val = m;
+    if (m >= 0 && m < modes.COUNT) {
+      if (reset) mode.secondary = 0;
+      mode.primary = m;
     }
   };
 
@@ -1591,58 +1445,88 @@ const s = sketch => {
     switch(name) {
       case 'texture':
         mode.fill = false;
-        sketch.setMode(cursors.TEXTURE);
-        mode.texture = key;
-        if (key > 0 && key < textures.COUNT) {
+        sketch.setMode(modes.TEXTURE);
+        mode.secondary = key;
+        if (key < 0 || key > textures.COUNT) {
+          mode.secondary = 0;
+        } else if (key > 0 && key < textures.COUNT) {
           textures.images[key].loadPixels();
         }
         break;
       case 'fill':
         mode.fill = true;
-        sketch.setMode(cursors.TEXTURE);
-        mode.texture = key;
-        if (key > 0 && key < textures.COUNT) {
+        sketch.setMode(modes.TEXTURE);
+        mode.secondary = key;
+        if (key < 0 || key > textures.COUNT) {
+          mode.secondary = 0;
+        } else if (key > 0 && key < textures.COUNT) {
           textures.images[key].loadPixels();
         }
         break;
       case 'fog':
-        mode.fill = false;
-        sketch.setMode(cursors.FOG);
-        mode.fog = key;
+        sketch.setMode(modes.FOG);
+        mode.secondary = key;
         if (key === 1) {
           textures.images[textures.FOG].loadPixels();
+        } else {
+          mode.secondary = 0;
+        }
+        break;
+      case 'fog-brush':
+        mode.fill = false;
+        sketch.setMode(modes.FOG);
+        mode.secondary = key;
+        if (key === 1) {
+          textures.images[textures.FOG].loadPixels();
+        } else {
+          mode.secondary = 0;
+        }
+        break;
+      case 'fog-fill':
+        mode.fill = true;
+        sketch.setMode(modes.FOG);
+        mode.secondary = key;
+        if (key === 1) {
+          textures.images[textures.FOG].loadPixels();
+        } else {
+          mode.secondary = 0;
         }
         break;
       case 'wall':
-        sketch.setMode(cursors.WALL);
-        mode.wall = key;
+        sketch.setMode(modes.WALL);
+        mode.secondary = key;
         break;
       case 'entity':
-        sketch.setMode(cursors.ENTITY);
-        mode.entity = key;
+        sketch.setMode(modes.ENTITY);
+        mode.moving = new Entity(key, 0, 0);
+        // TODO: is secondary used for entity
+        mode.secondary = key;
         break;
       case 'asset':
-        sketch.setMode(cursors.ASSET);
-        mode.asset = key;
-        break;
-      case 'map':
-        sketch.setMode(cursors.MAP);
-        break;
-      case 'move':
-        sketch.setMode(cursors.MOVE);
+        sketch.setMode(modes.ASSET);
+        mode.moving = new Asset(key, 0, 0);
+        // TODO: is secondary used for assets
+        mode.secondary = key;
         break;
       case 'draw':
-        sketch.setMode(cursors.DRAW);
+        sketch.setMode(modes.DRAW);
         break;
       case 'erase':
-        sketch.setMode(cursors.ERASE);
+        sketch.setMode(modes.ERASE);
+        break;
+      case 'none':
+        sketch.setMode(modes.NONE);
         break;
     }
   };
 
+  sketch.setBrushBlend = value => {
+    view.brush.blend.set(value);
+  };
+
   sketch.isLoaded = () => {
     return mode.loaded;
-  }
+  };
 
   function loadMedia(target, data, folder) {
     const dataKeys = Object.keys(data);
@@ -1660,7 +1544,7 @@ const s = sketch => {
         target.images[target[key]] = null;
       } else {
         if (DEBUG) console.log(`loading ${data[key][2]}`);
-        target.images[target[key]] = sketch.loadImage(MEDIA_MAPS + folder + data[key][2], mediaLoading);
+        target.images[target[key]] = sketch.loadImage(MEDIA_MAPS + folder + data[key][2], mediaLoaded);
       }
     }
 
@@ -1669,20 +1553,20 @@ const s = sketch => {
     return target;
   }
 
-  function mediaLoading() {
-    loading++;
+  function mediaLoaded() {
+    loaded++;
 
-    if (loading > totalLoading) loading = totalLoading;
+    if (loaded > totalLoading) loaded = totalLoading;
 
-    const perc = loading / totalLoading * 100;
+    const perc = loaded / totalLoading * 100;
     const percStr = `${perc.toString()}%`;
     $('#loader-bar').css('width', percStr);
-    $('#loader-status').html(`Loading (${loading}/${totalLoading})`);
+    $('#loader-status').html(`Loading (${loaded}/${totalLoading})`);
   }
 
   function loadCursors(data) {
     loadMedia(cursors, data, 'cursors/');
-    sketch.setMode(cursors.MAP);
+    sketch.setMode(modes.NONE);
   }
   function loadTextures(data) {
     loadMedia(textures, data, 'textures/');
@@ -1698,13 +1582,19 @@ const s = sketch => {
   }
 
   function drawMap() {
-    drawTexture();
-    drawGrid();
-    drawWalls();
-    drawAssets();
-    drawEntities();
-    drawFog();
-    drawLines();
+    sketch.push();
+      sketch.translate(-view.x * view.zoom.val, -view.y * view.zoom.val);
+      sketch.scale(view.zoom.val);
+      sketch.translate(sketch.width/(2 * view.zoom.val), sketch.height/(2 * view.zoom.val));
+
+      drawTexture();
+      drawGrid();
+      drawWalls();
+      drawAssets();
+      drawEntities();
+      drawFog();
+      drawLines();
+    sketch.pop();
   }
 
   function drawTexture() {
@@ -1733,30 +1623,24 @@ const s = sketch => {
       wall.draw();
     }
 
-    if (mode.walling !== null && mode.walling.mode === 1) {
+    if (mode.moving instanceof Wall) {
       const wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
       const wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
 
-      mode.walling.drawToMouse(wx, wy);
+      mode.moving.draw(wx, wy);
     }
   }
 
   function drawAssets() {
-    sketch.push();
-      sketch.scale(map.asset.scale);
-      for (asset of map.assets) {
-        asset.draw();
-      }
-    sketch.pop();
+    for (asset of map.assets) {
+      asset.draw();
+    }
   }
 
   function drawEntities() {
-    sketch.push();
-      sketch.scale(map.entity.scale);
-      for (entity of map.entities) {
-        entity.draw();
-      }
-    sketch.pop();
+    for (entity of map.entities) {
+      entity.draw();
+    }
   }
 
   function drawFog() {
@@ -1776,13 +1660,13 @@ const s = sketch => {
       // Redraw user entities over fog
       // TODO: (possibly) Re-add fog effect
       sketch.push();
-      sketch.scale(map.entity.scale);
-      for (entity of map.entities) {
-        if (entity.user.id === user.id) {
-          entity.draw();
+        sketch.scale(map.entity.scale);
+        for (entity of map.entities) {
+          if (entity.user.id === user.id) {
+            entity.draw();
+          }
         }
-      }
-    sketch.pop();
+      sketch.pop();
     }
   }
 
@@ -1826,10 +1710,8 @@ const s = sketch => {
   }
 
   function drawHover() {
-    if (mode.cursor.val === cursors.MOVE ||
-        mode.cursor.val === cursors.ERASE) {
-      const ex = view.mx / map.entity.scale;
-      const ey = view.my / map.entity.scale;
+    if (mode.primary === modes.NONE ||
+        mode.primary === modes.ERASE) {
       const fx = Math.floor(view.mx / map.fog.scale);
       const fy = Math.floor(view.my / map.fog.scale);
 
@@ -1843,22 +1725,18 @@ const s = sketch => {
             map.fog.val[fx][fy] === 1)
           continue;
 
-        if (entity.contains(ex, ey)) {
+        if (entity.contains(view.mx, view.my)) {
           const size = 16;
           const corWidth = Math.min(256, sketch.width / 3);
           const corHeight = corWidth + 2.75 * size;
-          const scale = corWidth / 6 * map.entity.scale;
+          const scale = corWidth / 6;
+
+          sketch.rectMode(sketch.CORNER);
+          sketch.strokeWeight(6);
+          sketch.stroke(entity.color[0], entity.color[1], entity.color[2], 255);
+          sketch.fill(255);
 
           sketch.push();
-            sketch.translate(-sketch.width/(2 * view.zoom.val), -sketch.height/(2 * view.zoom.val));
-            sketch.scale(1/view.zoom.val);
-            sketch.translate(view.x * view.zoom.val, view.y * view.zoom.val);
-
-            sketch.rectMode(sketch.CORNER);
-            sketch.strokeWeight(6);
-            sketch.stroke(entity.color[0], entity.color[1], entity.color[2], 255);
-            sketch.fill(255);
-
             if (sketch.mouseX < sketch.width / 2) {
               sketch.translate(sketch.width - corWidth - 10, 10);
             } else {
@@ -1891,112 +1769,187 @@ const s = sketch => {
   function drawCursor() {
     if (!onCanvas) return;
 
-    sketch.rectMode(sketch.CENTER);
-    sketch.strokeWeight(1 / view.zoom.val);
-    sketch.stroke(0, 0, 0);
+    sketch.push();
+      sketch.translate(-view.x * view.zoom.val, -view.y * view.zoom.val);
+      sketch.scale(view.zoom.val);
+      sketch.translate(sketch.width/(2 * view.zoom.val), sketch.height/(2 * view.zoom.val));
 
-    switch (mode.cursor.val) {
-      case cursors.MAP:
-        drawCursorImage();
-        sketch.fill(0);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
+      sketch.rectMode(sketch.CENTER);
+      sketch.strokeWeight(1 / view.zoom.val);
+      sketch.stroke(0, 0, 0);
 
-      case cursors.WALL:
-        const wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
-        const wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
+      switch (mode.primary) {
+        case modes.NONE:
+          drawCursorImage();
+          sketch.fill(0);
+          drawCursorMark();
+          break;
 
-        sketch.fill(0, 255, 255);
-        sketch.rect(wx, wy, 10 / view.zoom.val, 10 / view.zoom.val);
+        case modes.WALL:
+          const wx = Math.round(view.mx / map.wall.spacing) * map.wall.spacing;
+          const wy = Math.round(view.my / map.wall.spacing) * map.wall.spacing;
 
-        drawCursorImage();
-        sketch.fill(0);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
+          sketch.fill(0, 255, 255);
+          drawCursorMark(wx, wy);
 
-      case cursors.ENTITY:
-        if (mode.entity >= 0 && mode.entity < entities.COUNT) {
-          sketch.push();
-            sketch.scale(map.entity.scale);
+          drawCursorImage();
+          sketch.fill(0);
+          drawCursorMark();
+          break;
 
-            const ex = view.mx / map.entity.scale;
-            const ey = view.my / map.entity.scale;
+        case modes.ENTITY:
+          if (mode.moving instanceof Entity) {
+            mode.moving.draw(view.mx, view.my);
+          }
 
+          drawCursorImage();
+          sketch.fill(0, 0, 255);
+          drawCursorMark();
+          break;
+
+        case modes.ASSET:
+          if (mode.moving instanceof Asset) {
+            mode.moving.draw(view.mx, view.my);
+          }
+
+          drawCursorImage();
+          sketch.fill(0, 0, 255);
+          drawCursorMark();
+          break;
+
+        case modes.MOVE:
+          drawCursorImage();
+          sketch.fill(0, 255, 0);
+          drawCursorMark();
+          break;
+
+        case modes.DRAW:
+          drawCursorImage();
+          color = getUserColor(user);
+          sketch.fill(color[0], color[1], color[2]);
+          sketch.ellipse(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
+          break;
+
+        case modes.ERASE:
+          drawCursorImage();
+          sketch.fill(255, 0, 0);
+          drawCursorMark();
+          break;
+
+        case modes.TEXTURE:
+          let paint = view.brush.paint.MIN;
+
+          if (!mode.fill) {
+            paint = view.brush.paint.val;
+
+            const blend = view.brush.blend.val / view.brush.blend.MAX * paint;
+
+            // Blend
             sketch.ellipseMode(sketch.CENTER);
-            sketch.noStroke();
-            sketch.fill(255, 0, 0, 255);
-            sketch.ellipse(ex, ey, entities.images[mode.entity].width + 50, entities.images[mode.entity].height + 50);
+            sketch.noFill();
+            sketch.stroke(0, 0, 255);
+            sketch.strokeWeight(2 / view.zoom.val);
+            sketch.circle(view.mx, view.my, blend);
+          }
 
-            sketch.imageMode(sketch.CENTER);
-            sketch.image(entities.images[mode.entity], ex, ey);
-          sketch.pop();
-        }
+          // Paint
+          sketch.ellipseMode(sketch.CENTER);
+          sketch.noFill();
+          sketch.stroke(0);
+          sketch.strokeWeight(2 / view.zoom.val);
+          sketch.circle(view.mx, view.my, paint);
+          break;
 
-        drawCursorImage();
-        sketch.fill(0, 0, 255);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
+        case modes.FOG:
+          let radius = view.brush.paint.MIN;
 
-      case cursors.ASSET:
-        if (mode.asset >= 0 && mode.asset < assets.COUNT) {
-          const ax = view.mx / view.asset.zoom.val / map.asset.scale;
-          const ay = view.my / view.asset.zoom.val / map.asset.scale;
-          sketch.imageMode(sketch.CENTER);
-          sketch.push();
-            sketch.translate(view.mx, view.my);
-            sketch.rotate(sketch.radians(view.asset.rot.val));
-            sketch.translate(-view.mx, -view.my);
-            sketch.scale(map.asset.scale * view.asset.zoom.val);
-            sketch.image(assets.images[mode.asset], ax, ay);
-          sketch.pop();
-        }
+          if (!mode.fill) {
+            radius = view.brush.paint.val;
+          }
 
-        drawCursorImage();
-        sketch.fill(0, 0, 255);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
+          // Paint
+          sketch.ellipseMode(sketch.CENTER);
+          sketch.noFill();
+          sketch.stroke(0);
+          sketch.strokeWeight(2 / view.zoom.val);
+          sketch.circle(view.mx, view.my, radius);
+          break;
+      }
 
-      case cursors.MOVE:
-        drawCursorImage();
-        sketch.fill(0, 255, 0);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
+    sketch.pop();
+  }
 
-      case cursors.DRAW:
-        drawCursorImage();
-        color = getUserColor(user);
-        sketch.fill(color[0], color[1], color[2]);
-        sketch.ellipse(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
-
-      case cursors.ERASE:
-        drawCursorImage();
-        sketch.fill(255, 0, 0);
-        sketch.rect(view.mx, view.my, 10 / view.zoom.val, 10 / view.zoom.val);
-        break;
-
-      case cursors.TEXTURE:
-      case cursors.FOG:
-        let radius = view.brush.val;
-        if (mode.fill) {
-          radius = view.brush.MIN;
-        }
-
-        sketch.ellipseMode(sketch.CENTER);
-        sketch.noFill();
-        sketch.stroke(0);
-        sketch.strokeWeight(2 / view.zoom.val);
-        sketch.ellipse(view.mx, view.my, radius, radius);
-        break;
-    }
+  function drawCursorMark(x = view.mx, y = view.my, z = 10 / view.zoom.val) {
+    sketch.triangle(x, y, x, y + z, x + z, y);
   }
 
   function drawCursorImage() {
+    const color = getUserColor(user);
+    let cursor = cursors.DEFAULT;
+
+    switch (mode.primary) {
+      case modes.NONE:
+        // TODO: reduce number of times hover is called
+        const hover = mode.do.hover();
+        if (hover !== null) {
+          cursor = cursors.HOVER;
+        }
+        break;
+      case modes.WALL:
+      case modes.ENTITY:
+      case modes.ASSET:
+        cursor = cursors.HOLD;
+        break;
+      case modes.DRAW:
+        cursor = cursors.DRAW;
+        break;
+      case modes.ERASE:
+        cursor = cursors.ERASE;
+        break;
+      // case TEXTURE:
+      // case FOG:
+      //   if (mode.fill) {
+      //     cursor = cursors.FILL;
+      //   } else {
+      //     cursor = cursors.BRUSH;
+      //   }
+      //   break;
+    }
+
     sketch.imageMode(sketch.CORNER);
     sketch.push();
+      //sketch.tint(color[0], color[1], color[2]);
       sketch.scale(map.cursor.scale / view.zoom.val);
-      sketch.image(cursors.images[mode.cursor.val], view.mx * view.zoom.val / map.cursor.scale, view.my * view.zoom.val / map.cursor.scale);
+      sketch.image(cursors.images[cursor], view.mx * view.zoom.val / map.cursor.scale, view.my * view.zoom.val / map.cursor.scale);
     sketch.pop();
+  }
+
+  function drawText() {
+    sketch.fill(0);
+    sketch.stroke(127);
+    sketch.strokeWeight(2);
+
+    sketch.textSize(14);
+    const offx = 2;
+    const offy = 14;
+
+    switch (mode.primary) {
+      case modes.FOG:
+        sketch.text(`Fog (${mode.fill ? 'Fill' : 'Brush'}): ${mode.secondary === 0 ? 'Erase' : 'Draw'}`, offx, offy);
+        break;
+      case modes.TEXTURE:
+        sketch.text(`Texture (${mode.fill ? 'Fill' : 'Brush'}): ${textures.names[mode.secondary]}`, offx, offy);
+        break;
+      case modes.ASSET:
+        sketch.text(`Asset: ${assets.names[mode.secondary]}`, offx, offy);
+        break;
+      case modes.ENTITY:
+        sketch.text(`Entity: ${entities.names[mode.secondary]}`, offx, offy);
+        break;
+      case modes.WALL:
+        sketch.text(`Wall: ${walls.names[mode.secondary]}`, offx, offy);
+        break;
+    }
   }
 
   function compress(data) {
@@ -2014,13 +1967,22 @@ const s = sketch => {
         if (val === curr) {
           count++;
         } else {
-          out.val.push([val, count]);
+          if (count === 1) {
+            out.val.push(val);
+          } else {
+            out.val.push([val, count]);
+          }
           val = curr;
           count = 1;
         }
       }
     }
-    out.val.push([val, count]);
+
+    if (count === 1) {
+      out.val.push(val);
+    } else {
+      out.val.push([val, count]);
+    }
 
     return out;
   }
@@ -2037,8 +1999,20 @@ const s = sketch => {
     out.val = new Array(data.width);
     out.val[0] = new Array(data.height);
     for (val of data.val) {
-      for (let v = 0; v < val[1]; ++v) {
-        out.val[i][j] = val[0];
+      if (Array.isArray(val)) {
+        for (let v = 0; v < val[1]; ++v) {
+          out.val[i][j] = val[0];
+
+          if (++j === data.height) {
+            j = 0;
+            if (++i !== data.width) {
+              out.val[i] = new Array(data.height);
+            }
+          }
+        }
+      } else {
+        out.val[i][j] = val;
+
         if (++j === data.height) {
           j = 0;
           if (++i !== data.width) {
