@@ -4,7 +4,13 @@ const version = require('../package.json').version;
 
 /* GET home page. */
 router.get('/', (req, res, next) => {
-  res.render('index', { title: 'Rolls', version, debugMode: global.DEBUG ? 'true' : 'false' });
+  const debugMode = global.DEBUG ? 'true' : 'false';
+
+  res.render('index', {
+    title: 'Rolls',
+    version,
+    debugMode
+  });
 });
 
 router.sockets = (io, socket, rooms, func) => {

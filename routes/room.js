@@ -10,18 +10,41 @@ router.get('/:id', (req, res, next) => {
     console.log(`ERROR: a user tried to access an unavailable room: ${id}`);
 
     // Reroute to error
-    res.render('error', { error: { status: 'This room does not exist'}});
+    res.render('error', {
+      error: {
+        status: 'This room does not exist'
+      },
+      redirect: 'true'
+    });
+
     return;
   }
 
   const room = rooms.get(id);
+  const user = req.app.func.findUserSession(room, req.sessionID);
+
+  if (user === null) {
+    console.log(`ERROR: a user tried to access a room that they are not part of: ${id}`);
+
+    // Reroute to error
+    res.render('error', { 
+      error: { 
+        status: 'You are not included in this room. Access the room from the index page'
+      },
+      redirect: 'true'
+    });
+
+    return;
+  }
+
   const debugMode = global.DEBUG ? 'true' : 'false';
 
   res.render('room', {
     title : `Room ${room.name}`,
     id,
     name: room.name,
-    debugMode
+    debugMode,
+    role: user.role
   });
 });
 
@@ -314,9 +337,17 @@ router.sockets = (io, socket, rooms, func) => {
     if (user) {
       // Remove dice
       let changed = false;
-      if (data.hasOwnProperty('index')) {
-        user.dice.splice(data.index, 1);
-        changed = true;
+      if (data.hasOwnProperty('die')) { // Remove single dice
+        const dice = user.dice.filter(aDice => {
+          return aDice.id === data.die; // TODO: Allow data.die to be array to select/remove multiple dice
+        });
+
+        if (dice.length > 0) {
+          changed = true;
+          for (die of dice) {
+            user.dice.splice(user.dice.indexOf(die), 1);
+          }
+        }
       } else if (data.hasOwnProperty('type')) {
         user.dice.some((die, index) => {
           if (die.type === data.type) {

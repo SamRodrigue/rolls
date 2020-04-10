@@ -1,4 +1,4 @@
-const s = sketch => {
+const mapP5 = new p5(sketch => {
   const update = {
     texture: null,
     fog: null,
@@ -73,39 +73,30 @@ const s = sketch => {
       val: 10,
       MIN: 0.5,
       MAX: 20,
-      set(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
-    },
-    mx: 0,
-    my: 0,
-    brush: {
-      paint: {
-        val: 10,
-        MIN: 2,
-        MAX: 100,
-        set(v) { this.val = sketch.constrain(v, this.MIN, this.MAX); }
-      },
-      blend: {
-        val: 100,
-        MIN: 0,
-        MAX: 100,
-        set(v) {
-          this.val = sketch.constrain(v, this.MIN, this.MAX);
-          $('input#blend-range').val(this.val);
+      set(v) {
+        const prev = this.val;
+        this.val = sketch.constrain(v, this.MIN, this.MAX);
+
+        if (prev !== this.val) {
+          const ratio = prev / this.val;
+          view.x = (view.x - view.mx) * ratio + view.mx;
+          view.y = (view.y - view.my) * ratio + view.my;
         }
       }
-    }
+    },
+    mx: 0,
+    my: 0
   };
 
   const modes = {
-    NONE:    0,
-    WALL:    1,
-    ENTITY:  2,
-    ASSET:   3,
-    DRAW:    4,
-    ERASE:   5,
-    TEXTURE: 6,
-    FOG:     7,
-    COUNT:   8
+    NONE:   0,
+    WALL:   1,
+    ENTITY: 2,
+    ASSET:  3,
+    DRAW:   4,
+    ERASE:  5,
+    PAINT:  6,
+    COUNT:  7
   };
 
   const mode = {
@@ -124,7 +115,6 @@ const s = sketch => {
       }
     },
     moving: null,
-    fill: false,
 
     do: {
       map() { // Drag
@@ -350,22 +340,26 @@ const s = sketch => {
       texture() { // Press/Drag
         // TODO: Use new render object to modify texture using p5 lines/elipses
         //       https://p5js.org/examples/structure-create-graphics.html
-        if (mode.secondary < 0 || mode.secondary >= textures.COUNT) return;
+        if (paint.texture < 0 || paint.texture >= textures.COUNT) return;
+
+        const image = textures.images[paint.texture];
 
         // Update map texture
         map.texture.image.loadPixels();
+        if (paint.texture !== 0) image.loadPixels();
+        
 
-        if (!mode.fill) { // Brush mode
-          const paintLimit = view.brush.paint.val ** 2 / 4;
-          const blendLimit = (view.brush.blend.val / view.brush.blend.MAX) ** 2 * paintLimit;
+        if (paint.type === 'brush') { // Brush mode
+          const paintLimit = paint.size.val ** 2 / 4;
+          const blendLimit = (paint.blend.val / paint.blend.MAX) ** 2 * paintLimit;
 
-          for (let i = -view.brush.paint.val / 2; i < view.brush.paint.val / 2; i += map.texture.scale) {
+          for (let i = -paint.size.val / 2; i < paint.size.val / 2; i += map.texture.scale) {
             const x = Math.floor((view.mx + i) / map.texture.scale);
 
             if (x < 0 || x >= map.texture.width) continue;
             const di = i * i;
 
-            for (let j = -view.brush.paint.val / 2; j < view.brush.paint.val / 2; j += map.texture.scale) {
+            for (let j = -paint.size.val / 2; j < paint.size.val / 2; j += map.texture.scale) {
               const y = Math.floor((view.my + j) / map.texture.scale);
 
               if (y < 0 || y >= map.texture.height) continue;
@@ -380,15 +374,14 @@ const s = sketch => {
                   if (r < s) continue;
                 }
 
-                map.texture.val[x][y] = mode.secondary;
+                map.texture.val[x][y] = paint.texture;
 
-                if (mode.secondary === 0) {
+                if (paint.texture === 0) {
                   map.texture.image.pixels[index]     = 0;
                   map.texture.image.pixels[index + 1] = 0;
                   map.texture.image.pixels[index + 2] = 0;
                   map.texture.image.pixels[index + 3] = 0;
                 } else {
-                  const image = textures.images[mode.secondary];
                   const tx = x % image.width;
                   const ty = y % image.height;
                   const tindex = 4 * (ty * image.width + tx);
@@ -401,7 +394,7 @@ const s = sketch => {
               }
             }
           }
-        } else { // Fill mode
+        } else if (paint.type === 'fill') { // Fill mode
           const x = Math.floor(view.mx / map.texture.scale);
           if (x < 0 || x >= map.texture.width) return;
           const y = Math.floor(view.my / map.texture.scale);
@@ -419,15 +412,14 @@ const s = sketch => {
               const y = fy + j;
 
               const index = 4 * (y * map.texture.width + x);
-              map.texture.val[x][y] = mode.secondary;
+              map.texture.val[x][y] = paint.texture;
 
-              if (mode.secondary === 0) {
+              if (paint.texture === 0) {
                 map.texture.image.pixels[index]     = 0;
                 map.texture.image.pixels[index + 1] = 0;
                 map.texture.image.pixels[index + 2] = 0;
                 map.texture.image.pixels[index + 3] = 0;
               } else {
-                const image = textures.images[mode.secondary];
                 const tx = x % image.width;
                 const ty = y % image.height;
                 const tindex = 4 * (ty * image.width + tx);
@@ -448,21 +440,23 @@ const s = sketch => {
       fog() { // Press/Drag
         // TODO: Use new render object to modify texture using p5 lines/elipses
         //       https://p5js.org/examples/structure-create-graphics.html
-        if (mode.secondary < 0 || mode.secondary > 1) return;
+        if (paint.texture < 0 || paint.texture > 1) return;
+
+        const image = textures.images[textures.FOG];
 
         // Update map texture
-        const image = textures.images[textures.FOG];
         map.fog.image.loadPixels();
+        if (paint.texture !== 0) image.loadPixels();
 
-        if (!mode.fill) { // Brush mode
-          const dLimit = view.brush.paint.val * view.brush.paint.val / 4;
-          for (let i = -view.brush.paint.val / 2; i < view.brush.paint.val / 2; i += map.fog.scale) {
+        if (paint.type === 'brush') { // Brush mode
+          const dLimit = paint.size.val * paint.size.val / 4;
+          for (let i = -paint.size.val / 2; i < paint.size.val / 2; i += map.fog.scale) {
             const x = Math.floor((view.mx + i) / map.fog.scale);
 
             if (x < 0 || x >= map.fog.width) continue;
             const di = i * i;
 
-            for (let j = -view.brush.paint.val / 2; j < view.brush.paint.val / 2; j += map.fog.scale) {
+            for (let j = -paint.size.val / 2; j < paint.size.val / 2; j += map.fog.scale) {
               const y = Math.floor((view.my + j) / map.fog.scale);
 
               if (y < 0 || y >= map.fog.height) continue;
@@ -470,9 +464,9 @@ const s = sketch => {
 
               if (d < dLimit) {
                 const index = 4 * (y * map.fog.width + x);
-                map.fog.val[x][y] = mode.secondary;
+                map.fog.val[x][y] = paint.texture;
 
-                if (mode.secondary === 0) {
+                if (paint.texture === 0) {
                   map.fog.image.pixels[index]     = 0;
                   map.fog.image.pixels[index + 1] = 0;
                   map.fog.image.pixels[index + 2] = 0;
@@ -490,7 +484,7 @@ const s = sketch => {
               }
             }
           }
-        } else { // Fill mode
+        } else if (paint.type === 'fill') { // Fill mode
           const x = Math.floor(view.mx / map.fog.scale);
           if (x < 0 || x >= map.fog.width) return;
           const y = Math.floor(view.my / map.fog.scale);
@@ -508,9 +502,9 @@ const s = sketch => {
               const y = fy + j;
 
               const index = 4 * (y * map.fog.width + x);
-              map.fog.val[x][y] = mode.secondary;
+              map.fog.val[x][y] = paint.texture;
 
-              if (mode.secondary === 0) {
+              if (paint.texture === 0) {
                 map.fog.image.pixels[index]     = 0;
                 map.fog.image.pixels[index + 1] = 0;
                 map.fog.image.pixels[index + 2] = 0;
@@ -585,7 +579,7 @@ const s = sketch => {
   };
 
   const textures = {
-    COUNT:0,
+    COUNT: 0,
     names: [],
     images: []
   };
@@ -952,12 +946,12 @@ const s = sketch => {
     }
 
     // View
-    view.x = map.width / 2;
-    view.y = map.height / 2;
     const zx = view.width / map.width;
     const zy = view.height / map.height;
     view.zoom.MIN = Math.min(zx, zy) * 0.8;
     view.zoom.set(0);
+    view.x = map.width / 2;
+    view.y = map.height / 2;
 
     // Request map data
     mode.loaded = true;
@@ -1143,8 +1137,8 @@ const s = sketch => {
 
     switch (mod) {
       case modes.NONE:
-        const hover = mode.do.hover();
-        if (hover === null) {
+        let hover = null;
+        if (mode.shift || (hover = mode.do.hover()) === null) {
           mode.do.map();
         } else {
           mode.do.move(hover);
@@ -1165,11 +1159,15 @@ const s = sketch => {
       case modes.ERASE:
         mode.do.erase();
         break;
-      case modes.TEXTURE:
-        mode.do.texture();
-        break;
-      case modes.FOG:
-        mode.do.fog();
+      case modes.PAINT:
+        switch (paint.mode) {
+          case 'fog':
+            mode.do.fog();
+            break;
+          case 'texture':
+            mode.do.texture();
+            break;
+        }
         break;
     }
   };
@@ -1207,16 +1205,17 @@ const s = sketch => {
           mode.do.map();
         }
         break;
-      case modes.TEXTURE:
+      case modes.PAINT:
         if (dt >= mode.dragging.rate.fast) {
           mode.dragging.time = time;
-          mode.do.texture(true);
-        }
-        break;
-      case modes.FOG:
-        if (dt >= mode.dragging.rate.fast) {
-          mode.dragging.time = time;
-          mode.do.fog(true);
+          switch (paint.mode) {
+            case 'fog':
+              mode.do.fog(true);
+              break;
+            case 'texture':
+              mode.do.texture(true);
+              break;
+          }
         }
         break;
       case modes.DRAW:
@@ -1256,12 +1255,11 @@ const s = sketch => {
           mode.moving.zoom(-0.1 * Math.sign(event.delta));
         }
         break;
-      case modes.TEXTURE:
-      case modes.FOG:
+      case modes.PAINT:
         if (mode.ctrl) {
-          view.brush.blend.set(view.brush.blend.val - Math.sign(event.delta));
+          setPaint('blend', paint.blend.val - Math.sign(event.delta));
         } else {
-          view.brush.paint.set(view.brush.paint.val - Math.sign(event.delta));
+          setPaint('size', paint.size.val - Math.sign(event.delta));
         }
         break;
     }
@@ -1292,13 +1290,7 @@ const s = sketch => {
       case '+':
         switch (mode.primary) {
           case modes.ASSET:
-            if (mode.moving instanceof Asset) {
-              mode.moving.zoom(0.1);
-            }
-            break;
-          case modes.TEXTURE:
-          case modes.FOG:
-            view.brush.paint.set(view.brush.paint.val * 1.1);
+          case modes.PAINT:
             break;
           default:
             view.zoom.set(view.zoom.val * 1.1);
@@ -1308,13 +1300,7 @@ const s = sketch => {
       case '_':
         switch (mode.primary) {
           case modes.ASSET:
-            if (mode.moving instanceof Asset) {
-              mode.moving.zoom(-0.1);
-            }
-            break;
-          case modes.TEXTURE:
-          case modes.FOG:
-            view.brush.paint.set(view.brush.paint.val * 0.9);
+          case modes.PAINT:
             break;
           default:
             view.zoom.set(view.zoom.val * 0.9);
@@ -1340,47 +1326,54 @@ const s = sketch => {
           }
           break;
         case 't': // Texture Mode
-          if (mode.primary === modes.TEXTURE) {
-            mode.fill = !mode.fill;
+          sketch.setMode(modes.PAINT);
+          if (paint.mode === 'texture') {
+            setPaint('type', paint.type === 'brush' ? 'fill' : 'brush');
           } else {
-            sketch.setMode(modes.TEXTURE);
+            paint.mode = 'texture';
           }
           break;
         case 'f': // Fog Mode
-          if (mode.primary === modes.FOG) {
-            mode.fill = !mode.fill;
+          sketch.setMode(modes.PAINT);
+          if (paint.mode === 'fog') {
+            setPaint('type', paint.type === 'brush' ? 'fill' : 'brush');
           } else {
-            sketch.setMode(modes.FOG);
+            paint.mode = 'fog';
           }
           break;
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9':
-          const key = sketch.key - '0';
+        case '=':
+        case '+':
           switch (mode.primary) {
-            case modes.FOG:
-              if (key < 0 || key >= 1) break;
-
-              mode.secondary = key;
-              if (key === 1) {
-                textures.images[textures.FOG].loadPixels();
+            case modes.ASSET:
+              if (mode.moving instanceof Asset) {
+                mode.moving.zoom(0.1);
               }
               break;
-            case modes.TEXTURE:
-              if (key < 0 || key >= textures.COUNT) break;
-
-              mode.secondary = key;
-              if (key !== 0) {
-                textures.images[key].loadPixels();
+            case modes.PAINT:
+              setPaint('size', paint.size.val * 1.1);
+              break;
+          }
+          break;
+        case '-':
+        case '_':
+          switch (mode.primary) {
+            case modes.ASSET:
+              if (mode.moving instanceof Asset) {
+                mode.moving.zoom(-0.1);
               }
-            break;
+              break;
+            case modes.PAINT:
+              setPaint('blend', paint.size.val * 0.9);
+              break;
+          }
+          break;
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+          const key = sketch.key - '0';
+          switch (mode.primary) {
+            case modes.PAINT:
+              setPaint('texture', key);
+              break;
             case modes.ENTITY:
               if (key < 0 || key >= entities.COUNT) break;
 
@@ -1443,54 +1436,8 @@ const s = sketch => {
   // TODO: merge with keypress to use single function
   sketch.setSpecificMode = (name, key) => {
     switch(name) {
-      case 'texture':
-        mode.fill = false;
-        sketch.setMode(modes.TEXTURE);
-        mode.secondary = key;
-        if (key < 0 || key > textures.COUNT) {
-          mode.secondary = 0;
-        } else if (key > 0 && key < textures.COUNT) {
-          textures.images[key].loadPixels();
-        }
-        break;
-      case 'fill':
-        mode.fill = true;
-        sketch.setMode(modes.TEXTURE);
-        mode.secondary = key;
-        if (key < 0 || key > textures.COUNT) {
-          mode.secondary = 0;
-        } else if (key > 0 && key < textures.COUNT) {
-          textures.images[key].loadPixels();
-        }
-        break;
-      case 'fog':
-        sketch.setMode(modes.FOG);
-        mode.secondary = key;
-        if (key === 1) {
-          textures.images[textures.FOG].loadPixels();
-        } else {
-          mode.secondary = 0;
-        }
-        break;
-      case 'fog-brush':
-        mode.fill = false;
-        sketch.setMode(modes.FOG);
-        mode.secondary = key;
-        if (key === 1) {
-          textures.images[textures.FOG].loadPixels();
-        } else {
-          mode.secondary = 0;
-        }
-        break;
-      case 'fog-fill':
-        mode.fill = true;
-        sketch.setMode(modes.FOG);
-        mode.secondary = key;
-        if (key === 1) {
-          textures.images[textures.FOG].loadPixels();
-        } else {
-          mode.secondary = 0;
-        }
+      case 'paint':
+        sketch.setMode(modes.PAINT);
         break;
       case 'wall':
         sketch.setMode(modes.WALL);
@@ -1518,10 +1465,6 @@ const s = sketch => {
         sketch.setMode(modes.NONE);
         break;
     }
-  };
-
-  sketch.setBrushBlend = value => {
-    view.brush.blend.set(value);
   };
 
   sketch.isLoaded = () => {
@@ -1659,14 +1602,11 @@ const s = sketch => {
 
       // Redraw user entities over fog
       // TODO: (possibly) Re-add fog effect
-      sketch.push();
-        sketch.scale(map.entity.scale);
-        for (entity of map.entities) {
-          if (entity.user.id === user.id) {
-            entity.draw();
-          }
+      for (entity of map.entities) {
+        if (entity.user.id === user.id) {
+          entity.draw();
         }
-      sketch.pop();
+      }
     }
   }
 
@@ -1778,7 +1718,9 @@ const s = sketch => {
       sketch.strokeWeight(1 / view.zoom.val);
       sketch.stroke(0, 0, 0);
 
-      switch (mode.primary) {
+      const mod = mode.shift ? modes.NONE: mode.primary;
+
+      switch (mod) {
         case modes.NONE:
           drawCursorImage();
           sketch.fill(0);
@@ -1836,43 +1778,44 @@ const s = sketch => {
           drawCursorMark();
           break;
 
-        case modes.TEXTURE:
-          let paint = view.brush.paint.MIN;
-
-          if (!mode.fill) {
-            paint = view.brush.paint.val;
-
-            const blend = view.brush.blend.val / view.brush.blend.MAX * paint;
-
-            // Blend
-            sketch.ellipseMode(sketch.CENTER);
-            sketch.noFill();
-            sketch.stroke(0, 0, 255);
-            sketch.strokeWeight(2 / view.zoom.val);
-            sketch.circle(view.mx, view.my, blend);
+        case modes.PAINT:
+          let paintSize = paint.size.MIN;
+          switch (paint.mode) {
+            case 'texture':
+              if (paint.type === 'brush') {
+                paintSize = paint.size.val;
+    
+                const blendSize = paint.blend.val / paint.blend.MAX * paintSize;
+    
+                // Blend
+                sketch.ellipseMode(sketch.CENTER);
+                sketch.noFill();
+                sketch.stroke(0, 0, 255);
+                sketch.strokeWeight(2 / view.zoom.val);
+                sketch.circle(view.mx, view.my, blendSize);
+              }
+    
+              // Paint
+              sketch.ellipseMode(sketch.CENTER);
+              sketch.noFill();
+              sketch.stroke(0);
+              sketch.strokeWeight(2 / view.zoom.val);
+              sketch.circle(view.mx, view.my, paintSize);
+              break;
+    
+            case 'fog':    
+              if (paint.type === 'brush') {
+                paintSize = paint.size.val;
+              }
+    
+              // Paint
+              sketch.ellipseMode(sketch.CENTER);
+              sketch.noFill();
+              sketch.stroke(0);
+              sketch.strokeWeight(2 / view.zoom.val);
+              sketch.circle(view.mx, view.my, paintSize);
+              break;
           }
-
-          // Paint
-          sketch.ellipseMode(sketch.CENTER);
-          sketch.noFill();
-          sketch.stroke(0);
-          sketch.strokeWeight(2 / view.zoom.val);
-          sketch.circle(view.mx, view.my, paint);
-          break;
-
-        case modes.FOG:
-          let radius = view.brush.paint.MIN;
-
-          if (!mode.fill) {
-            radius = view.brush.paint.val;
-          }
-
-          // Paint
-          sketch.ellipseMode(sketch.CENTER);
-          sketch.noFill();
-          sketch.stroke(0);
-          sketch.strokeWeight(2 / view.zoom.val);
-          sketch.circle(view.mx, view.my, radius);
           break;
       }
 
@@ -1884,15 +1827,17 @@ const s = sketch => {
   }
 
   function drawCursorImage() {
-    const color = getUserColor(user);
     let cursor = cursors.DEFAULT;
+    const mod = mode.shift ? modes.NONE: mode.primary;
 
-    switch (mode.primary) {
+    switch (mod) {
       case modes.NONE:
         // TODO: reduce number of times hover is called
-        const hover = mode.do.hover();
-        if (hover !== null) {
-          cursor = cursors.HOVER;
+        if (!mode.shift) {
+          const hover = mode.do.hover();
+          if (hover !== null) {
+            cursor = cursors.HOVER;
+          }
         }
         break;
       case modes.WALL:
@@ -1906,14 +1851,8 @@ const s = sketch => {
       case modes.ERASE:
         cursor = cursors.ERASE;
         break;
-      // case TEXTURE:
-      // case FOG:
-      //   if (mode.fill) {
-      //     cursor = cursors.FILL;
-      //   } else {
-      //     cursor = cursors.BRUSH;
-      //   }
-      //   break;
+      default:
+        return;
     }
 
     sketch.imageMode(sketch.CORNER);
@@ -1934,18 +1873,25 @@ const s = sketch => {
     const offy = 14;
 
     switch (mode.primary) {
-      case modes.FOG:
-        sketch.text(`Fog (${mode.fill ? 'Fill' : 'Brush'}): ${mode.secondary === 0 ? 'Erase' : 'Draw'}`, offx, offy);
+      case modes.PAINT:
+        switch (paint.mode) {
+          case 'fog':
+            sketch.text(`Fog (${paint.type === 'fill' ? 'Fill' : 'Brush'}): ${paint.texture === 0 ? 'Erase' : 'Draw'}`, offx, offy);
+            break;
+          case 'texture':
+            sketch.text(`Texture (${paint.type === 'fill' ? 'Fill' : 'Brush'}): ${textures.names[paint.texture]}`, offx, offy);
+            break;
+        }
         break;
-      case modes.TEXTURE:
-        sketch.text(`Texture (${mode.fill ? 'Fill' : 'Brush'}): ${textures.names[mode.secondary]}`, offx, offy);
-        break;
+
       case modes.ASSET:
         sketch.text(`Asset: ${assets.names[mode.secondary]}`, offx, offy);
         break;
+
       case modes.ENTITY:
         sketch.text(`Entity: ${entities.names[mode.secondary]}`, offx, offy);
         break;
+
       case modes.WALL:
         sketch.text(`Wall: ${walls.names[mode.secondary]}`, offx, offy);
         break;
@@ -2068,6 +2014,4 @@ const s = sketch => {
 
     to.image.updatePixels();
   }
-  }; // End of sketch
-
-  const myp5 = new p5(s);
+});

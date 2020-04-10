@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "test": "node ./bin/www debug"
+    "debug": "node --nolazy --inspect-brk=9229 ./bin/www debug "
   },
   "dependencies": {
     "body-parser": "^1.19.0",

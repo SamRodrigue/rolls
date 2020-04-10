@@ -6,6 +6,8 @@ block scripts
     const ROOM_ID = '#{id}';
   script(src='/javascripts/room.js')
   script(src='/javascripts/map.js')
+  if role === 'admin'
+    script(src='/javascripts/paint.js')
 
 block content
   .toggle.float-left
@@ -43,20 +45,23 @@ block content
       .row.user-roll.col-12.mx-auto.input-group
         button#help-button.btn.btn-info.col-1(data-toggle="modal" data-target="#help-modal")
           span.oi(data-glyph="question-mark")
-        button#share-map.btn.btn-warning.col-2(style="display: none;" onClick="toggleShareMap(!shareMap)")
-          span#share-map-status Hide
+        if role === 'admin'
+          button#share-map.btn.btn-warning.col-2(onClick="toggleShareMap(!shareMap)")
+            span#share-map-status Hide
         button#tools-button.btn.btn-primary.col-5(data-toggle="modal" data-target="#tools-modal")
           span Tools
         button#entities-button.btn.btn-success.col-2(data-toggle="modal" data-target="#entities-modal")
           span Entities
-        button#assets-button.btn.btn-success.col-2(style="display: none;" data-toggle="modal" data-target="#assets-modal")
-          span Assets
+        if role === 'admin'
+          button#assets-button.btn.btn-success.col-2(data-toggle="modal" data-target="#assets-modal")
+            span Assets
       .row.mt-2
         #map.col-12
           #p5_loading.text-center
             #loader-progress
               #loader-bar
             h5#loader-status
+          .loader
 
   .footer
 
@@ -160,6 +165,11 @@ block content
           button.close(data-dismiss="modal") &times;
         .modal-body
           #help-container.row
+            .mx-auto
+              p m: map/move mode</br>d: draw mode</br>x: erase mode</br>o: toggle grid overlay</br>+: zoom in</br>-: zoom out</br>SHIFT: map mode while held`;
+
+              if role === 'admin'
+                p </br>- Admin Only -</br>w: wall mode</br>e: entity mode</br>a: asset mode</br>t: texture mode (toggle paint mode)</br>h: fog mode (toggle paint mode)</br>0-9: select one of first 10 wall/entity/asset/texture depending on mode
 
         .modal-footer
           button.btn.btn-dark(data-dismiss="modal")
@@ -172,25 +182,48 @@ block content
           h2 Tools
           button.close(data-dismiss="modal") &times;
         .modal-body
-          #tool-containers.row.mt-1
+          #tool-containers.row
             h5.col-12 Modes
-            button.btn.btn-primary.col-4(onclick="myp5.setSpecificMode('none')" data-dismiss="modal") Map/Move
-            button.btn.btn-primary.col-4(onclick="myp5.setSpecificMode('draw')" data-dismiss="modal") Draw
-            button.btn.btn-primary.col-4(onclick="myp5.setSpecificMode('erase')" data-dismiss="modal") Erase
-          #wall-containers.row.border-top.mt-1(style="display: none;")
-            h5.col-12 Walls
-          #fog-containers.row.border-top.mt-1(style="display: none;")
-            h5.col-12 Fog
-          #texture-containers.row.border-top.mt-1(style="display: none;")
-            h5.col-3 Texture
-            h6.col-2.my-auto Blend
-            input#blend-range.col-6(type="range" min="0" max="100" value="100" oninput="myp5.setBrushBlend(this.value);" onchange="myp5.setBrushBlend(this.value);")
-          #fill-containers.row.border-top.mt-1(style="display: none;")
-            h5.col-12 Fill
+            .row.col-12.mx-auto
+              button.btn.btn-primary.col-4(onclick="mapP5.setSpecificMode('none')" data-dismiss="modal")
+                img(src="/media/maps/cursors/default.png")
+                span Map/Move
+              button.btn.btn-primary.col-4(onclick="mapP5.setSpecificMode('draw')" data-dismiss="modal")
+                img(src="/media/maps/cursors/draw.png")
+                span Draw
+              button.btn.btn-primary.col-4(onclick="mapP5.setSpecificMode('erase')" data-dismiss="modal")
+                img(src="/media/maps/cursors/erase.png")
+                span Erase
+          if role === 'admin'
+            #wall-containers.row.border-top.mt-1
+              h5.col-12 Walls
+            #paint-container.row.border-top.mt-1
+              h5.col-12 Paint
+              .row.col-12.mx-auto
+                #paint.col-6.row.mx-auto
+                #paint-settings.col-6.row.mx-auto
+                  #texture-type-container.col-12
+                    #texture-type.col-12
+                  .col-12.mt-1
+                    select#paint-mode.col-12(size=2 oninput="setPaint('mode', this.value);")
+                      option(value="fog" selected) Fog
+                      option(value="texture") Texture
+                  .col-12.mt-1
+                    select#paint-type.col-12(size=2 oninput="setPaint('type', this.value);")
+                      option(value="brush" selected) Brush
+                      option(value="fill") Fill
+                  #brush-size-container.col-12.mt-1
+                    label.col-8.mb-0(for="brush-size") Brush Size
+                    label#brush-size-label.col-4.mb-0 10
+                    input#brush-size.col-12(name="brush-size" type="range" min="2" max="100" value="10" oninput="setPaint('size', this.value);" onchange="setPaint('size', this.value);")
+                  #brush-blend-container.col-12.mt-1
+                    label.col-8.mb-0(for="brush-blend") Brush Blend
+                    label#brush-blend-label.col-4.mb-0 100
+                    input#brush-blend.col-12(name="brush-blend" type="range" min="0" max="100" value="100" oninput="setPaint('blend', this.value);" onchange="setPaint('blend', this.value);")
           #color-containers.row.border-top.mt-1
             h5.col-12 Token Color
             .row.col-12.mx-auto
-              input#color-wheel(type="color")
+              input#color-wheel(type="color" onchange="setUserColor(this.value);")
               .token-color(style="background-color: #FFF100;" onClick="setUserColor('#FFF100')")
               .token-color(style="background-color: #FF8C00;" onClick="setUserColor('#FF8C00')")
               .token-color(style="background-color: #E81123;" onClick="setUserColor('#E81123')")
@@ -201,13 +234,14 @@ block content
               .token-color(style="background-color: #00B294;" onClick="setUserColor('#00B294')")
               .token-color(style="background-color: #009E49;" onClick="setUserColor('#009E49')")
               .token-color(style="background-color: #BAD80A;" onClick="setUserColor('#BAD80A')")
-          #tools-modal-map.row.border-top.mt-1(style="display: none;")
-            h5.col-12 Load/Save Map
-            input#map-data-input.col-6(type="file")
-            button.btn.btn-primary.col-3(onClick="loadMap()")
-              span Load
-            button.btn.btn-success.col-3(onClick="saveMap()")
-              span Save
+          if role === 'admin'
+            #tools-modal-map.row.border-top.mt-1
+              h5.col-12 Load/Save Map
+              input#map-data-input.col-6(type="file")
+              button.btn.btn-primary.col-3(onClick="loadMap()")
+                span Load
+              button.btn.btn-success.col-3(onClick="saveMap()")
+                span Save
         .modal-footer
           button.btn.btn-dark(data-dismiss="modal")
             span Close

@@ -6,11 +6,8 @@ body {
   background-size: contain;
   background-position: top;
   background-repeat: repeat-y;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: -o-crisp-edges;
-  image-rendering: -webkit-optimize-contrast;
-  -ms-interpolation-mode: nearest-neighbor;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
   overflow-y: hidden;
 }
 
@@ -81,6 +78,10 @@ a {
   background-image: url('/media/rolls/parchment.jpg');
 }
 
+#paint canvas {
+  background-image: url('/media/rolls/parchment.jpg');
+}
+
 #log-container {
   background-color: transparent;
   border: double 8px grey;
@@ -121,7 +122,7 @@ a {
   margin-bottom: 0.1em;
 }
 
-.wall-container {
+.wall-container, .texture-container, .fill-container, .entity-container, .asset-container {
   cursor: pointer;
 }
 
@@ -131,18 +132,10 @@ a {
   width: 64px;
 }
 
-.texture-container {
-  cursor: pointer;
-}
-
 .texture-container img {
   border-radius: 32px;
   height: 64px;
   width: 64px;
-}
-
-.fill-container {
-  cursor: pointer;
 }
 
 .fill-container img {
@@ -150,20 +143,13 @@ a {
   width: 64px;
 }
 
-.entity-container {
-  cursor: pointer;
-}
-
 .entity-container img {
   height: 64px;
   width: 64px;
 }
 
-.asset-container {
-  cursor: pointer;
-}
-
 .asset-container img {
+  object-fit: scale-down;
   height: 64px;
   width: 64px;
 }
@@ -270,7 +256,7 @@ a {
   font-size: 1em;
 }
 
-.die-number, .die-count, .dice-status {
+.die-number, .die-count, .dice-status, #texture-type label {
   color: #FFFFFF;
   text-shadow: 1px 1px 0 #000,
   -1px 1px 0 #000,
@@ -318,18 +304,7 @@ a {
   height: 64px;
 }
 
-#dice-overlay-remove {
-  margin-top: auto;
-  margin-bottom: auto;
-  text-align: center;
-  vertical-align: middle;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  z-index: 10;
-}
-
-#dice-overlay-roll {
+#dice-overlay-remove, #dice-overlay-roll {
   margin-top: auto;
   margin-bottom: auto;
   text-align: center;
@@ -349,6 +324,54 @@ a {
 
 .token-color:hover {
   border: solid 4px black;
+}
+
+#texture-type-container {
+  height: 50px;
+}
+
+#texture-type {
+  float: left;
+  border: 1px solid lightgray;
+  width: 200px;
+  height: 50px;
+  overflow: hidden;
+  transition: height 0.1s;
+  background-color: white;
+  z-index: 10;
+}
+
+#texture-type:hover {
+  height: 200px;
+  overflow-y: scroll;
+  transition: height 0.5s;
+}
+
+#texture-type input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+}
+
+#texture-type label {
+  display: none;
+  margin: 2px;
+  height: 46px;
+  opacity: 0.5;
+}
+
+#texture-type:hover label {
+  display: block;
+}
+
+#texture-type label:hover {
+  opacity: 0.75;
+}
+
+#texture-type input:checked + label {
+  opacity: 1 !important;
+  display: block;
 }
 
 #color-wheel {
@@ -403,21 +426,17 @@ a {
   border-radius: 50%;
   width: 2.5em;
   height: 2.5em;
-  -webkit-animation-fill-mode: both;
   animation-fill-mode: both;
-  -webkit-animation: load7 1.8s infinite ease-in-out;
-  animation: load7 1.8s infinite ease-in-out;
+  animation: loading 1.8s infinite ease-in-out;
 }
+
 .loader {
   color: #000000;
   font-size: 10px;
   margin: 80px auto;
   position: relative;
   text-indent: -9999em;
-  -webkit-transform: translateZ(0);
-  -ms-transform: translateZ(0);
   transform: translateZ(0);
-  -webkit-animation-delay: -0.16s;
   animation-delay: -0.16s;
 }
 .loader:before,
@@ -426,25 +445,17 @@ a {
   position: absolute;
   top: 0;
 }
+
 .loader:before {
   left: -3.5em;
-  -webkit-animation-delay: -0.32s;
   animation-delay: -0.32s;
 }
+
 .loader:after {
   left: 3.5em;
 }
-@-webkit-keyframes load7 {
-  0%,
-  80%,
-  100% {
-    box-shadow: 0 2.5em 0 -1.3em;
-  }
-  40% {
-    box-shadow: 0 2.5em 0 0;
-  }
-}
-@keyframes load7 {
+
+@keyframes loading {
   0%,
   80%,
   100% {

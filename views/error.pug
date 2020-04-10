@@ -1,6 +1,13 @@
 extends layout
 
+block scripts
+  script.
+    const REDIRECT = ('#{redirect}' === 'true');
+  script(src='/javascripts/error.js')
+
 block content
   h1.text-light= message
   h2.text-light= error.status
+  if redirect === 'true'
+    h3.text-light redirecting...
   pre #{error.stack}

@@ -240,16 +240,20 @@ const findRoom = (rooms, id, socket) => {
   return rooms.get(id);
 };
 
-const findUserSocket = (room, socket) => {
+const findUserSession = (room, session) => {
   let user = null;
   room.users.some(aUser => {
-    if (socket.handshake.sessionID === aUser.socket.handshake.sessionID) {
+    if (session === aUser.socket.handshake.sessionID) {
       user = aUser;
       return true;
     }
   });
 
   return user;
+}
+
+const findUserSocket = (room, socket) => {
+  return findUserSession(room, socket.handshake.sessionID);
 };
 
 const findUserName = (room, name) => {
@@ -316,6 +320,7 @@ module.exports = {
   roll,
   diceStatus,
   findRoom,
+  findUserSession,
   findUserSocket,
   findUserName,
   colorFromString,

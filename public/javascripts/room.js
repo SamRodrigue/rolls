@@ -75,98 +75,49 @@ function userData(data) {
   user = data;
 
   if (!initialized) {
-    let helpText = `
-m: map/move mode</br>
-d: draw mode</br>
-x: erase mode</br>
-o: toggle grid overlay</br>
-+: zoom in</br>
--: zoom out</br>
-SHIFT: map mode while held`;
-
     if (user.role === 'admin') {
-      helpText += `
-</br>- Admin Only -</br>
-w: wall mode</br>
-e: entity mode</br>
-a: asset mode</br>
-t: texture mode (toggle paint mode)</br>
-h: fog mode (toggle paint mode)</br>
-0-9: select one of first 10 wall/entity/asset/texture depending on mode`;
       // Load textures
       $.getJSON(`${MEDIA_MAPS}textures/textures.json`, data => {
         $.each(data, (key, val) => {
-          $('#texture-containers').append(`
-            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('texture', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
-              <span class="mx-auto">` + val[1] + `</span>
-            </div>`);
-          $('#fill-containers').append(`
-            <div class="fill-container col-3 text-center" onclick="myp5.setSpecificMode('fill', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/` + val[2] + `" />
-              <span class="mx-auto">` + val[1] + `</span>
-            </div>`);
+          $('#texture-type').append(`
+            <input type="radio" id="texture-${val[0]}" name="texture-type" value="${val[0]}" onclick="setPaint('texture', ${val[0]});" />
+            <label for="texture-${val[0]}" style="background: url('${MEDIA_MAPS}textures/${val[2]}') 50% 50%;">${val[1]}</label>`);
         });
+
+        // Select first texture type
+        $('#texture-type input:radio:first').attr('checked', true);
       });
-
-      $('#texture-containers').show();
-      $('#fill-containers').show();
-
-      $('#fog-containers').append(`
-            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog', 0); $('#tools-modal').modal('toggle');">
-              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/erase.png" />
-              <span class="mx-auto">Erase</span>
-            </div>
-            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog-brush', 1); $('#tools-modal').modal('toggle');">
-              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/fog.png" />
-              <span class="mx-auto">Brush</span>
-            </div>
-            <div class="texture-container col-3 text-center" onclick="myp5.setSpecificMode('fog-fill', 1); $('#tools-modal').modal('toggle');">
-              <img class="row mx-auto" src="` + MEDIA_MAPS + `textures/fog.png" style="border-radius: 0"/>
-              <span class="mx-auto">Fill</span>
-            </div>`);
-
-      $('#fog-containers').show();
 
       // Load walls
       $.getJSON(`${MEDIA_MAPS}walls/walls.json`, data => {
         $.each(data, (key, val) => {
           $('#wall-containers').append(`
-    <div class="wall-container col-3 text-center" onclick="myp5.setSpecificMode('wall', ` + val[0] + `); $('#tools-modal').modal('toggle');">
-      <img class="row mx-auto" src="` + MEDIA_MAPS + `walls/` + val[2] + `" />
-      <span class="mx-auto">` + val[1] + `</span>
+    <div class="wall-container col-3 text-center" onclick="mapP5.setSpecificMode('wall', ${val[0]}); $('#tools-modal').modal('toggle');">
+      <img class="row mx-auto" src="${MEDIA_MAPS}walls/${val[2]}" />
+      <span class="mx-auto">${val[1]}</span>
     </div>`);
         });
       });
-
-      $('#wall-containers').show();
 
       // Load assets
       $.getJSON(`${MEDIA_MAPS}assets/assets.json`, data => {
         $.each(data, (key, val) => {
           $('#asset-containers').append(`
-    <div class="asset-container col-3 text-center" onclick="myp5.setSpecificMode('asset', ` + val[0] + `); $('#assets-modal').modal('toggle');">
-      <img class="row mx-auto" src="` + MEDIA_MAPS + `assets/` + val[2] + `" />
-      <span class="mx-auto">` + val[1] + `</span>
+    <div class="asset-container col-3 text-center" onclick="mapP5.setSpecificMode('asset', ${val[0]}); $('#assets-modal').modal('toggle');">
+      <img class="row mx-auto" src="${MEDIA_MAPS}assets/${val[2]}" />
+      <span class="mx-auto">${val[1]}</span>
     </div>`);
         });
       });
-
-      $('#share-map').show();
-      $('#assets-button').show();
-      $('#tools-modal-map').show();
     }
-
-    // Set help text
-    $('#help-container').append(`<div class="mx-auto"><p>${helpText}</p></div>`);
 
     // Load entities
     $.getJSON(`${MEDIA_MAPS}entities/entities.json`, data => {
       $.each(data, (key, val) => {
         $('#entity-containers').append(`
-  <div class="entity-container col-3 text-center" onclick="myp5.setSpecificMode('entity', ` + val[0] + `); $('#entities-modal').modal('toggle');">
-    <img class="row mx-auto" src="` + MEDIA_MAPS + `entities/` + val[2] + `" />
-    <span class="mx-auto">` + val[1] + `</span>
+  <div class="entity-container col-3 text-center" onclick="mapP5.setSpecificMode('entity', ${val[0]}); $('#entities-modal').modal('toggle');">
+    <img class="row mx-auto" src="${MEDIA_MAPS}entities/${val[2]}" />
+    <span class="mx-auto">${val[1]}</span>
   </div>`);
       });
     });
@@ -178,14 +129,14 @@ h: fog mode (toggle paint mode)</br>
     const userColor = getUserColor(user);
     const colorValue = (userColor[0] << 16) + (userColor[1] << 8) + userColor[2];
     const colorString = colorValue.toString(16).padStart(6, '0');
-    $('input#color-wheel').val(`#${colorString}`);
+    document.getElementById('color-wheel').value = `#${colorString}`;
 
     socket.emit('get-room', { id: ROOM_ID }); refreshSocket();
     initialized = true;
   }
 
   // Load presets
-  for (let i = 0; i < 2; ++i) {
+  for (let i = 0; i < user.preset.length; ++i) {
     const preset = user.preset[i];
     if (preset.used) {
       let presetContent = '';
@@ -193,7 +144,7 @@ h: fog mode (toggle paint mode)</br>
       if (preset.counter !== 0) {
         presetContent += `<h6 class="col-12"><span class="bg-`;
         presetContent += (preset.counter > 0) ? 'success' : 'danger';
-        presetContent += `" style="border-radius: 5%;">Counter: ` + preset.counter + `</span></h6>`;
+        presetContent += `" style="border-radius: 5%;">Counter: ${preset.counter}</span></h6>`;
       }
 
       presetContent += `
@@ -201,7 +152,7 @@ h: fog mode (toggle paint mode)</br>
 
       preset.dice.forEach(die => {
         presetContent += `
-<div class="` + die.type + ` small-die"></div>`;
+<div class="${die.type} small-die"></div>`;
       });
 
       presetContent += `</div>`;
@@ -214,8 +165,8 @@ h: fog mode (toggle paint mode)</br>
 function getMap() {
   if (DEBUG) console.log('checking for map');
   // Check if map is fully loaded
-  if (typeof myp5 !== 'undefined' &&
-      myp5.isLoaded()) {
+  if (typeof mapP5 !== 'undefined' &&
+      mapP5.isLoaded()) {
     if (DEBUG) console.log('updating map');
     socket.emit('get-map', { id: ROOM_ID }); refreshSocket();
     $('#map .loader').remove();
@@ -235,7 +186,7 @@ function removeUser(data) {
 }
 
 // Map
-function toggleShareMap(val) {
+function toggleShareMap(val, share = true) {
   if (val !== null && user.role === 'admin') {
     const shareButton = $('#share-map');
     const shareStatus = $('#share-map-status');
@@ -254,12 +205,14 @@ function toggleShareMap(val) {
       mapDiv.css('border-color', 'red');
     }
 
-    socket.emit('share-map', { id: ROOM_ID, share: shareMap }); refreshSocket();
+    if (share) {
+      socket.emit('share-map', { id: ROOM_ID, share: shareMap }); refreshSocket();
+    }
   }
 }
 
 function saveMap() {
-  const data = `text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(myp5.saveAll()))}`;
+  const data = `text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(mapP5.saveAll()))}`;
   const a = document.createElement('a');
   a.href = `data:${data}`;
   a.download = 'mapData.json';
@@ -293,7 +246,7 @@ function loadMap() {
       const lines = e.target.result;
       const newMapData = JSON.parse(lines);
       newMapData.share = shareMap;
-      myp5.loadAll(newMapData);
+      mapP5.loadAll(newMapData);
       sendMap();
     };
     fr.readAsText(file); // calls fr.onload
@@ -306,33 +259,15 @@ function sendMap() {
   if (DEBUG) console.log('sending map');
   socket.emit('update-map', {
     id: ROOM_ID,
-    map: myp5.saveAll()
+    map: mapP5.saveAll()
   }); refreshSocket();
 }
 
 function mapData(data) {
   if (DEBUG) console.log('receiving map');
 
-  shareMap = data.share;
-  if (user.role === 'admin') {
-    const shareButton = $('#share-map');
-    const shareStatus = $('#share-map-status');
-    const mapDiv = $('#map');
-
-    if (shareMap) { // Shown
-      shareButton.removeClass('btn-danger');
-      shareButton.addClass('btn-warning');
-      shareStatus.text('Hide');
-      mapDiv.css('border-color', 'grey');
-    } else { // Hidden
-      shareButton.removeClass('btn-warning');
-      shareButton.addClass('btn-danger');
-      shareStatus.text('Show');
-      mapDiv.css('border-color', 'red');
-    }
-  }
-
-  myp5.loadAll(data);
+  toggleShareMap(data.share, false);
+  mapP5.loadAll(data);
 }
 
 // Send a type
@@ -350,7 +285,7 @@ function send(type) {
       socket.emit('update-map-type', {
         id: ROOM_ID,
         type,
-        data: myp5.saveType(type)
+        data: mapP5.saveType(type)
       }); refreshSocket();
       break;
   }
@@ -366,7 +301,7 @@ function receive(data) {
     case 'texture':
     case 'fog':
       if (DEBUG) console.log(`receiving ${data.type}`);
-      myp5.loadType(data.type, data.data);
+      mapP5.loadType(data.type, data.data);
       break;
   }
 }
@@ -391,7 +326,7 @@ function toggleDice(val) {
       dice.hide();
       map.show();
       // Resize map
-      myp5.resize();
+      mapP5.resize();
       toggleStatus.html('Dice');
     }
   }
@@ -579,7 +514,7 @@ function setUserColor(colorString) {
   const userColor = getUserColor(user);
   const colorValue = (userColor[0] << 16) + (userColor[1] << 8) + userColor[2];
   colorString = colorValue.toString(16).padStart(6, '0');
-  $('input#color-wheel').val(`#${colorString}`);
+  document.getElementById('color-wheel').value = `#${colorString}`;
 }
 
 function getUserColor(aUser) {
@@ -640,6 +575,16 @@ function colorToArray(colorString) {
   }
 
   return out;
+}
+
+function setBrushSize(val) {
+  $('#brush-size-label').text(val);
+  mapP5.setBrushSize(val);
+}
+
+function setBrushBlend(val) {
+  $('#brush-blend-label').text(val);
+  mapP5.setBrushBlend(val);
 }
 
 // Window dependant
@@ -860,7 +805,7 @@ function roomLog(data) {
 function windowResize() {
 
   // Resize map
-  myp5.resize();
+  mapP5.resize();
 
   logResize(0);
 
@@ -969,17 +914,9 @@ $(document).ready(() => {
   //   $(document).off('mousemove');
   // });
 
-  $(document).on('wheel', '#map canvas', event => {
-    event.preventDefault();
-  });
-
-  $(document).on('contextmenu', '#map canvas', event => {
-    event.preventDefault();
-  });
-
-  $(document).on('change', 'input#color-wheel', event =>{
-    setUserColor(this.value);
-  });
+  // $(document).on('wheel contextmenu', '#map canvas', event => {
+  //   event.preventDefault();
+  // });
 
   $(document).on('animationend', '.a-dice', event => {
     $(this).css('animation-name', '');
@@ -990,15 +927,4 @@ $(document).ready(() => {
 
   // Resize window on load
   windowResize();
-  // function resize_on_load() {
-  //   // Check if map is fully loaded
-  //   console.log('checking');
-  //   if (typeof myp5 !== 'undefined' &&
-  //       myp5.isLoaded()) {
-  //     console.log('update');
-  //     windowResize();
-  //   } else {
-  //     setTimeout(resize_on_load, 100);
-  //   }
-  // }; resize_on_load();
 });
