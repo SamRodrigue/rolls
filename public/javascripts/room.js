@@ -914,9 +914,9 @@ $(document).ready(() => {
   //   $(document).off('mousemove');
   // });
 
-  // $(document).on('wheel contextmenu', '#map canvas', event => {
-  //   event.preventDefault();
-  // });
+  $(document).on('wheel contextmenu', '#map canvas', event => {
+    event.preventDefault();
+  });
 
   $(document).on('animationend', '.a-dice', event => {
     $(this).css('animation-name', '');
